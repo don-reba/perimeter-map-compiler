@@ -23,10 +23,11 @@ if ($map_name_length <= 0 || $map_name_length > 20)
 	exit(INVALID_NAME_MSG);
 
 // make sure map_name contains only valid characters
-$valid_chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-';
+$valid_chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-\'\\';
 for ($i = 0; $i != $map_name_length; ++$i)
 	if (!strstr($valid_chars, $map_name{$i}))
 		exit(INVALID_NAME_MSG);
+$map_name = stripslashes($map_name);
 
 // the name UNREGISTERED is reserved
 if ('UNREGISTERED' == $map_name)

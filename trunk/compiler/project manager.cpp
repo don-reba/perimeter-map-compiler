@@ -1426,7 +1426,7 @@ bool CProjectManager::RegisterMap()
 				unsafe_url += _T("&map_checksum=");
 				unsafe_url += checksum;
 				// convert the unsafe url to canonical form
-				DWORD num_chars;
+				DWORD num_chars(MAX_PATH);
 				if (S_OK != UrlEscape(
 					unsafe_url.c_str(),
 					url,
@@ -1474,12 +1474,13 @@ bool CProjectManager::RegisterMap()
 	// process result
 	if (0 != _tcscmp(buffer, _T("success")))
 	{
+		const TCHAR * const error_name(_T("Registration Error"));
 		if (0 == _tcscmp(buffer, _T("taken")))
-			MessageBox(hWnd, _T("The name of this map is already in use."), _T("Registration Error"), MB_OK);
+			MessageBox(hWnd, _T("The name of this map is already in use."), error_name, MB_OK);
 		else if (0 == _tcscmp(buffer, _T("invalid")))
-			MessageBox(hWnd, _T("Invalid map name."), _T("Registration Error"), MB_OK);
+			MessageBox(hWnd, _T("Invalid map name."), error_name, MB_OK);
 		else
-			MessageBox(hWnd, _T("Map could not be registered."), _T("Registration Error"), MB_OK);
+			MessageBox(hWnd, _T("Map could not be registered."), error_name, MB_OK);
 		delete [] buffer;
 		return false;
 	}

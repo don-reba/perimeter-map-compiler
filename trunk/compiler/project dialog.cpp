@@ -86,7 +86,7 @@ BOOL CProjectDlg::OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
 				}
 				// make sure the name contains only valid characters
 				bool invalid_char(false);
-				TCHAR *valid_chars(_T("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"));
+				TCHAR *valid_chars(_T("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'_-"));
 				for (size_t i(0); i != name_size; ++i)
 					if (NULL == _tcschr(valid_chars, name[i]))
 					{
@@ -95,7 +95,8 @@ BOOL CProjectDlg::OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
 					}
 				if (invalid_char)
 				{
-					MessageBox(hWnd, _T("This map name contains an invalid character."), NULL, MB_OK);
+					MessageBox(hWnd, _T("The map name contains an invalid character.\n\
+Only numbers, letters, spaces, dashes, and apostrophies are allowed."), NULL, MB_OK);
 					break;
 				}
 				// make sure the name does not match one of the reserved namesstring worlds_list;
