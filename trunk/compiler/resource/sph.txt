@@ -1,0 +1,342 @@
+MissionDescriptionPrm = {
+	worldName = "%folder_name%";
+	missionDescription = "";
+	difficulty = DIFFICULTY_HARD;
+	playersData = {
+		4;
+		{
+			playerID = 0;
+			realPlayerType = REAL_PLAYER_TYPE_PLAYER;
+			belligerent = BELLIGERENT_EXODUS0;
+			colorIndex = 0;
+			clan = -1;
+			difficulty = DIFFICULTY_HARD;
+			handicap = 100;
+			flag_playerStartReady = false;
+			flag_playerGameReady = false;
+			compAndUserID = 0;
+			gameVersion = 0;
+			name_ = {
+				64;
+				71,
+				101,
+				111,
+				114,
+				103,
+				101,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			};
+		},
+		{
+			playerID = 1;
+			realPlayerType = REAL_PLAYER_TYPE_AI;
+			belligerent = BELLIGERENT_HARKBACKHOOD0;
+			colorIndex = 1;
+			clan = -1;
+			difficulty = DIFFICULTY_HARD;
+			handicap = 100;
+			flag_playerStartReady = false;
+			flag_playerGameReady = false;
+			compAndUserID = 0;
+			gameVersion = 0;
+			name_ = {
+				64;
+				90,
+				111,
+				100,
+				105,
+				97,
+				99,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			};
+		},
+		{
+			playerID = 2;
+			realPlayerType = REAL_PLAYER_TYPE_AI;
+			belligerent = BELLIGERENT_EXODUS0;
+			colorIndex = 2;
+			clan = -1;
+			difficulty = DIFFICULTY_HARD;
+			handicap = 100;
+			flag_playerStartReady = false;
+			flag_playerGameReady = false;
+			compAndUserID = 0;
+			gameVersion = 0;
+			name_ = {
+				64;
+				67,
+				108,
+				117,
+				115,
+				116,
+				101,
+				114,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			};
+		},
+		{
+			playerID = 3;
+			realPlayerType = REAL_PLAYER_TYPE_AI;
+			belligerent = BELLIGERENT_EXODUS0;
+			colorIndex = 3;
+			clan = -1;
+			difficulty = DIFFICULTY_HARD;
+			handicap = 100;
+			flag_playerStartReady = false;
+			flag_playerGameReady = false;
+			compAndUserID = 0;
+			gameVersion = 0;
+			name_ = {
+				64;
+				67,
+				108,
+				117,
+				115,
+				116,
+				101,
+				114,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0
+			};
+		}
+	};
+	missionNumber = -1;
+	playerAmountScenarioMax = 4;
+	playersShufflingIndices = {
+		4;
+		0,
+		1,
+		2,
+		3
+	};
+	activePlayerID = 0;
+	globalTime = 1;
+	gameSpeed = 0.;
+	gamePaused = false;
+	originalSaveName = "resource\\battle\\%folder_name%.spg";
+};

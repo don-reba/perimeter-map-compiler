@@ -1,0 +1,453 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Russian resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+#ifdef _WIN32
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Russian resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (Canada) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENC)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_CAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_SHRUB_ACTIVE        ICON                    "resource/shrub.ico"
+IDI_SHRUB_INACTIVE      ICON                    "resource/shrub2.ico"
+IDI_IM                  ICON                    "resource/details window.ico"
+IDI_MP                  ICON                    "resource/preview window.ico"
+IDI_SM                  ICON                    "resource/stat window.ico"
+IDI_TRIANGLE            ICON                    "resource/triangle.ico"
+IDI_COMPILER            ICON                    "resource/compiler.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDC_COMPILER MENU 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New Project\tCtrl-N",        ID_FILE_NEWPROJECT
+        MENUITEM "&Open Project\tCtrl-O",       ID_FILE_OPENPROJECT
+        MENUITEM SEPARATOR
+        MENUITEM "&Pack Shrub\tCtrl-P",         ID_FILE_PACKSHRUB, GRAYED
+        MENUITEM "&Unpack Shrub\tCtrl-U",       ID_FILE_UNPACKSHRUB
+        MENUITEM SEPARATOR
+        MENUITEM "&Install Map\tCtrl-I",        ID_FILE_INSTALLSHRUB, GRAYED
+        MENUITEM "&Manage Maps\tCtrl-M",        ID_FILE_MANAGEMAPS
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt-F4",               IDM_EXIT
+    END
+    POPUP "Tools"
+    BEGIN
+        MENUITEM "Preferences\tF10",            ID_TOOLS_PREFERENCES
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About",                      IDM_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDC_COMPILER ACCELERATORS 
+BEGIN
+    "I",            ID_FILE_INSTALLSHRUB,   VIRTKEY, CONTROL, NOINVERT
+    "M",            ID_FILE_MANAGEMAPS,     VIRTKEY, CONTROL, NOINVERT
+    "N",            ID_FILE_NEWPROJECT,     VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_FILE_OPENPROJECT,    VIRTKEY, CONTROL, NOINVERT
+    "P",            ID_FILE_PACKSHRUB,      VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_FILE_SAVEPROJECT,    VIRTKEY, CONTROL, NOINVERT
+    "U",            ID_FILE_UNPACKSHRUB,    VIRTKEY, CONTROL, NOINVERT
+    "/",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    "?",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    VK_F10,         ID_TOOLS_PREFERENCES,   VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PROJECT_DLG DIALOGEX 0, 0, 125, 69
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Project Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    COMBOBOX        IDC_MAP_SIZE,50,22,68,128,CBS_DROPDOWN | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,7,48,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,68,48,50,14
+    LTEXT           "map size",IDC_STATIC,7,24,37,8
+    LTEXT           "map name",IDC_STATIC,7,9,34,8
+    EDITTEXT        IDC_MAP_NAME,50,7,68,12,ES_AUTOHSCROLL
+END
+
+IDD_STAT_DLG DIALOGEX 0, 0, 88, 34
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Statistics"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "average height",IDC_STATIC,7,7,55,8
+    CTEXT           "-",IDC_AVE_HEIGHT,68,7,13,8
+    LTEXT           "average color",IDC_STATIC,7,20,55,8
+    LTEXT           "",IDC_AVE_COLOUR,68,20,13,8,SS_SUNKEN
+END
+
+IDD_PREVIEW_DLG DIALOGEX 0, 0, 186, 94
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | 
+    WS_THICKFRAME
+CAPTION "Map Preview"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+END
+
+IDD_INFO_DLG DIALOGEX 0, 0, 121, 170
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Details"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_ZERO_PLAST,76,18,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_ZERO_PLAST_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | WS_DISABLED,110,18,11,14
+    EDITTEXT        IDC_FOG_START,76,32,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    EDITTEXT        IDC_FOG_END,76,46,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    PUSHBUTTON      "",IDC_FOG_COLOUR_BTN,92,62,13,8,BS_ICON | BS_CENTER | 
+                    BS_VCENTER | WS_DISABLED
+    EDITTEXT        IDC_SP1_X,26,91,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP1_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,90,11,
+                    14
+    EDITTEXT        IDC_SP1_Y,76,91,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP1_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,90,11,
+                    14
+    EDITTEXT        IDC_SP2_X,26,106,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP2_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,105,11,
+                    14
+    EDITTEXT        IDC_SP2_Y,76,106,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP2_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,105,11,
+                    14
+    EDITTEXT        IDC_SP3_X,26,121,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP3_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,120,11,
+                    14
+    EDITTEXT        IDC_SP3_Y,76,121,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP3_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,120,11,
+                    14
+    EDITTEXT        IDC_SP4_X,26,136,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP4_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,135,11,
+                    14
+    EDITTEXT        IDC_SP4_Y,76,136,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP4_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,135,11,
+                    14
+    EDITTEXT        IDC_SP0_X,26,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP0_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,150,11,
+                    14
+    EDITTEXT        IDC_SP0_Y,76,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP0_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,150,11,
+                    14
+    LTEXT           "y",IDC_STATIC,68,108,8,8
+    LTEXT           "Zero-level (0-255)",IDC_STATIC,7,20,64,8
+    LTEXT           "Fog End",IDC_STATIC,7,48,64,8
+    LTEXT           "Fog Color",IDC_STATIC,7,62,64,8
+    LTEXT           "Fog Start",IDC_STATIC,7,34,64,8
+    LTEXT           "",IDC_FOG_COLOUR,76,62,13,8,SS_SUNKEN | WS_DISABLED
+    CTEXT           "Map",IDC_STATIC,7,7,107,8
+    CTEXT           "Starting Positions",IDC_STATIC,7,78,107,8
+    LTEXT           "x",IDC_STATIC,18,93,8,8
+    LTEXT           "y",IDC_STATIC,68,93,8,8
+    LTEXT           "x",IDC_STATIC,18,108,8,8
+    LTEXT           "x",IDC_STATIC,18,123,8,8
+    LTEXT           "y",IDC_STATIC,68,123,8,8
+    LTEXT           "x",IDC_STATIC,18,138,8,8
+    LTEXT           "y",IDC_STATIC,68,138,8,8
+    LTEXT           "x",IDC_STATIC,18,153,8,8
+    LTEXT           "y",IDC_STATIC,68,153,8,8
+    LTEXT           "1:",IDC_STATIC,7,93,8,8
+    LTEXT           "2:",IDC_STATIC,7,108,8,8
+    LTEXT           "3:",IDC_STATIC,7,123,8,8
+    LTEXT           "4:",IDC_STATIC,7,138,8,8
+    LTEXT           "0:",IDC_STATIC,7,153,8,8
+END
+
+IDD_PREFERENCES DIALOGEX 0, 0, 173, 141
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOPMOST
+CAPTION "Preferences"
+FONT 8, "MS Shell Dlg", 400, 0, 0xCC
+BEGIN
+    CONTROL         "Speed",IDC_TEXTURE_COLOUR_SPEED,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,17,36,10
+    CONTROL         "Quality",IDC_TEXTURE_COLOUR_QUALITY,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,27,36,10
+    EDITTEXT        IDC_LOD,120,60,36,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "",IDC_ZERO_PLAST_COLOUR_BTN,143,78,13,8,BS_ICON | 
+                    BS_CENTER | BS_VCENTER
+    EDITTEXT        IDC_ZERO_PLAST_OPACITY,120,92,36,12,ES_AUTOHSCROLL | 
+                    ES_NUMBER
+    CONTROL         "",IDC_ZERO_PLAST_OPACITY_SPIN,"msctls_updown32",
+                    UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | 
+                    UDS_AUTOBUDDY | UDS_ARROWKEYS,156,92,10,12
+    PUSHBUTTON      "OK",IDOK,7,120,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,61,120,50,14
+    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,120,50,14
+    LTEXT           "",IDC_ZERO_PLAST_COLOUR,120,78,13,8,SS_SUNKEN
+    GROUPBOX        "Map Preview",IDC_STATIC,7,49,159,61,BS_CENTER
+    LTEXT           "Mesh tolerance (0-8)",IDC_STATIC,19,62,89,8
+    LTEXT           "Zero-level color",IDC_STATIC,19,78,89,8
+    LTEXT           "Zero-level opacity (0-255)",IDC_STATIC,19,94,89,8
+    GROUPBOX        "General",IDC_STATIC,7,7,159,35,BS_CENTER
+    LTEXT           "Texture color trade-off",IDC_STATIC,19,23,89,8
+END
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 234, 133
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About Perimeter Map Compiler"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,116,112,50,14
+    ICON            IDI_SHRUB_ACTIVE,IDC_STATIC,7,7,20,20,SS_REALSIZEIMAGE
+    LTEXT           "Perimeter Map Compiler 1.0 Beta 3\nCopyright 2005 Don Reba",
+                    IDC_STATIC,49,47,177,19
+    LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",
+                    IDC_STATIC,49,68,177,35
+END
+
+IDD_MAP_MANAGER DIALOGEX 0, 0, 104, 101
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Manage Maps"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LISTBOX         IDC_MAP_LIST,7,7,90,66,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
+                    WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Delete",IDC_DELETE_MAP,32,80,40,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_PROJECT_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 118
+        VERTGUIDE, 44
+        VERTGUIDE, 50
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 62
+    END
+
+    IDD_STAT_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 81
+        VERTGUIDE, 62
+        VERTGUIDE, 68
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 27
+    END
+
+    IDD_PREVIEW_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_INFO_DLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 114
+        VERTGUIDE, 26
+        VERTGUIDE, 71
+        VERTGUIDE, 76
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 163
+    END
+
+    IDD_PREFERENCES, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 166
+        VERTGUIDE, 19
+        VERTGUIDE, 108
+        VERTGUIDE, 120
+        VERTGUIDE, 156
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 134
+    END
+
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 226
+        VERTGUIDE, 28
+        VERTGUIDE, 49
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 126
+        HORZGUIDE, 27
+        HORZGUIDE, 47
+    END
+
+    IDD_MAP_MANAGER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 97
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 94
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXT
+//
+
+IDR_WORLD_INI           TEXT                    "resource/world.ini"
+IDR_WORLDS_LIST         TEXT                    "resource/worlds_list.txt"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// BZ2
+//
+
+IDR_SPG                 BZ2                     "resource/spg.bz2"
+IDR_SPH                 BZ2                     "resource/sph.bz2"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDS_APP_TITLE           "Map Compiler"
+    IDC_COMPILER            "COMPILER"
+END
+
+#endif    // English (Canada) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
