@@ -112,7 +112,6 @@ void CMapInfo::Load(string file_name)
 	GetPrivateProfileString(section_name, _T("FogEnd"), default_str, str, max_string_length, file_name.c_str());
 	fog_end = _ttoi(str);
 	// load fog_colour
-	_ltot(fog_colour, default_str, 10);
 	_stprintf(default_str, "%X", fog_colour);
 	GetPrivateProfileString(section_name, _T("FogColor"),default_str, str, max_string_length, file_name.c_str());
 	_stscanf(str, "%X", &fog_colour);
@@ -170,12 +169,12 @@ string CMapInfo::GenerateWorldIni() const
 }
 
 // for check sum computation
-size_t CMapInfo::GetBinaryBlock(BYTE *buffer) const
+size_t CMapInfo::GetBinaryBlock(BYTE *&buffer) const
 {
 	// define data sizes
 	map<string, size_t> size_map;
 	size_map["map_name size"] = sizeof(size_t);
-	size_map["map_name"]      = sizeof(TCHAR) * (map_name.size() + 1);
+	size_map["map_name"]      = sizeof(TCHAR) * map_name.size();
 	size_map["map_power_x"]   = sizeof(unsigned int);
 	size_map["map_power_y"]   = sizeof(unsigned int);
 	size_map["zero_plast"]    = sizeof(unsigned int);
@@ -190,9 +189,13 @@ size_t CMapInfo::GetBinaryBlock(BYTE *buffer) const
 		const map<string, size_t>::const_iterator end(size_map.end());
 		for (; i != end; ++i)
 			buffer_size += i->second;
+		size_t remainder(buffer_size % 4);
+		if (remainder != 0)
+			buffer_size += 4 - remainder;
 	}
 	// allocate memory
 	buffer = new BYTE[buffer_size]; // start_pos
+	ZeroMemory(buffer, buffer_size);
 	BYTE *buffer_i(buffer);
 	// map_name size
 	{

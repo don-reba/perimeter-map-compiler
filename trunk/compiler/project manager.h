@@ -92,8 +92,8 @@ private:
 	void   SaveMission(const TCHAR *path, const TCHAR *folder_name, bool survival);
 	void   SavePalette(const TCHAR *path);
 	void   SaveShrub(const TCHAR *path, const BYTE *buffer, DWORD size) const;
-	void   SaveSPG(const TCHAR *path, const TCHAR *folder_name, bool survival);
-	void   SaveSPH(const TCHAR *path, const TCHAR *folder_name, bool survival);
+	void   SaveSPG(const TCHAR *path, const TCHAR *folder_name, const bool survival);
+	void   SaveSPH(const TCHAR *path, const TCHAR *folder_name, const bool survival);
 	void   SaveTexture(const TCHAR *path);
 	void   SaveThumb(const TCHAR *path);
 	void   SaveVMP(const TCHAR *path);

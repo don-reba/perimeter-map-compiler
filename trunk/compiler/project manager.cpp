@@ -511,9 +511,9 @@ void CProjectManager::Install()
 	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
 	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 	SaveMission(folder_path, folder_name.c_str(), false);
-//	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-//	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-//	SaveMission(folder_path, folder_name.c_str(), true);
+	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+	SaveMission(folder_path, folder_name.c_str(), true);
 	// reassure the user
 	MessageBox(
 		hWnd,
@@ -839,15 +839,17 @@ DWORD CProjectManager::CalculateChecksum()
 		texture.SignIn();
 		// set data to map_info
 		{
-			length = map_info.SignOutConst().GetBinaryBlock(const_cast<BYTE*>(data));
+			BYTE *new_data;
+			length = map_info.SignOutConst().GetBinaryBlock(new_data);
 			map_info.SignIn();
+			data = new_data;
 		}
 		// add to the checksum
 		_ASSERTE(length % 4 == 0 && length >= 4);
 		for (size_t i(0); i != length; ++i)
 			result = (result << 8 | *data++) ^ crctab[result >> 24];
 		// deallocate memory allocated by GetBinaryBlock
-		delete [] data;
+		delete [] (data - length);
 	}
 	return ~result;
 }
@@ -1614,7 +1616,7 @@ void CProjectManager::SaveShrub(const TCHAR *path, const BYTE *buffer, DWORD siz
 	SaveMemToFile(path, buffer, size);
 }
 
-void CProjectManager::SaveSPG(const TCHAR *path, const TCHAR *folder_name, bool survival)
+void CProjectManager::SaveSPG(const TCHAR *path, const TCHAR *folder_name, const bool survival)
 {
 	const size_t spg_alloc(8388608); // 8 MB should be enough
 	size_t spg_size(spg_alloc);
@@ -1630,7 +1632,10 @@ void CProjectManager::SaveSPG(const TCHAR *path, const TCHAR *folder_name, bool 
 	{
 		BYTE *compressed_buffer;
 		// load the compressed template
-		HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_SPG), "BZ2"));
+		HRSRC resource_info(FindResource(
+			NULL,
+			MAKEINTRESOURCE(survival ? IDR_SURVIVAL_SPG : IDR_SPG),
+			"BZ2"));
 		HGLOBAL resource(LoadResource(NULL, resource_info));
 		compressed_buffer = ri_cast<BYTE*>(LockResource(resource));
 		// uncompress
@@ -1667,7 +1672,9 @@ void CProjectManager::SaveSPG(const TCHAR *path, const TCHAR *folder_name, bool 
 	// sign out map info, as it will be needed for the following replacements
 	const CMapInfo &map_data(map_info.SignOutConst());
 	// set Frame positions
-	for (int i(1); i != 5; ++i)
+	const unsigned int pos_range_start(survival ? 0 : 1);
+	const unsigned int pos_range_end  (survival ? 1 : 5);
+	for (size_t i(pos_range_start); i != pos_range_end; ++i)
 	{
 		char target[] = "%frame_position_X%";
 		itoa(i, target + sizeof(target) - 3, 10);
@@ -1688,39 +1695,36 @@ void CProjectManager::SaveSPG(const TCHAR *path, const TCHAR *folder_name, bool 
 		spg_iter2 += sizeof(target) - 1;
 	}
 	// set camera positions
-	for (int i(1); i != 5; ++i)
+	for (size_t i(pos_range_start); i != pos_range_end; ++i)
 	{
 		char target[] = "%camera_position_X%";
 		itoa(i, target + sizeof(target) - 3, 10);
 		// replace both occurences
-		for (int j(0); j != 2; ++j)
+		spg_iter1 = spg_iter2;
+		spg_iter2 = strstr(spg_iter2, target);
+		if (NULL == spg_iter2)
 		{
-			spg_iter1 = spg_iter2;
-			spg_iter2 = strstr(spg_iter2, target);
-			if (NULL == spg_iter2)
-			{
-				Error(_T("Program seems to have been corrupted. Please reinstall."));
-				map_info.SignIn();
-				delete [] spg;
-				return;
-			}
-			spg_out.write(spg_iter1, spg_iter2 - spg_iter1);
-			if (survival)
-				spg_out << map_data.start_pos[0].x << " " << map_data.start_pos[0].y;
-			else
-				spg_out << map_data.start_pos[i].x << " " << map_data.start_pos[i].y;
-			spg_iter2 += sizeof(target) - 1;
+			Error(_T("Program seems to have been corrupted. Please reinstall."));
+			map_info.SignIn();
+			delete [] spg;
+			return;
 		}
+		spg_out.write(spg_iter1, spg_iter2 - spg_iter1);
+		if (survival)
+			spg_out << map_data.start_pos[0].x << " " << map_data.start_pos[0].y;
+		else
+			spg_out << map_data.start_pos[i].x << " " << map_data.start_pos[i].y;
+		spg_iter2 += sizeof(target) - 1;
 	}
 	// sign in map info
 	map_info.SignIn();
 	// output the rest of the data
-	spg_out.write(spg_iter2, spg_size - (spg_iter2 - spg));
+	spg_out.write(spg_iter2, spg_size - (spg_iter2 - spg) - 1); // minus one for the terminating zero
 	// clean up
 	delete [] spg;
 }
 
-void CProjectManager::SaveSPH(const TCHAR *path, const TCHAR *folder_name, bool survival)
+void CProjectManager::SaveSPH(const TCHAR *path, const TCHAR *folder_name, const bool survival)
 {
 	const size_t sph_alloc(4096); // 4 KB should be enough
 	size_t sph_size(sph_alloc);
@@ -1756,7 +1760,37 @@ void CProjectManager::SaveSPH(const TCHAR *path, const TCHAR *folder_name, bool 
 	// create an output stream
 	ofstream sph_out(path, ios_base::binary | ios_base::out);
 	// set map name
-	for (int i(0); i != 2; ++i)
+	{
+		char target[] = "%folder_name%";
+		sph_iter1 = sph_iter2;
+		sph_iter2 = strstr(sph_iter2, target);
+		if (NULL == sph_iter2)
+		{
+			Error(_T("Program seems to have been corrupted. Please reinstall."));
+			delete [] sph;
+			return;
+		}
+		sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
+		sph_out << folder_name;
+		sph_iter2 += sizeof(target) - 1;
+	}
+	// set the number of players
+	{
+		char target[] = "%player_count%";
+		sph_iter1 = sph_iter2;
+		sph_iter2 = strstr(sph_iter2, target);
+		if (NULL == sph_iter2)
+		{
+			Error(_T("Program seems to have been corrupted. Please reinstall."));
+			delete [] sph;
+			return;
+		}
+		sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
+		char *player_count(survival ? "1" : "4");
+		sph_out << player_count;
+		sph_iter2 += sizeof(target) - 1;
+	}
+	// set map path
 	{
 		char target[] = "%folder_name%";
 		sph_iter1 = sph_iter2;
@@ -1769,14 +1803,14 @@ void CProjectManager::SaveSPH(const TCHAR *path, const TCHAR *folder_name, bool 
 		}
 		sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
 		string map_name;
-		if (survival && i == 1)
+		if (survival)
 			map_name = "survival\\\\";
 		map_name += folder_name;
 		sph_out << map_name;
 		sph_iter2 += sizeof(target) - 1;
 	}
 	// output the rest of the data
-	sph_out.write(sph_iter2, sph_size - (sph_iter2 - sph));
+	sph_out.write(sph_iter2, sph_size - (sph_iter2 - sph) - 1); // minus one for the terminating zero
 	// clean up
 	delete [] sph;
 }
@@ -1950,7 +1984,7 @@ void CProjectManager::SaveVMP(const TCHAR *path)
 		heightmap.SignIn();
 	}
 	// interpolate heightmap
-	StackBlur(int_heightmap, map_size.cx + 1, map_size.cy + 1, 2);
+	StackBlur(int_heightmap, map_size.cx + 1, map_size.cy + 1, 4);
 	// fill the second layer with the heightmap
 	{
 		const int  *int_heightmap_iter(int_heightmap);

@@ -169,7 +169,7 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
 END
 
-IDD_INFO_DLG DIALOGEX 0, 0, 121, 157
+IDD_INFO_DLG DIALOGEX 0, 0, 121, 170
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "Details"
@@ -234,6 +234,18 @@ BEGIN
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
                     UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,135,11,
                     14
+    EDITTEXT        IDC_SP0_X,26,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP0_X_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,150,11,
+                    14
+    EDITTEXT        IDC_SP0_Y,76,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_DISABLED
+    CONTROL         "",IDC_SP0_Y_SPIN,"msctls_updown32",UDS_WRAP | 
+                    UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,150,11,
+                    14
     LTEXT           "y",IDC_STATIC,68,108,8,8
     LTEXT           "Zero-level (0-255)",IDC_STATIC,7,20,64,8
     LTEXT           "Fog End",IDC_STATIC,7,48,64,8
@@ -249,10 +261,13 @@ BEGIN
     LTEXT           "y",IDC_STATIC,68,123,8,8
     LTEXT           "x",IDC_STATIC,18,138,8,8
     LTEXT           "y",IDC_STATIC,68,138,8,8
+    LTEXT           "x",IDC_STATIC,18,153,8,8
+    LTEXT           "y",IDC_STATIC,68,153,8,8
     LTEXT           "1:",IDC_STATIC,7,93,8,8
     LTEXT           "2:",IDC_STATIC,7,108,8,8
     LTEXT           "3:",IDC_STATIC,7,123,8,8
     LTEXT           "4:",IDC_STATIC,7,138,8,8
+    LTEXT           "0:",IDC_STATIC,7,153,8,8
 END
 
 IDD_PREFERENCES DIALOGEX 0, 0, 173, 141
@@ -355,7 +370,7 @@ BEGIN
         VERTGUIDE, 71
         VERTGUIDE, 76
         TOPMARGIN, 7
-        BOTTOMMARGIN, 150
+        BOTTOMMARGIN, 163
     END
 
     IDD_PREFERENCES, DIALOG
@@ -408,6 +423,7 @@ IDR_WORLDS_LIST         TEXT                    "resource/worlds_list.txt"
 
 IDR_SPG                 BZ2                     "resource/spg.bz2"
 IDR_SPH                 BZ2                     "resource/sph.bz2"
+IDR_SURVIVAL_SPG        BZ2                     "resource\\survival_spg.bz2"
 
 /////////////////////////////////////////////////////////////////////////////
 //

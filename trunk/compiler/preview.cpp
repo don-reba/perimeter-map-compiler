@@ -36,7 +36,7 @@ CPreview::CPreview(
 	,map_info_thread  (NULL)
 	,texture_thread   (NULL)
 	,is_busy          (false)
-	,world_stretch    (1.5f)
+	,world_stretch    (1.3f)
 	,active_vb        (NULL)
 	,last_vb_access   (0)
 	,track_usage      (true)
@@ -1056,7 +1056,7 @@ void CPreview::BuildVB()
 	// change window title
 	{
 		TCHAR poly_num_str[16];
-		_itot(vertices.size() / 6, poly_num_str, 10);
+		_itot(vertices.size() / 3, poly_num_str, 10);
 		string window_text = "Map Preview (";
 		window_text.append(poly_num_str);
 		window_text.append(" polygons)");

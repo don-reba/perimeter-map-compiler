@@ -326,7 +326,7 @@ MissionDescriptionPrm = {
 		}
 	};
 	missionNumber = -1;
-	playerAmountScenarioMax = 4;
+	playerAmountScenarioMax = %player_count%;
 	playersShufflingIndices = {
 		4;
 		0,
@@ -340,3 +340,4 @@ MissionDescriptionPrm = {
 	gamePaused = false;
 	originalSaveName = "resource\\battle\\%folder_name%.spg";
 };
+ 

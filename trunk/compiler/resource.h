@@ -37,6 +37,9 @@
 #define IDD_MAP_MANAGER                 173
 #define IDR_TEXT2                       175
 #define IDR_WORLDS_LIST                 175
+#define IDR_SURIVAL_SPG                 177
+#define IDR_SURVIVAL_SPG                177
+#define IDR_BZ22                        178
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_MAP_NAME                    1001
@@ -105,7 +108,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        176
+#define _APS_NEXT_RESOURCE_VALUE        179
 #define _APS_NEXT_COMMAND_VALUE         32800
 #define _APS_NEXT_CONTROL_VALUE         1040
 #define _APS_NEXT_SYMED_VALUE           110
