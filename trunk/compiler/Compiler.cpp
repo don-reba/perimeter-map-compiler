@@ -2,6 +2,7 @@
 //
 
 #include "stdafx.h"
+#include "about.h"
 #include "Compiler.h"
 #include "shlobj.h"
 
@@ -29,6 +30,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                      LPTSTR    lpCmdLine,
                      int       nCmdShow)
 {
+	InitCommonControls();
+
 	MSG msg;
 	HACCEL hAccelTable;
 
@@ -103,25 +106,6 @@ LRESULT CALLBACK CCompiler::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-}
-
-// Message handler for about box.
-LRESULT CALLBACK CCompiler::About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return TRUE;
-
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) 
-		{
-			EndDialog(hDlg, LOWORD(wParam));
-			return TRUE;
-		}
-		break;
-	}
-	return FALSE;
 }
 // select a directory for a new project folder via the standard BrowseForFolder dialog
 string CCompiler::FolderDlg(HWND hWnd, TCHAR *title)
@@ -503,8 +487,10 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 		preferences.Create(hWnd);
 		break;
 	case IDM_ABOUT:
-		DialogBox(hInstance, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)About);
-		break;
+		{
+			CAbout about_dlg;
+			about_dlg.DoModal(hInstance, hWnd);
+		} break;
 	case IDM_EXIT:
 		DestroyWindow(hWnd);
 		break;

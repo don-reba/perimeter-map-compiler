@@ -170,7 +170,7 @@ string CMapInfo::GenerateWorldIni() const
 }
 
 // for check sum computation
-BYTE *CMapInfo::GetBinaryBlock() const
+size_t CMapInfo::GetBinaryBlock(BYTE *buffer) const
 {
 	// define data sizes
 	map<string, size_t> size_map;
@@ -192,7 +192,7 @@ BYTE *CMapInfo::GetBinaryBlock() const
 			buffer_size += i->second;
 	}
 	// allocate memory
-	BYTE *buffer(new BYTE[buffer_size]);    // start_pos
+	buffer = new BYTE[buffer_size]; // start_pos
 	BYTE *buffer_i(buffer);
 	// map_name size
 	{
@@ -224,7 +224,7 @@ BYTE *CMapInfo::GetBinaryBlock() const
 	// fog_colour
 	CopyMemory(buffer_i, start_pos, size_map["start_pos"]);
 	buffer_i += size_map["start_pos"];
-	return buffer;
+	return buffer_size;
 }
 
 void CMapInfo::SaveToXml(TiXmlNode &node) const

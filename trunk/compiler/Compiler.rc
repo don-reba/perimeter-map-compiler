@@ -308,7 +308,6 @@ CAPTION "About Perimeter Map Compiler"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,116,112,50,14
-    ICON            IDI_SHRUB_ACTIVE,IDC_STATIC,7,7,20,20,SS_REALSIZEIMAGE
     LTEXT           "Perimeter Map Compiler 1.0 Beta 3\nCopyright 2005 Don Reba",
                     IDC_STATIC,49,47,177,19
     LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",

@@ -19,10 +19,8 @@ INT_PTR CALLBACK CProjectDlg::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	CProjectDlg *obj = ri_cast<CProjectDlg*>(GetWindowLong(hWnd, DWL_USER));
 	switch (uMsg)
 	{
-	case WM_INITDIALOG:
-		return HANDLE_WM_INITDIALOG(hWnd, wParam, lParam, obj->OnInitDialog);
-	case WM_COMMAND:
-		return HANDLE_WM_COMMAND(hWnd, wParam, lParam, obj->OnCommand);
+		HANDLE_MSG(hWnd, WM_INITDIALOG, obj->OnInitDialog);
+		HANDLE_MSG(hWnd, WM_COMMAND,    obj->OnCommand);
 	}
 	return FALSE;
 }

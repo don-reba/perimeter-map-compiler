@@ -839,16 +839,15 @@ DWORD CProjectManager::CalculateChecksum()
 		texture.SignIn();
 		// set data to map_info
 		{
-			const CMapInfo &map_data(map_info.SignOutConst());
-			data = ri_cast<const BYTE*>(&map_data);
-			length = sizeof(map_data);
+			length = map_info.SignOutConst().GetBinaryBlock(const_cast<BYTE*>(data));
+			map_info.SignIn();
 		}
 		// add to the checksum
 		_ASSERTE(length % 4 == 0 && length >= 4);
 		for (size_t i(0); i != length; ++i)
 			result = (result << 8 | *data++) ^ crctab[result >> 24];
-		// sign in map_info
-		map_info.SignIn();
+		// deallocate memory allocated by GetBinaryBlock
+		delete [] data;
 	}
 	return ~result;
 }

@@ -33,7 +33,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_debug\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Debug\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Debug\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Debug\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Debug_STL\tinyxmld_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib Wininet.lib"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_debug\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Debug\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Debug\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Debug\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Debug_STL\tinyxmld_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib Wininet.lib"
 				OutputFile="$(OutDir)/Compiler.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="TRUE"
@@ -92,7 +92,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_release\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Release\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Release\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\RELEASE\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Release_STL\tinyxml_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9dt.lib d3d9.lib Wininet.lib"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_release\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Release\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Release\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\RELEASE\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Release_STL\tinyxml_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9dt.lib d3d9.lib Wininet.lib"
 				OutputFile="$(OutDir)/Compiler.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
@@ -129,6 +129,9 @@
 			Name="Source Files"
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
+			<File
+				RelativePath=".\about.cpp">
+			</File>
 			<File
 				RelativePath=".\btdb.cpp">
 			</File>
@@ -182,6 +185,9 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+			<File
+				RelativePath=".\about.h">
+			</File>
 			<File
 				RelativePath=".\btdb.h">
 			</File>
@@ -239,7 +245,13 @@
 				RelativePath=".\Compiler.ico">
 			</File>
 			<File
+				RelativePath=".\resource\compiler.ico">
+			</File>
+			<File
 				RelativePath=".\Compiler.rc">
+			</File>
+			<File
+				RelativePath=".\resource\details window.ico">
 			</File>
 			<File
 				RelativePath=".\details window.ico">
@@ -252,6 +264,9 @@
 			</File>
 			<File
 				RelativePath=".\icon2.ico">
+			</File>
+			<File
+				RelativePath=".\resource\preview window.ico">
 			</File>
 			<File
 				RelativePath=".\preview window.ico">
@@ -269,6 +284,12 @@
 				RelativePath=".\shrub.ico">
 			</File>
 			<File
+				RelativePath=".\resource\shrub.ico">
+			</File>
+			<File
+				RelativePath=".\resource\shrub2.ico">
+			</File>
+			<File
 				RelativePath=".\shrub2.ico">
 			</File>
 			<File
@@ -278,7 +299,13 @@
 				RelativePath=".\stat window.ico">
 			</File>
 			<File
+				RelativePath=".\resource\stat window.ico">
+			</File>
+			<File
 				RelativePath=".\Triangle.bmp">
+			</File>
+			<File
+				RelativePath=".\resource\triangle.ico">
 			</File>
 			<File
 				RelativePath=".\triangle.ico">
@@ -352,6 +379,9 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\resource\spg.bz2">
+		</File>
+		<File
 			RelativePath=".\spg.bz2">
 		</File>
 		<File
@@ -361,6 +391,12 @@
 			RelativePath=".\sph.bz2">
 		</File>
 		<File
+			RelativePath=".\resource\sph.bz2">
+		</File>
+		<File
+			RelativePath=".\resource\world.ini">
+		</File>
+		<File
 			RelativePath=".\world.ini">
 		</File>
 		<File
@@ -368,6 +404,9 @@
 		</File>
 		<File
 			RelativePath=".\worlds_list.txt">
+		</File>
+		<File
+			RelativePath=".\resource\worlds_list.txt">
 		</File>
 	</Files>
 	<Globals>

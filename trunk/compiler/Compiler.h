@@ -24,7 +24,6 @@ public:
 	~CCompiler();
 	// window functions
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	static LRESULT CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 	string FolderDlg(HWND hWNd, TCHAR *title);
 	BOOL   InitInstance(int nCmdShow);
 	ATOM   MyRegisterClass();

@@ -118,20 +118,20 @@ public:
 protected:
 	// window functions
 	static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	BOOL   OnCaptureChanged(HWND hWnd, HWND capture_reciever);
-	BOOL   OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify);
-	BOOL   OnDestroy(HWND hWnd);
-	BOOL   OnEraseBkgnd(HWND hWnd, HDC hDC);
-	BOOL   OnInitDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam);
-	BOOL   OnKeyDown(HWND hWnd, UINT vk, BOOL fDown, int cRepeat, UINT flags);
-	BOOL   OnLButtonDown(HWND hWnd, BOOL fDoubleClick, int x, int y, UINT keyFlags);
-	BOOL   OnLButtonUp(HWND hWnd, int x, int y, UINT keyFlags);
-	BOOL   OnMouseMove(HWND hWnd, int x, int y, UINT codeHitTest);
-	BOOL   OnMouseWheel(HWND hWnd, int xPos, int yPos, int zDelta, UINT fwKeys);
-	BOOL   OnPaint(HWND hWnd);
-	BOOL   OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg);
-	BOOL   OnShowWindow(HWND hWnd, BOOL fShow, UINT status);
-	BOOL   OnSize(HWND hWnd, UINT state, int cx, int cy);
+	BOOL OnCaptureChanged(HWND hWnd, HWND capture_reciever);
+	BOOL OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify);
+	BOOL OnDestroy(HWND hWnd);
+	BOOL OnEraseBkgnd(HWND hWnd, HDC hDC);
+	BOOL OnInitDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam);
+	BOOL OnKeyDown(HWND hWnd, UINT vk, BOOL fDown, int cRepeat, UINT flags);
+	BOOL OnLButtonDown(HWND hWnd, BOOL fDoubleClick, int x, int y, UINT keyFlags);
+	BOOL OnLButtonUp(HWND hWnd, int x, int y, UINT keyFlags);
+	BOOL OnMouseMove(HWND hWnd, int x, int y, UINT codeHitTest);
+	BOOL OnMouseWheel(HWND hWnd, int xPos, int yPos, int zDelta, UINT fwKeys);
+	BOOL OnPaint(HWND hWnd);
+	BOOL OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg);
+	BOOL OnShowWindow(HWND hWnd, BOOL fShow, UINT status);
+	BOOL OnSize(HWND hWnd, UINT state, int cx, int cy);
 	// DX functions
 	void InitializeDevice();
 	void Render();

@@ -22,7 +22,7 @@ public:
 	void   SaveCriticalInfo(const string &file_name) const;
 	void   Load(string file_name);
 	string GenerateWorldIni() const;
-	BYTE  *GetBinaryBlock() const;
+	size_t GetBinaryBlock(BYTE *buffer) const;
 	void   SaveToXml(TiXmlNode &node) const;
 	void   LoadFromXml(TiXmlNode *node);
 protected:
