@@ -22,6 +22,7 @@ public:
 		// data
 		D3DCOLOR zero_layer_colour;
 		float    threshold;
+		bool     enable_lighting;
 	protected:
 		CPreview *parent;
 	};
@@ -106,7 +107,8 @@ public:
 	CPreview(
 		CData<CStaticArray<BYTE> > *heightmap,
 		CData<CPalettedTexture>    *texture,
-		CData<CMapInfo>            *map_info);
+		CData<CMapInfo>            *map_info,
+		CData<CStaticArray<BYTE> > *lightmap);
 	~CPreview(void);
 public:
 	// interface
@@ -187,6 +189,7 @@ protected:
 	CData<CStaticArray<BYTE> > *heightmap;
 	CData<CPalettedTexture>    *texture;
 	CData<CMapInfo>            *map_info;
+	CData<CStaticArray<BYTE> > *lightmap;
 	string tmp_file_path;
 	HANDLE tmp_file;
 	FLOAT zero_plast;

@@ -30,6 +30,7 @@ public:
 		void Update();
 		// data
 		bool texture_colour_quality;
+		bool enable_lighting;
 	private:
 		CProjectManager *parent;
 	};
@@ -71,6 +72,7 @@ private:
 	void   CleanUp();
 	void   CreateHeightmapThread();
 	void   CreateTextureThread();
+	void   CreateLightMap(const BYTE *heightmap, SIZE size);
 	DWORD  CalculateChecksum();
 	void   DefaultHeightmap();
 	void   DefaultMapInfo();
@@ -109,6 +111,7 @@ protected:
 	CData<CStaticArray<BYTE> > heightmap;
 	CData<CPalettedTexture>    texture;
 	CData<CMapInfo>            map_info;
+	CData<CStaticArray<BYTE> > lightmap;
 	CInfoManager info_manager;
 	CPreview     preview;
 	CStatManager stat_manager;

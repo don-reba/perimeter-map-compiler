@@ -20,7 +20,7 @@ using namespace std;
 
 CProjectManager::CProjectManager(void) :
 	stat_manager     (&heightmap, &texture, &map_info),
-	preview          (&heightmap, &texture, &map_info),
+	preview          (&heightmap, &texture, &map_info, &lightmap),
 	info_manager     (&map_info, GenerateId()),
 	file_timer       (NULL),
 	heightmap_thread (NULL),
@@ -768,6 +768,68 @@ void CProjectManager::CreateTextureThread()
 	texture_thread = CreateThread(NULL, 0, TextureLoadThreadProc, this, 0, &thread_id);
 }
 
+void CProjectManager::CreateLightMap(const BYTE *heightmap, SIZE size)
+{
+	// ASSUME the length of each row of the heightmap is size.cx + 1
+	// sign out the lightmap
+	CStaticArray<BYTE> &lightmap_data(lightmap.SignOut());
+	// allocate new memory if necessary
+	{
+		const size_t new_size(size.cx * size.cy);
+		if (new_size != lightmap_data.length)
+		{
+			delete [] lightmap_data.ptr;
+			lightmap_data.ptr = new BYTE[new_size];
+			lightmap_data.length = new_size;
+		}
+	}
+	// calculate lighting
+	const BYTE *i(heightmap);    // heightmap iterator
+	BYTE *li(lightmap_data.ptr); // lightmap iterator
+	for (LONG r(0); r != size.cy; ++r)
+	{
+		const BYTE * row_i(i + size.cx);
+		int          high_point_z(*row_i);
+		const BYTE * high_point_x(row_i);
+		li += size.cx;
+		while (row_i != i)
+		{
+			--li;
+			--row_i;
+			const ptrdiff_t point_x(high_point_x - row_i);
+			const int       point_z(*row_i);
+			if (high_point_z - point_z < point_x)
+			// if the point is unshadowed
+			{
+				const float dx(1.0f);
+				const float dy(static_cast<float>(row_i[0] - row_i[1]));
+				float length(sqrt(2 * (dx * dx + dy * dy)));
+				float dot((dx + dy) / length);
+				*li = (BYTE)(255 * dot);
+				high_point_z = point_z;
+				high_point_x = row_i;
+			}
+			else
+				*li = 0x00;
+		}
+		li += size.cx;
+		i += size.cx + 1;
+	}
+	// blur the lightmap (fake soft shadows :) )
+	{
+		const size_t lightmap_size(size.cx * size.cy);
+		int *int_lightmap(new int[lightmap_size]);
+		for (size_t i(0); i != lightmap_size; ++i)
+			int_lightmap[i] = lightmap_data.ptr[i];
+		StackBlur(int_lightmap, size.cx, size.cy, 4);
+		for (size_t i(0); i != lightmap_size; ++i)
+			lightmap_data.ptr[i] = static_cast<BYTE>(int_lightmap[i]);
+		delete [] int_lightmap;
+	}
+	// sign in the lightmap
+	lightmap.SignIn();
+}
+
 DWORD CProjectManager::CalculateChecksum()
 {
 	const DWORD QUOTIENT(0x04c11db7);
@@ -1174,6 +1236,9 @@ void CProjectManager::LoadHeightmap()
 	}
 	// pad vertically
 	CopyMemory(heightmap_iter, heightmap_iter - (map_size.cx + 1), map_size.cx + 1);
+	// calculate the lightmap
+	if (settings.enable_lighting)
+		CreateLightMap(heightmap_data.ptr, map_size);
 	// wrap up
 	heightmap.SignIn();
 	heightmap.Update(0);
@@ -1855,31 +1920,34 @@ void CProjectManager::SaveThumb(const TCHAR *path)
 		map_info.SignIn();
 	}
 	// initialize the map preview image
-	fipImage image(FIT_BITMAP, static_cast<WORD>(map_size.cx), static_cast<WORD>(map_size.cy), 8);
-	image.convertTo8Bits();
-	const CPalettedTexture &texture_data(texture.SignOutConst());
-	// copy indices
-	CopyMemory(image.accessPixels(), texture_data.ptr, texture_data.length);
-	// copy palette
+	fipImage image(FIT_BITMAP, static_cast<WORD>(map_size.cx), static_cast<WORD>(map_size.cy), 24);
+	// if lighting data has not been initialized alread, do it now
+	if (!lightmap.IsValid())
 	{
-		RGBQUAD  *image_palette(image.getPalette());
-		const COLORREF *texture_palette(texture_data.palette);
-		int palette_size(min(256, image.getPaletteSize() / 4));
-		for (int i(0); i != palette_size; ++i)
-		{
-			image_palette->rgbRed   = GetRValue(*texture_palette);
-			image_palette->rgbGreen = GetGValue(*texture_palette);
-			image_palette->rgbBlue  = GetBValue(*texture_palette);
-			++image_palette;
-			++texture_palette;
-		}
+		CreateLightMap(heightmap.SignOutConst().ptr, map_size);
+		heightmap.SignIn();
 	}
-	texture.SignIn();
-	// convert to 24-bit color for further processing
-	if (FALSE == image.convertTo24Bits())
+	// fill the image with data from the texture and from the lightmap
 	{
-		Error(_T("fipImage::convertTo24Bits failed"));
-		return;
+		const CPalettedTexture &texture_data(texture.SignOutConst());
+		const BYTE *lightmap_i(lightmap.SignOutConst().ptr);
+		const BYTE *texture_i(texture_data.ptr);
+		const BYTE * const texture_end(texture_i + texture_data.length);
+		BYTE *image_i(image.accessPixels());
+		while (texture_i != texture_end)
+		{
+			float f_light(static_cast<float>(*lightmap_i));
+			f_light = (f_light + 128.0f) / 255.0f;
+			COLORREF colour(texture_data.palette[*texture_i]);
+			image_i[0] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetBValue(colour) * f_light)));
+			image_i[1] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetGValue(colour) * f_light)));
+			image_i[2] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetRValue(colour) * f_light)));
+			image_i += 3;
+			++texture_i;
+			++lightmap_i;
+		}
+		lightmap.SignIn();
+		texture.SignIn();
 	}
 	// paint all pixels underneath which the heightmap is zero black
 	{
@@ -2388,7 +2456,13 @@ void CProjectManager::CSerializable::Save(string file_name)
 	WritePrivateProfileString(
 		section_name,
 		_T("texture colour"),
-		texture_colour_quality ? _T("quality") : ("speed"),
+		texture_colour_quality ? _T("quality") : _T("speed"),
+		file_name.c_str());
+	// enable_lighting
+	WritePrivateProfileString(
+		section_name,
+		_T("enable lighting"),
+		enable_lighting ? _T("true") : _T("false"),
 		file_name.c_str());
 }
 
@@ -2407,13 +2481,44 @@ void CProjectManager::CSerializable::Load(string file_name)
 		buffer_size,
 		file_name.c_str());
 	texture_colour_quality = (0 == _tcscmp(buffer, _T("quality")));
+	// enable_lighting
+	GetPrivateProfileString(
+		section_name,
+		_T("enable lighting"),
+		_T("true"),
+		buffer,
+		buffer_size,
+		file_name.c_str());
+	enable_lighting = (0 == _tcscmp(buffer, _T("true")));
 }
 
 void CProjectManager::CSerializable::Update()
 {
+	if (parent->settings.enable_lighting)
+	{
+		if (parent->heightmap.IsValid())
+		{
+			// get dimensions of the map
+			SIZE map_size;
+			{
+				const CMapInfo &map_data(parent->map_info.SignOutConst());
+				map_size.cx = parent->exp2(map_data.map_power_x);
+				map_size.cy = parent->exp2(map_data.map_power_y);
+				parent->map_info.SignIn();
+			}
+			// create the lightmap
+			parent->CreateLightMap(parent->heightmap.SignOutConst().ptr, map_size);
+			parent->heightmap.SignIn();
+		}
+	}
+	else
+	{
+		CStaticArray<BYTE> &lightmap(parent->lightmap.SignOut());
+		delete [] lightmap.ptr;
+		lightmap.length = 0;
+		parent->lightmap.SignIn();
+	}
 	// schedule to update the texture soon
-//	InterlockedExchange(&parent->texture_time.dwLowDateTime,  numeric_limits<DWORD>::min());
-//	InterlockedExchange(&parent->texture_time.dwHighDateTime, numeric_limits<DWORD>::min());
 	parent->texture_time.dwLowDateTime  = numeric_limits<DWORD>::min();
 	parent->texture_time.dwHighDateTime = numeric_limits<DWORD>::min();
 };

@@ -161,9 +161,9 @@ string CMapInfo::GenerateWorldIni() const
 	_stprintf(
 		str,
 		_T("%u %u %u"),
-		(fog_colour & 0x00FF0000) >> 16,
-		(fog_colour & 0x0000FF00) >> 8 ,
-		(fog_colour & 0x000000FF) >> 0 );
+		(fog_colour & 0x000000FF) >> 0,
+		(fog_colour & 0x0000FF00) >> 8,
+		(fog_colour & 0x00FF0000) >> 16);
 	ReplaceSubstring(world_ini, "%fog_colour%", str);
 	return world_ini;
 }

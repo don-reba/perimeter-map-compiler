@@ -67,6 +67,8 @@ public:
 	}
 	const data_type &SignOutConst()
 	{
+		while (!is_valid)
+			Sleep(128);
 		EnterCriticalSection(&critical_section);
 		return data;
 	}

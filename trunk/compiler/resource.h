@@ -42,6 +42,7 @@
 #define IDR_BZ22                        178
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
+#define IDC_LIGHTING                    1000
 #define IDC_MAP_NAME                    1001
 #define IDC_AVE_HEIGHT                  1004
 #define IDC_AVE_COLOR                   1005
@@ -92,6 +93,7 @@
 #define IDC_TEXTURE_COLOUR_QUALITY2     1040
 #define IDC_TEXTURE_COLOUR_SPEED        1040
 #define IDC_TEXTURE_COLOUR_QUALITY      1041
+#define IDC_CHECK1                      1042
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -110,7 +112,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        179
 #define _APS_NEXT_COMMAND_VALUE         32800
-#define _APS_NEXT_CONTROL_VALUE         1040
+#define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

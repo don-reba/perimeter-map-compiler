@@ -158,6 +158,10 @@ BOOL CPreferences::OnInitDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
 			IDC_TEXTURE_COLOUR_QUALITY,
 			project_settings->texture_colour_quality ? IDC_TEXTURE_COLOUR_QUALITY : IDC_TEXTURE_COLOUR_SPEED);
 	}
+	// lighting
+	{
+		CheckDlgButton(hWnd, IDC_LIGHTING, project_settings->enable_lighting ? TRUE : FALSE);
+	}
 	// wrap up
 	project_settings->SignIn();
 	preview_settings->SignIn();
@@ -170,9 +174,12 @@ void CPreferences::Apply()
 	{
 		// texture_colour_quality
 		bool texture_colour_quality(BST_CHECKED == IsDlgButtonChecked(hWnd, IDC_TEXTURE_COLOUR_QUALITY));
+		// enable_lighting
+		bool enable_lighting(BST_CHECKED == IsDlgButtonChecked(hWnd, IDC_LIGHTING));
 		// commit settings
 		project_settings->SignOut();
 		project_settings->texture_colour_quality = texture_colour_quality;
+		project_settings->enable_lighting        = enable_lighting;
 		project_settings->SignIn();
 		// update
 		project_settings->Update();
@@ -180,8 +187,9 @@ void CPreferences::Apply()
 	// map preview
 	{
 		// get control info
-		float threshold(3.0f);
+		float        threshold(3.0f);
 		unsigned int opacity(0x28);
+		bool         enable_lighting(true);
 		// threshold
 		{
 			HWND ctrl(GetDlgItem(hWnd, IDC_LOD));
@@ -194,8 +202,12 @@ void CPreferences::Apply()
 		}
 		// opacity
 		{
-			opacity = GetDlgItemInt(hWnd, IDC_ZERO_PLAST_OPACITY, NULL, FALSE);
+			opacity = GetDlgItemInt(hWnd, IDC_LIGHTING, NULL, FALSE);
 			opacity = __min(255, opacity);
+		}
+		// enable_lighting
+		{
+			enable_lighting = BST_CHECKED == IsDlgButtonChecked(hWnd, IDC_LIGHTING);
 		}
 		// commit settings
 		preview_settings->SignOut();
@@ -205,6 +217,7 @@ void CPreferences::Apply()
 			GetRValue(zero_plast_colour),
 			GetGValue(zero_plast_colour),
 			GetBValue(zero_plast_colour));
+		preview_settings->enable_lighting = enable_lighting;
 		preview_settings->SignIn();
 		// update
 		preview_settings->Update();

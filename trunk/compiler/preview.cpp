@@ -18,10 +18,12 @@ const int texture_height(1024);
 CPreview::CPreview(
 	CData<CStaticArray<BYTE> > *heightmap,
 	CData<CPalettedTexture>    *texture,
-	CData<CMapInfo>            *map_info)
+	CData<CMapInfo>            *map_info,
+	CData<CStaticArray<BYTE> > *lightmap)
 	:heightmap        (heightmap)
 	,texture          (texture)
 	,map_info         (map_info)
+	,lightmap         (lightmap)
 	,heightmap_valid  (false)
 	,map_info_valid   (false)
 	,texture_valid    (false)
@@ -679,7 +681,7 @@ void CPreview::Render()
 				// render the frame markers
 				{
 					CAutoCriticalSection auto_billboard_section(&billboard_section);
-					for (int i(1); i != 5; ++i)
+					for (int i(0); i != 5; ++i)
 					{
 						// set marker position
 						{
@@ -845,8 +847,8 @@ DWORD WINAPI CPreview::MapInfoThreadProc(LPVOID lpParameter)
 		obj->device->SetRenderState(
 			D3DRS_FOGCOLOR,
 			D3DCOLOR_ARGB(0, GetRValue(map_data.fog_colour), GetGValue(map_data.fog_colour), GetBValue(map_data.fog_colour)));
-		obj->device->SetRenderState(D3DRS_FOGSTART, *((DWORD*) (&fog_start)));
-		obj->device->SetRenderState(D3DRS_FOGEND,   *((DWORD*) (&fog_end)));
+		obj->device->SetRenderState(D3DRS_FOGSTART, *(ri_cast<DWORD*>(&fog_start)));
+		obj->device->SetRenderState(D3DRS_FOGEND,   *(ri_cast<DWORD*>(&fog_end)));
 		obj->map_info_valid = true;
 	}
 	// check in map info
@@ -855,6 +857,7 @@ DWORD WINAPI CPreview::MapInfoThreadProc(LPVOID lpParameter)
 	ResumeThread(obj->heightmap_thread);
 	ResumeThread(obj->texture_thread);
 	// redraw
+	obj->MakeViewMatrix();
 	InvalidateRect(obj->hWnd, NULL, TRUE);
 	// wrap up
 	obj->ToggleWaitCursor(false);
@@ -1119,6 +1122,15 @@ void CPreview::InitializeTextures()
 	_ASSERTE(map_size.cy >= texture_height);
 	_ASSERTE(map_size.cx % texture_width  == 0);
 	_ASSERTE(map_size.cy % texture_height == 0);
+	// get lightmap data, if necessary
+	const bool enable_lighting(settings.enable_lighting);
+	const BYTE *lightmap_ptr;
+	if (enable_lighting)
+	{
+		while (!lightmap->IsValid())
+			Sleep(200);
+		lightmap_ptr = lightmap->SignOutConst().ptr;
+	}
 	// compute constants and variables
 	const CPalettedTexture &texture_data(texture->SignOutConst());
 	const COLORREF *palette(texture_data.palette);
@@ -1160,11 +1172,24 @@ void CPreview::InitializeTextures()
 			{
 				for (int x(0); x != texture_width; ++x)
 				{
-					int index(texture_data.ptr[offset++]);
-					texture_iterator[3] = 0xFF;                      // A
-					texture_iterator[2] = GetRValue(palette[index]); // R
-					texture_iterator[1] = GetGValue(palette[index]); // G
-					texture_iterator[0] = GetBValue(palette[index]); // B
+					const COLORREF colour(palette[texture_data.ptr[offset]]);
+					if (!enable_lighting)
+					{
+						texture_iterator[3] = 0xFF; // alpha
+						texture_iterator[2] = GetRValue(colour);
+						texture_iterator[1] = GetGValue(colour);
+						texture_iterator[0] = GetBValue(colour);
+					}
+					else
+					{
+						float f_light(static_cast<float>(lightmap_ptr[offset]));
+						f_light = (f_light + 128.0f) / 255.0f;
+						texture_iterator[3] = 0xFF; // alpha
+						texture_iterator[2] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetRValue(colour) * f_light)));
+						texture_iterator[1] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetGValue(colour) * f_light)));
+						texture_iterator[0] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetBValue(colour) * f_light)));
+					}
+					++offset;
 					texture_iterator += 4;
 				}
 				offset += map_size.cx - texture_width;
@@ -1181,8 +1206,11 @@ void CPreview::InitializeTextures()
 		}
 		initial_offset += map_size.cx * (texture_height - 1);
 	}
+	// check in resources
 	texture->SignIn();
 	texture_valid = true;
+	if (enable_lighting)
+		lightmap->SignIn();
 }
 
 // sort the vertices by texture and initialize the vertex buffer
@@ -2088,6 +2116,18 @@ void CPreview::CSerializable::Load(string file_name)
 		raw_b = __max(0, __min(255, raw_b));
 		zero_layer_colour |= raw_r << 16 | raw_g << 8 | raw_b;
 	}
+	// enable_lighting
+	{
+		const TCHAR * const section_name(_T("Project Settings")); // HACK
+		GetPrivateProfileString(
+			section_name,
+			_T("enable lighting"),
+			_T("true"),
+			buffer,
+			buffer_size,
+			file_name.c_str());
+		enable_lighting = (0 == _tcscmp(buffer, _T("true")));
+	}
 }
 
 void CPreview::CSerializable::Update()
@@ -2099,5 +2139,7 @@ void CPreview::CSerializable::Update()
 		parent->ReleaseTerrainVBs();
 		parent->BuildVB();
 	}
+	if (parent->texture_valid)
+		parent->InitializeTextures();
 	parent->Render();
 }
