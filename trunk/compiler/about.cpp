@@ -213,6 +213,29 @@ BOOL CAbout::OnMouseMove(HWND hWnd, int x, int y, UINT codeHitTest)
 // WM_SETCURSOR handler
 BOOL CAbout::OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg)
 {
-	SetCursor(LoadCursor(NULL, IDC_HAND));
+	// set cursor to hand in client area, but to normal elsewhere
+	RECT client_rect;
+	POINT cursor_pos;
+	GetClientRect(hWnd, &client_rect);
+	{
+		POINT corner;
+		// top left
+		corner.x = client_rect.left;
+		corner.y = client_rect.top;
+		ClientToScreen(hWnd, &corner);
+		client_rect.left = corner.x;
+		client_rect.top  = corner.y;
+		// bottom right
+		corner.x = client_rect.right;
+		corner.y = client_rect.bottom;
+		ClientToScreen(hWnd, &corner);
+		client_rect.right  = corner.x;
+		client_rect.bottom = corner.y;
+	}
+	GetCursorPos(&cursor_pos);
+	if (TRUE == PtInRect(&client_rect, cursor_pos))
+		SetCursor(LoadCursor(NULL, IDC_HAND));
+	else
+		SetCursor(LoadCursor(NULL, IDC_ARROW));
 	return TRUE;
 }

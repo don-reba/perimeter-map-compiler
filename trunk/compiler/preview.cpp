@@ -679,7 +679,7 @@ void CPreview::Render()
 				// render the frame markers
 				{
 					CAutoCriticalSection auto_billboard_section(&billboard_section);
-					for (int i(0); i != 5; ++i)
+					for (int i(1); i != 5; ++i)
 					{
 						// set marker position
 						{

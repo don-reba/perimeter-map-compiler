@@ -441,7 +441,7 @@ void CProjectManager::Install()
 	{
 		const CMapInfo &map_data(map_info.SignOutConst());
 		PathCombine(str, folder_path, _T("world.ini"));
-		ofstream world_ini(str);
+		ofstream world_ini(str, ios_base::binary | ios_base::out);
 		world_ini << map_data.GenerateWorldIni();
 		map_info.SignIn();
 	}
