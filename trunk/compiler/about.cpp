@@ -82,7 +82,7 @@ VOID CALLBACK CAbout::DrawStroke(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD d
 	if (!obj->painting)
 		return;
 	// seed random number generator
-	srand(time(NULL));
+	srand(clock());
 	// draw a stroke
 	for (size_t r(0); r != brush_size; ++r)
 		for (size_t c(0); c != brush_size; ++c)

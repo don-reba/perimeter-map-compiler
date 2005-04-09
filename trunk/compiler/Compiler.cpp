@@ -397,15 +397,15 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 				string project_folder(FolderDlg(hWnd, "Choose a folder for the new project's files."));
 				if (!project_folder.empty())
 				{
+					ToggleWaitCursor(true);
+					// create the project
+					project.NewProject(project_folder, dlg.map_size, dlg.map_name);
 					// change menu state
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,   MF_ENABLED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT, MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,  MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB, MF_DISABLED | MF_GRAYED);
-					// create the project
-					ToggleWaitCursor(true);
-					project.NewProject(project_folder, dlg.map_size, dlg.map_name);
 					ToggleWaitCursor(false);
 				}
 			}
@@ -415,15 +415,15 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 			string project_file(OpenDlg(hWnd, "Open Project", "Map Project Files (*.pmproj)\0*.pmproj\0"));
 			if (!project_file.empty())
 			{
+				ToggleWaitCursor(true);
+				// open the project
+				project.OpenProject(project_file);
 				// change menu state
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,   MF_ENABLED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT, MF_DISABLED | MF_GRAYED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,  MF_DISABLED | MF_GRAYED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB, MF_DISABLED | MF_GRAYED);
-				// open the project
-				ToggleWaitCursor(true);
-				project.OpenProject(project_file);
 				ToggleWaitCursor(false);
 			}
 		} break;
@@ -443,35 +443,24 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 			string shrub_file(OpenDlg(hWnd, _T("Unpack Shrub"), _T("Shrub Files (*.shrub)\0*.shrub\0")));
 			if (!shrub_file.empty())
 			{
-				// change menu state
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_SAVEPROJECT,  MF_ENABLED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT,  MF_DISABLED | MF_GRAYED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,   MF_DISABLED | MF_GRAYED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,    MF_DISABLED | MF_GRAYED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB,  MF_DISABLED | MF_GRAYED);
 				// unpack the shrub
 				ToggleWaitCursor(true);
-				project.Unpack(shrub_file);
-				ShowWindow(active_shrub, SW_SHOW);
-				ShowWindow(inactive_shrub, SW_HIDE);
+				if (project.Unpack(shrub_file))
+				{
+					// change menu state
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_SAVEPROJECT,  MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT,  MF_DISABLED | MF_GRAYED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,   MF_DISABLED | MF_GRAYED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,    MF_DISABLED | MF_GRAYED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB,  MF_DISABLED | MF_GRAYED);
+					// change the shrub icon
+					ShowWindow(active_shrub, SW_SHOW);
+					ShowWindow(inactive_shrub, SW_HIDE);
+				}
 				ToggleWaitCursor(false);
 			}
 		} break;
-	//case ID_FILE_SAVEPROJECT:
-	//	{
-	//		// change menu state
-	//		EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,    MF_ENABLED);
-	//		EnableMenuItem(GetMenu(hWnd), ID_FILE_SAVEPROJECT,  MF_DISABLED | MF_GRAYED);
-	//		EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_DISABLED | MF_GRAYED);
-	//		// save the shrub as a project
-	//		ToggleWaitCursor(true);
-	//		string project_folder(FolderDlg(hWnd, "Choose the folder to save the project in."));
-	//		project.Save(project_folder);
-	//		ShowWindow(inactive_shrub, SW_SHOW);
-	//		ShowWindow(active_shrub, SW_HIDE);
-	//		ToggleWaitCursor(false);
-	//	} break;
 	case ID_FILE_INSTALLSHRUB:
 		{
 			ToggleWaitCursor(true);

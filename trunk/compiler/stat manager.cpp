@@ -272,10 +272,10 @@ DWORD WINAPI CStatManager::TextureThreadProc(LPVOID lpParameter)
 	do
 	{
 		_ASSERTE(color_iter != color_count + num_colors);
-		if (*color_iter != 0)
-			sum += *color_iter;
+		sum += *color_iter;
 		++color_iter;
 	} while (sum < half_size);
+	--color_iter;
 	median_b = static_cast<BYTE>(color_iter - color_count);
 	// count the number of occurences of each value of green
 	ZeroMemory(color_count, num_colors * sizeof(int));
@@ -290,10 +290,10 @@ DWORD WINAPI CStatManager::TextureThreadProc(LPVOID lpParameter)
 	do
 	{
 		_ASSERTE(color_iter != color_count + num_colors);
-		if (*color_iter != 0)
-			sum += *color_iter;
+		sum += *color_iter;
 		++color_iter;
 	} while (sum < half_size);
+	--color_iter;
 	median_g = static_cast<BYTE>(color_iter - color_count);
 	// count the number of occurences of each value of green
 	ZeroMemory(color_count, num_colors * sizeof(int));
@@ -309,10 +309,10 @@ DWORD WINAPI CStatManager::TextureThreadProc(LPVOID lpParameter)
 	do
 	{
 		_ASSERTE(color_iter != color_count + num_colors);
-		if (*color_iter != 0)
-			sum += *color_iter;
+		sum += *color_iter;
 		++color_iter;
 	} while (sum < half_size);
+	--color_iter;
 	median_r = static_cast<BYTE>(color_iter - color_count);
 	// wrap up
 	obj->texture->SignIn();

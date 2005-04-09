@@ -33,7 +33,7 @@ public:
 	BOOL   OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg);
 	string OpenDlg(HWND hWnd, TCHAR *title, TCHAR *filter);
 	void   ToggleWaitCursor(bool on);
-protected:
+public:
 	// constants
 	static const int MAX_LOADSTRING = 100;
 	// data

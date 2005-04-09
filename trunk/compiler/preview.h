@@ -134,6 +134,7 @@ protected:
 	BOOL OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg);
 	BOOL OnShowWindow(HWND hWnd, BOOL fShow, UINT status);
 	BOOL OnSize(HWND hWnd, UINT state, int cx, int cy);
+	BOOL OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos);
 	// DX functions
 	void InitializeDevice();
 	void Render();
@@ -147,7 +148,7 @@ protected:
 	void    BuildFrameMarker(CBillboard *marker, D3DCOLOR marker_colour);
 	void    BuildZeroLayerVB();
 	void    BuildVB();
-	void    DeleteTerainVBs();
+	void    DeleteTerrainVBs();
 	float   Flatness(int h1, int h2, int v1, int v2, int c, int r) const;
 	void    InitializeTextures();
 	void    InitializeVB(vector<CSimpleVertex> &vertices);
@@ -206,6 +207,7 @@ protected:
 	CRITICAL_SECTION texture_section;
 	CRITICAL_SECTION vb_section;
 	CRITICAL_SECTION zero_layer_vb_section;
+	CRITICAL_SECTION temp_file_section;
 	clock_t          last_vb_access;
 	bool             track_usage;
 	// DX variables

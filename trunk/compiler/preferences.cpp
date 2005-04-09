@@ -202,7 +202,7 @@ void CPreferences::Apply()
 		}
 		// opacity
 		{
-			opacity = GetDlgItemInt(hWnd, IDC_LIGHTING, NULL, FALSE);
+			opacity = GetDlgItemInt(hWnd, IDC_ZERO_PLAST_OPACITY, NULL, FALSE);
 			opacity = __min(255, opacity);
 		}
 		// enable_lighting

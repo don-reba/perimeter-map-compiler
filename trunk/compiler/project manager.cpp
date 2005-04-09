@@ -311,7 +311,7 @@ void CProjectManager::Pack()
 	PathCombine(path, map_info.SignOutConst().folder_path.c_str(), map_name.c_str());
 	map_info.SignIn();
 	PathAddExtension(path, _T(".shrub"));
-	SaveShrub(path, compressed_buffer, compressed_buffer_size + 12);
+	SaveShrub(path, compressed_buffer, compressed_buffer_size);
 	delete [] compressed_buffer;
 	// reassure the user
 	MessageBox(
@@ -321,8 +321,17 @@ void CProjectManager::Pack()
 		MB_ICONINFORMATION | MB_OK);
 }
 
-void CProjectManager::Unpack(string shrub_file)
+bool CProjectManager::Unpack(string shrub_file)
 {
+	// get the folder path
+	{
+		TCHAR temp_folder_path[MAX_PATH];
+		_tcscpy(temp_folder_path, shrub_file.c_str());
+		PathRemoveFileSpec(temp_folder_path);
+		PathAddBackslash(temp_folder_path);
+		map_info.SignOut().folder_path = temp_folder_path;
+		map_info.SignIn();
+	}
 	// load the packed Biboorat from the shrub file
 	BYTE *compressed_buffer;
 	const size_t compressed_buffer_size(LoadFile(shrub_file.c_str(), compressed_buffer));
@@ -335,7 +344,7 @@ void CProjectManager::Unpack(string shrub_file)
 		{
 			Error("the file is not a valid shrub");
 			delete [] compressed_buffer;
-			return;
+			return false;
 		}
 		// check the compression format
 		CopyMemory(word, compressed_buffer + 4, 3);
@@ -343,7 +352,7 @@ void CProjectManager::Unpack(string shrub_file)
 		{
 			Error("the shrub has an unfamiliar format");
 			delete [] compressed_buffer;
-			return;
+			return false;
 		}
 	}
 	// read in the size of the buffer and allocate memory
@@ -351,18 +360,36 @@ void CProjectManager::Unpack(string shrub_file)
 	CopyMemory(&buffer_size, compressed_buffer + 8, 4);
 	BYTE *buffer(new BYTE[buffer_size]);
 	// decompress the shrub
-	if (BZ_OK != BZ2_bzBuffToBuffDecompress(
-		ri_cast<char*>(buffer),
-		&buffer_size,
-		ri_cast<char*>(compressed_buffer + 12),
-		compressed_buffer_size - 12,
-		0,
-		0))
 	{
-		Error(_T("BZ2_bzBuffToBuffDecompress failed"));
-		delete [] buffer;
-		delete [] compressed_buffer;
-		return;
+		int result(BZ2_bzBuffToBuffDecompress(
+			ri_cast<char*>(buffer),
+			&buffer_size,
+			ri_cast<char*>(compressed_buffer + 12),
+			compressed_buffer_size - 12,
+			0,
+			0));
+		if (BZ_OK != result)
+		{
+			switch (result)
+			{
+			case BZ_MEM_ERROR:
+				Error(_T("Insufficient memory for decompression."));
+				break;
+			case BZ_OUTBUFF_FULL:
+			case BZ_DATA_ERROR:
+			case BZ_DATA_ERROR_MAGIC:
+				Error(_T("The shrub file is corrupt."));
+				break;
+			case BZ_UNEXPECTED_EOF:
+				Error(_T("Unexpected end of file during decompression."));
+				break;
+			default:
+				Error(_T("BZ2_bzBuffToBuffDecompress failed"));
+			};
+			delete [] buffer;
+			delete [] compressed_buffer;
+			return false;
+		}
 	}
 	delete [] compressed_buffer;
 	// read in xml information
@@ -375,7 +402,7 @@ void CProjectManager::Unpack(string shrub_file)
 	{
 		Error("the shrub has an unfamiliar format");
 		delete [] buffer;
-		return;
+		return false;
 	}
 	// unpack map_info, heightmap, and texture
 	UnpackMapInfo(content_node->FirstChildElement("map_info"));
@@ -385,6 +412,7 @@ void CProjectManager::Unpack(string shrub_file)
 	delete [] buffer;
 	// set project state
 	project_state = PS_SHRUB;
+	return true;
 }
 
 void CProjectManager::Install()
@@ -2337,6 +2365,7 @@ void CProjectManager::UnpackHeightmap(TiXmlNode *node, BYTE *buffer)
 				++data_ptr;
 			}
 		}
+		CreateLightMap(heightmap_data.ptr, map_size);
 		heightmap.SignIn();
 		heightmap.Update(0);
 	}
@@ -2494,31 +2523,23 @@ void CProjectManager::CSerializable::Load(string file_name)
 
 void CProjectManager::CSerializable::Update()
 {
-	if (parent->settings.enable_lighting)
+	if (PS_PROJECT == parent->project_state)
 	{
-		if (parent->heightmap.IsValid())
-		{
-			// get dimensions of the map
-			SIZE map_size;
-			{
-				const CMapInfo &map_data(parent->map_info.SignOutConst());
-				map_size.cx = parent->exp2(map_data.map_power_x);
-				map_size.cy = parent->exp2(map_data.map_power_y);
-				parent->map_info.SignIn();
-			}
-			// create the lightmap
-			parent->CreateLightMap(parent->heightmap.SignOutConst().ptr, map_size);
-			parent->heightmap.SignIn();
-		}
+		// schedule to update the heightmap soon
+		parent->heightmap_time.dwLowDateTime  = numeric_limits<DWORD>::min();
+		parent->heightmap_time.dwHighDateTime = numeric_limits<DWORD>::min();
+		// schedule to update the texture soon
+		parent->texture_time.dwLowDateTime  = numeric_limits<DWORD>::min();
+		parent->texture_time.dwHighDateTime = numeric_limits<DWORD>::min();
 	}
-	else
+	if (PS_SHRUB == parent->project_state)
 	{
-		CStaticArray<BYTE> &lightmap(parent->lightmap.SignOut());
-		delete [] lightmap.ptr;
-		lightmap.length = 0;
-		parent->lightmap.SignIn();
+		const CMapInfo &map_data(parent->map_info.SignOutConst());
+		TCHAR file_path[MAX_PATH];
+		_tcscpy(file_path, map_data.folder_path.c_str());
+		PathCombine(file_path, file_path, map_data.map_name.c_str());
+		PathAddExtension(file_path, _T(".shrub"));
+		parent->map_info.SignIn();
+		parent->Unpack(file_path);
 	}
-	// schedule to update the texture soon
-	parent->texture_time.dwLowDateTime  = numeric_limits<DWORD>::min();
-	parent->texture_time.dwHighDateTime = numeric_limits<DWORD>::min();
 };

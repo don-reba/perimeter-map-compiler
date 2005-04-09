@@ -51,7 +51,7 @@ public:
 	void NewProject(string project_folder, SIZE map_size, string map_name);
 	void OpenProject(string project_file);
 	void Pack();
-	void Unpack(string shrub_file);
+	bool Unpack(string shrub_file);
 	void Install();
 	void ToggleStatManager(bool show);
 	void TogglePreview(bool show);

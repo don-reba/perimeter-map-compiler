@@ -1,8 +1,12 @@
 #include "StdAfx.h"
 #include "preview.h"
 #include "resource.h"
+
+#include <algorithm>
 #include <cmath>
+
 using std::list;
+using std::for_each;
 
 //----------
 // constants
@@ -60,6 +64,7 @@ CPreview::CPreview(
 	InitializeCriticalSection(&texture_section);
 	InitializeCriticalSection(&vb_section);
 	InitializeCriticalSection(&zero_layer_vb_section);
+	InitializeCriticalSection(&temp_file_section);
 	// initialize world matrix stack
 	{
 		D3DXMATRIX identity_matrix;
@@ -122,7 +127,7 @@ void CPreview::Destroy()
 	{
 		track_usage = false;
 		CAutoCriticalSection auto_vb_section(&vb_section);
-		DeleteTerainVBs();
+		DeleteTerrainVBs();
 		CloseHandle(tmp_file);
 	}
 	DestroyWindow(hWnd);
@@ -180,8 +185,16 @@ INT_PTR CALLBACK CPreview::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 		HANDLE_MSG(hWnd, WM_SETCURSOR,      obj->OnSetCursor);
 		HANDLE_MSG(hWnd, WM_SHOWWINDOW,     obj->OnShowWindow);
 		HANDLE_MSG(hWnd, WM_SIZE,           obj->OnSize);
+		HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGED, obj->OnWindowPosChanging);
 	}
 	return FALSE;
+}
+
+BOOL CPreview::OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos)
+{
+	//return TRUE;
+	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+	return TRUE;
 }
 
 // WM_CAPTURECHANGED handler
@@ -224,6 +237,11 @@ BOOL CPreview::OnInitDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
 	SetWindowLong(hWnd, DWL_USER, lParam);
 	this->hWnd = hWnd;
 	InitializeDevice();
+	// create a thread to save heightmap data if it goes unused
+	{
+		DWORD thread_id;
+		CreateThread(NULL, 0, UsageTracker, this, 0, &thread_id);
+	}
 	return TRUE;
 }
 
@@ -237,6 +255,7 @@ BOOL CPreview::OnKeyDown(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags
 	const float angle_h_max(2 * D3DX_PI);
 	const float angle_v_min(0.0f);
 	const float angle_v_max(D3DX_PI / 2.0f - 0.0001f);
+	const float displace_delta(16.0f);
 	// key handling
 	switch (vk)
 	{
@@ -308,6 +327,58 @@ BOOL CPreview::OnKeyDown(HWND hwnd, UINT vk, BOOL fDown, int cRepeat, UINT flags
 			radius /= 0.9f;
 			MakeViewMatrix();
 			MakeProjectiveMatrix();
+			Render();
+		} break;
+	case VK_LEFT:
+		{
+			const float proj(cos(angle_v) * radius);
+			float dir_x(cos(angle_h) * proj);
+			float dir_y(sin(angle_h) * proj);
+			const float dir_length(sqrt(dir_x * dir_x + dir_y * dir_y));
+			dir_x /= dir_length;
+			dir_y /= dir_length;
+			target.x = target.x - dir_y * displace_delta;
+			target.y = target.y + dir_x * displace_delta;
+			MakeViewMatrix();
+			Render();
+		} break;
+	case VK_RIGHT:
+		{
+			const float proj(cos(angle_v) * radius);
+			float dir_x(cos(angle_h) * proj);
+			float dir_y(sin(angle_h) * proj);
+			const float dir_length(sqrt(dir_x * dir_x + dir_y * dir_y));
+			dir_x /= dir_length;
+			dir_y /= dir_length;
+			target.x = target.x + dir_y * displace_delta;
+			target.y = target.y - dir_x * displace_delta;
+			MakeViewMatrix();
+			Render();
+		} break;
+	case VK_UP:
+		{
+			const float proj(cos(angle_v) * radius);
+			float dir_x(cos(angle_h) * proj);
+			float dir_y(sin(angle_h) * proj);
+			const float dir_length(sqrt(dir_x * dir_x + dir_y * dir_y));
+			dir_x /= dir_length;
+			dir_y /= dir_length;
+			target.x = target.x - dir_x * displace_delta;
+			target.y = target.y - dir_y * displace_delta;
+			MakeViewMatrix();
+			Render();
+		} break;
+	case VK_DOWN:
+		{
+			const float proj(cos(angle_v) * radius);
+			float dir_x(cos(angle_h) * proj);
+			float dir_y(sin(angle_h) * proj);
+			const float dir_length(sqrt(dir_x * dir_x + dir_y * dir_y));
+			dir_x /= dir_length;
+			dir_y /= dir_length;
+			target.x = target.x + dir_x * displace_delta;
+			target.y = target.y + dir_y * displace_delta;
+			MakeViewMatrix();
 			Render();
 		} break;
 	}
@@ -742,7 +813,7 @@ DWORD WINAPI CPreview::HeightmapThreadProc(LPVOID lpParameter)
 		SuspendThread(GetCurrentThread());
 	clock_t start_time(clock());
 	// release the vertex buffers
-	obj->ReleaseTerrainVBs();
+	obj->DeleteTerrainVBs();
 	// create a representation of the map
 	obj->sections.resize((obj->map_size.cx / texture_width) * (obj->map_size.cy / texture_height));
 	obj->BuildVB();
@@ -887,19 +958,23 @@ DWORD WINAPI CPreview::TextureThreadProc(LPVOID lpParameter)
 
 DWORD WINAPI CPreview::UsageTracker(LPVOID lpParameter)
 {
-	const time_to_wait(16 * 1000); // in milliseconds
-	const time_to_sleep(1 * 1000); // in milliseconds
+	const DWORD time_to_wait(16 * 1000); // in milliseconds
+	const DWORD time_to_sleep(1 * 1000); // in milliseconds
 	CPreview *obj = ri_cast<CPreview*>(lpParameter);
 	while (obj->track_usage)
 	{
-		// check if data is in memory or if Render was called recently
-		if (INVALID_HANDLE_VALUE != obj->tmp_file || clock() - obj->last_vb_access <= time_to_wait)
-		// if so - sleep
-			Sleep(time_to_sleep);
-		else
-		// else - move data to disk
+		// sleep if the data is in memory or if Render was called recently
+		// else, move the data to disk
+		if (
+			!obj->heightmap_valid                 ||
+			INVALID_HANDLE_VALUE != obj->tmp_file ||
+			clock() - obj->last_vb_access <= time_to_wait)
 		{
-			_RPT0(_CRT_WARN, "• writing file\n");
+			Sleep(time_to_sleep);
+		}
+		else
+		{
+			CAutoCriticalSection auto_temp_file_section(&obj->temp_file_section);
 			CAutoCriticalSection auto_vb_section(&obj->vb_section);
 			// create file
 			{
@@ -907,8 +982,6 @@ DWORD WINAPI CPreview::UsageTracker(LPVOID lpParameter)
 				const DWORD dwShareMode           = FILE_SHARE_READ;
 				const DWORD dwCreationDisposition = CREATE_ALWAYS;
 				const DWORD dwFlagsAndAttributes  = /*FILE_ATTRIBUTE_TEMPORARY | */FILE_ATTRIBUTE_HIDDEN | FILE_FLAG_DELETE_ON_CLOSE;
-				if (INVALID_HANDLE_VALUE != obj->tmp_file)
-					CloseHandle(obj->tmp_file);
 				obj->tmp_file = CreateFile(
 					obj->tmp_file_path.c_str(),
 					dwDesiredAccess,
@@ -925,7 +998,7 @@ DWORD WINAPI CPreview::UsageTracker(LPVOID lpParameter)
 			}
 			// write data to the file
 			{
-				      list<CVertexBuffer>::const_iterator i(obj->terrain_vbs.begin());
+				      list<CVertexBuffer>::const_iterator i  (obj->terrain_vbs.begin());
 				const list<CVertexBuffer>::const_iterator end(obj->terrain_vbs.end());
 				for (; i != end; ++i)
 				{
@@ -946,7 +1019,7 @@ DWORD WINAPI CPreview::UsageTracker(LPVOID lpParameter)
 				}
 			}
 			// delete buffers
-			obj->DeleteTerainVBs();
+			obj->ReleaseTerrainVBs();
 		}
 	}
 	return 0;
@@ -956,16 +1029,16 @@ void CPreview::ActivateTerrainVBs()
 {
 	if (INVALID_HANDLE_VALUE != tmp_file)
 	{
-		_RPT0(_CRT_WARN, "• reading file\n");
+		CAutoCriticalSection auto_temp_file_section(&temp_file_section);
 		SetFilePointer(tmp_file, 0, NULL, FILE_BEGIN);
-		      list<CVertexBuffer>::iterator       i(terrain_vbs.begin());
+		      list<CVertexBuffer>::iterator       i  (terrain_vbs.begin());
 		const list<CVertexBuffer>::const_iterator end(terrain_vbs.end());
 		DWORD num_bytes_read;
 		DWORD bytes_to_read;
 		for (; i != end; ++i)
 		{
-			// read the number of faces
 			bytes_to_read = i->_face_count * 3 * sizeof(CVertex);
+			_ASSERTE(i->_vertices == NULL);
 			i->_vertices = new CVertex[i->_face_count * 3];
 			_ASSERTE(i->_vertices != NULL);
 			if (FALSE == ReadFile(
@@ -1069,16 +1142,18 @@ void CPreview::BuildVB()
 	InitializeVB(vertices);
 }
 
-void CPreview::DeleteTerainVBs()
+void CPreview::DeleteTerrainVBs()
 {
-			list<CVertexBuffer>::iterator       i(terrain_vbs.begin());
-	const list<CVertexBuffer>::const_iterator end(terrain_vbs.end());
+	heightmap_valid = false;
+	      list<CVertexBuffer>::iterator i  (terrain_vbs.begin());
+	const list<CVertexBuffer>::iterator end(terrain_vbs.end());
 	for (; i != end; ++i)
-		if (NULL != i->_vertices)
-		{
-			delete [] i->_vertices;
-			i->_vertices = NULL;
-		}
+	{
+		delete [] i->_vertices;
+		i->_vertices = NULL;
+		i->_face_count = 0;
+	}
+	terrain_vbs.clear();
 }
 
 float CPreview::Flatness(int h1, int h2, int v1, int v2, int c, int r) const
@@ -1122,9 +1197,11 @@ void CPreview::InitializeTextures()
 	_ASSERTE(map_size.cy >= texture_height);
 	_ASSERTE(map_size.cx % texture_width  == 0);
 	_ASSERTE(map_size.cy % texture_height == 0);
+	// disable texture
+	texture_valid = false;
 	// get lightmap data, if necessary
 	const bool enable_lighting(settings.enable_lighting);
-	const BYTE *lightmap_ptr;
+	const BYTE *lightmap_ptr(NULL);
 	if (enable_lighting)
 	{
 		while (!lightmap->IsValid())
@@ -1144,6 +1221,9 @@ void CPreview::InitializeTextures()
 	{
 		for (int texture_x(0); texture_x != x_num; ++texture_x)
 		{
+			// release the previous texture
+			if (NULL != sections[texture_index].texture)
+				sections[texture_index].texture->Release();
 			// create the texture and get its data
 			if (FAILED(device->CreateTexture(
 				texture_width,
@@ -1225,6 +1305,8 @@ void CPreview::InitializeVB(vector<CSimpleVertex> &vertices)
 	// preconditions
 	_ASSERTE(vertices.size() % 6 == 0); // should be true after Triangulate is done
 	_ASSERTE(!sections.empty());
+	// disable heightmap
+	heightmap_valid = false;
 	// reset face counts
 	{
 		vector<CSection>::iterator i(sections.begin());
@@ -1294,18 +1376,12 @@ void CPreview::InitializeVB(vector<CSimpleVertex> &vertices)
 		}
 		CloseHandle(tmp_file);
 		tmp_file = INVALID_HANDLE_VALUE;
-		DeleteTerainVBs();
 		terrain_vbs.push_back(vb);
 		last_vb_access = clock();
 	}
 	// set up for rendering
 	active_vb       = NULL;
 	active_vb_copy  = NULL;
-	if (!heightmap_valid)
-	{
-		DWORD thread_id;
-		CreateThread(NULL, 0, UsageTracker, this, 0, &thread_id);
-	}
 	heightmap_valid = true;
 }
 
@@ -1362,13 +1438,13 @@ void CPreview::PushWorldMatrix(const D3DXMATRIX &matrix)
 
 void CPreview::ReleaseTerrainVBs()
 {
-	heightmap_valid = false;
-	list<CVertexBuffer>::iterator i(terrain_vbs.begin());
-	const list<CVertexBuffer>::const_iterator end(terrain_vbs.end());
+	      list<CVertexBuffer>::iterator i  (terrain_vbs.begin());
+	const list<CVertexBuffer>::iterator end(terrain_vbs.end());
 	for (; i != end; ++i)
-		if (NULL != i->_vertices)
-			delete [] i->_vertices;
-	terrain_vbs.clear();
+	{
+		delete [] i->_vertices;
+		i->_vertices = NULL;
+	}
 }
 
 HRESULT CPreview::SetMeshStreamSource(list<CVertexBuffer>::iterator vb)
@@ -2012,7 +2088,7 @@ void CPreview::UpdateData()
 // generates an assertion in debug mode and a warning in release mode
 void CPreview::Error(string message) const
 {
-	string new_message = _T("CPreview: \n");
+	string new_message = _T("CPreview:\n");
 	new_message.append(message);
 	_RPT0(_CRT_ERROR, new_message.c_str());
 	MessageBox(hWnd, new_message.c_str(), NULL, MB_OK | MB_ICONERROR);
@@ -2132,14 +2208,11 @@ void CPreview::CSerializable::Load(string file_name)
 
 void CPreview::CSerializable::Update()
 {
-	if (parent->map_info_valid)
+	/*if (parent->map_info_valid)
 		parent->BuildZeroLayerVB();
 	if (parent->heightmap_valid)
-	{
-		parent->ReleaseTerrainVBs();
 		parent->BuildVB();
-	}
 	if (parent->texture_valid)
 		parent->InitializeTextures();
-	parent->Render();
+	parent->Render();*/
 }
