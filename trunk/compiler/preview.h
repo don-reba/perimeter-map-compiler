@@ -39,7 +39,7 @@ protected:
 	{
 		FLOAT x, y, z;
 		FLOAT u, v;
-		static const DWORD FVF = D3DFVF_XYZ | D3DFVF_TEX2;
+		static const DWORD FVF = D3DFVF_XYZ | D3DFVF_TEX1;
 	};
 	// zero layer vertex
 	struct CColouredVertex
@@ -219,7 +219,8 @@ protected:
 	CVertexBuffer          *active_vb_copy;
 	std::list<CVertexBuffer> terrain_vbs;
 	vector<CSection> sections;
-	CBillboard       billboards[5];
+	static const size_t billboard_count = 5;
+	CBillboard       billboards[billboard_count];
 	std::stack<D3DXMATRIX> world_matrix_stack;
 	bool     wireframe_mode;
 	FLOAT    world_stretch;

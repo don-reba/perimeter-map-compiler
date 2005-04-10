@@ -106,30 +106,6 @@ void CPreview::Create(HWND hWndParent, const RECT &window_rect, HWND hButton, co
 
 void CPreview::Destroy()
 {
-	if (NULL != heightmap_thread)
-	{
-		WaitForSingleObject(heightmap_thread, INFINITE);
-		CloseHandle(heightmap_thread);
-		heightmap_thread = NULL;
-	}
-	if (NULL != map_info_thread)
-	{
-		WaitForSingleObject(map_info_thread, INFINITE);
-		CloseHandle(map_info_thread);
-		map_info_thread = NULL;
-	}
-	if (NULL != texture_thread)
-	{
-		WaitForSingleObject(texture_thread, INFINITE);
-		CloseHandle(texture_thread);
-		texture_thread = NULL;
-	}
-	{
-		track_usage = false;
-		CAutoCriticalSection auto_vb_section(&vb_section);
-		DeleteTerrainVBs();
-		CloseHandle(tmp_file);
-	}
 	DestroyWindow(hWnd);
 }
 
@@ -192,7 +168,7 @@ INT_PTR CALLBACK CPreview::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 
 BOOL CPreview::OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos)
 {
-	//return TRUE;
+	return TRUE;
 	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
 	return TRUE;
 }
@@ -219,8 +195,58 @@ BOOL CPreview::OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
 // WM_DESTROY handler
 BOOL CPreview::OnDestroy(HWND hWnd)
 {
+	// close threads
+	// TODO: force kill on timeout
+	if (NULL != heightmap_thread)
+	{
+		WaitForSingleObject(heightmap_thread, INFINITE);
+		CloseHandle(heightmap_thread);
+		heightmap_thread = NULL;
+	}
+	if (NULL != map_info_thread)
+	{
+		WaitForSingleObject(map_info_thread, INFINITE);
+		CloseHandle(map_info_thread);
+		map_info_thread = NULL;
+	}
+	if (NULL != texture_thread)
+	{
+		WaitForSingleObject(texture_thread, INFINITE);
+		CloseHandle(texture_thread);
+		texture_thread = NULL;
+	}
+	{
+		track_usage = false;
+		CAutoCriticalSection auto_vb_section(&vb_section);
+		DeleteTerrainVBs();
+		CloseHandle(tmp_file);
+	}
+	// clean up texture memory
+	{
+		      vector<CSection>::iterator i  (sections.begin());
+		const vector<CSection>::iterator end(sections.end());
+		for (; i != end; ++i)
+			i->texture->Release();
+	}
+	// release terrain VB
+	if (NULL != active_vb)
+		active_vb->Release();
+	// release zero layer VB
+	if (NULL != zero_layer_vb)
+		zero_layer_vb->Release();
+	// release billboard VBs
+	{
+		CBillboard *i(billboards);
+		const CBillboard *end(i + billboard_count);
+		for (; i != end; ++i)
+			if (NULL != i->vertices)
+				i->vertices->Release();
+	}
+	// release the device
+	if (NULL != device)
+		device->Release();
+	// get window rectangle
 	GetWindowRect(hWnd, &window_rect);
-	PostQuitMessage(0);
 	this->hWnd = NULL;
 	return TRUE;
 }
@@ -486,12 +512,13 @@ void CPreview::InitializeDevice()
 	// define presentation parameters
 	D3DPRESENT_PARAMETERS d3d_params;
 	ZeroMemory(&d3d_params, sizeof(d3d_params));
-	d3d_params.Windowed = true;
-	d3d_params.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	d3d_params.EnableAutoDepthStencil = TRUE;
 	d3d_params.AutoDepthStencilFormat = D3DFMT_D16;
-	d3d_params.BackBufferWidth = client_rect.right;
-	d3d_params.BackBufferHeight = client_rect.bottom;
+	d3d_params.BackBufferCount        = 1;
+	d3d_params.BackBufferHeight       = client_rect.bottom;
+	d3d_params.BackBufferWidth        = client_rect.right;
+	d3d_params.EnableAutoDepthStencil = TRUE;
+	d3d_params.SwapEffect             = D3DSWAPEFFECT_DISCARD;
+	d3d_params.Windowed               = true;
 	// create or reset the device
 	if (NULL == device)
 	{
@@ -499,7 +526,7 @@ void CPreview::InitializeDevice()
 			D3DADAPTER_DEFAULT,
 			D3DDEVTYPE_HAL,
 			hWnd,
-			D3DCREATE_HARDWARE_VERTEXPROCESSING,
+			D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_MULTITHREADED,
 			&d3d_params,
 			&device);
 		if (D3D_OK != result)
@@ -512,31 +539,68 @@ void CPreview::InitializeDevice()
 	}
 	else
 	{
+		// wait for the device to become accessible
+		for (bool quit(false); !quit;)
+		{
+			result = device->TestCooperativeLevel();
+			switch (result)
+			{
+			case D3D_OK:
+			case D3DERR_DEVICENOTRESET:
+				quit = true;
+				break;
+			case D3DERR_DRIVERINTERNALERROR:
+				Error(_T("Internal Driver Error on IDirect3DDevice9::TestCooperativeLevel"));
+				DestroyWindow(hWnd);
+				return;
+			default:
+				Sleep(500);
+			}
+		}
+		// release the vertex buffer
 		if (NULL != active_vb)
+		{
 			active_vb->Release();
+			active_vb      = NULL;
+			active_vb_copy = NULL;
+		}
+		// reset the device
 		result = device->Reset(&d3d_params);
 		if ((D3D_OK != result))
 		{
 			Error(_T("IDirect3DDevice9::Reset failed"));
-			device = NULL;
 			DestroyWindow(hWnd);
 			return;
+		}
+		// get map information
+		if (map_info_valid)
+		{
+			const CMapInfo &map_data(map_info->SignOutConst());
+			FLOAT fog_start(static_cast<FLOAT>(map_data.fog_start));
+			FLOAT fog_end  (static_cast<FLOAT>(map_data.fog_end));
+			device->SetRenderState(
+				D3DRS_FOGCOLOR,
+				D3DCOLOR_ARGB(0, GetRValue(map_data.fog_colour), GetGValue(map_data.fog_colour), GetBValue(map_data.fog_colour)));
+			device->SetRenderState(D3DRS_FOGSTART, *(ri_cast<DWORD*>(&fog_start)));
+			device->SetRenderState(D3DRS_FOGEND,   *(ri_cast<DWORD*>(&fog_end)));
+			map_info->SignIn();
 		}
 	}
 	// configure the device
 	device->SetSamplerState(0, D3DSAMP_ADDRESSU,  D3DTADDRESS_CLAMP);
 	device->SetSamplerState(0, D3DSAMP_ADDRESSV,  D3DTADDRESS_CLAMP);
-	device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_ANISOTROPIC);
+	device->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 	device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
 	device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-	device->SetRenderState(D3DRS_ZENABLE,  D3DZB_TRUE);
-	device->SetRenderState(D3DRS_LIGHTING, FALSE);
-	device->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+	device->SetRenderState(D3DRS_ZENABLE,          D3DZB_TRUE);
+	device->SetRenderState(D3DRS_LIGHTING,         FALSE);
+	device->SetRenderState(D3DRS_AMBIENT,         0x0000FF00);
+	device->SetRenderState(D3DRS_CULLMODE,         D3DCULL_CCW);
 	device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-	device->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA);
-	device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-	device->SetRenderState(D3DRS_FOGENABLE,    TRUE);
-	device->SetRenderState(D3DRS_FOGTABLEMODE, D3DFOG_LINEAR);
+	device->SetRenderState(D3DRS_SRCBLEND,         D3DBLEND_SRCALPHA);
+	device->SetRenderState(D3DRS_DESTBLEND,        D3DBLEND_INVSRCALPHA);
+	device->SetRenderState(D3DRS_FOGENABLE,        TRUE);
+	device->SetRenderState(D3DRS_FOGTABLEMODE,     D3DFOG_LINEAR);
 	// set wireframe mode if needed
 	if (wireframe_mode)
 	{
@@ -548,6 +612,8 @@ void CPreview::InitializeDevice()
 		device->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, FALSE);
 		device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
 	}
+	MakeViewMatrix();
+	MakeProjectiveMatrix();
 }
 
 // main render function
@@ -564,7 +630,7 @@ void CPreview::Render()
 		int *count;
 	} recursion_counter(&recursion_count);
 	if (recursion_count > 1)
-		return;
+		DebugBreak();
 	// check preconditions
 	if (NULL == device)
 		return;
@@ -797,7 +863,7 @@ void CPreview::Render()
 			DestroyWindow(hWnd);
 			return;
 		case D3DERR_INVALIDCALL:
-			Error("InvalidCall");
+			Error("Invalid Call");
 			DestroyWindow(hWnd);
 			return;
 		}
@@ -920,10 +986,10 @@ DWORD WINAPI CPreview::MapInfoThreadProc(LPVOID lpParameter)
 			D3DCOLOR_ARGB(0, GetRValue(map_data.fog_colour), GetGValue(map_data.fog_colour), GetBValue(map_data.fog_colour)));
 		obj->device->SetRenderState(D3DRS_FOGSTART, *(ri_cast<DWORD*>(&fog_start)));
 		obj->device->SetRenderState(D3DRS_FOGEND,   *(ri_cast<DWORD*>(&fog_end)));
-		obj->map_info_valid = true;
 	}
 	// check in map info
 	obj->map_info->SignIn();
+	obj->map_info_valid = true;
 	// resume the other threads
 	ResumeThread(obj->heightmap_thread);
 	ResumeThread(obj->texture_thread);
@@ -933,7 +999,7 @@ DWORD WINAPI CPreview::MapInfoThreadProc(LPVOID lpParameter)
 	// wrap up
 	obj->ToggleWaitCursor(false);
 	clock_t end_time(clock());
-	_RPT1(_CRT_WARN, "CPreview::TextureThreadProc: %i ticks\n", end_time - start_time);
+	_RPT1(_CRT_WARN, "CPreview::MapInfoThreadProc: %i ticks\n", end_time - start_time);
 	return 0;
 }
 
@@ -1060,8 +1126,11 @@ void CPreview::ActivateTerrainVBs()
 void CPreview::BuildFrameMarker(CBillboard *marker, D3DCOLOR marker_colour)
 {
 	CColouredVertex *vertices;
-	if (FAILED(marker->vertices->Lock(0, 0, ri_cast<void**>(&vertices), D3DLOCK_DISCARD)))
+	if (FAILED(marker->vertices->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
+	{
 		Error(_T("IDirect3DVertexBuffer9::Lock failed"));
+		return;
+	}
 	const FLOAT radius(6.0f);
 	const FLOAT height(512.0f);
 	vertices[0].x     = -radius;
@@ -1096,14 +1165,14 @@ void CPreview::BuildFrameMarker(CBillboard *marker, D3DCOLOR marker_colour)
 	vertices[7].y     = 0.0f;
 	vertices[7].z     = height;
 	vertices[7].color = marker_colour & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF);
-	zero_layer_vb->Unlock();
+	marker->vertices->Unlock();
 }
 
 void CPreview::BuildZeroLayerVB()
 {
 	settings.SignOut();
 	CColouredVertex *vertices;
-	if (FAILED(zero_layer_vb->Lock(0, 0, ri_cast<void**>(&vertices), D3DLOCK_DISCARD)))
+	if (FAILED(zero_layer_vb->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
 		Error(_T("IDirect3DVertexBuffer9::Lock failed"));
 	vertices[0].x     = 0.0f;
 	vertices[0].y     = 0.0f;
@@ -1380,7 +1449,11 @@ void CPreview::InitializeVB(vector<CSimpleVertex> &vertices)
 		last_vb_access = clock();
 	}
 	// set up for rendering
-	active_vb       = NULL;
+	if (NULL != active_vb)
+	{
+		active_vb->Release();
+		active_vb = NULL;
+	}
 	active_vb_copy  = NULL;
 	heightmap_valid = true;
 }
@@ -1451,7 +1524,7 @@ HRESULT CPreview::SetMeshStreamSource(list<CVertexBuffer>::iterator vb)
 {
 	HRESULT result;
 	// if the given buffer is not in video memory, load it
-	if (&*vb != &*active_vb_copy)
+	if (&*vb != &*active_vb_copy || NULL == active_vb)
 	{
 		if (NULL != active_vb)
 			active_vb->Release();
@@ -1468,7 +1541,7 @@ HRESULT CPreview::SetMeshStreamSource(list<CVertexBuffer>::iterator vb)
 			// check if the cause of failure was not memory shortage
 			if (D3DERR_OUTOFVIDEOMEMORY != result)
 			{
-				Error(_T("IDirect3DDevice9::SetStreamSource failed"));
+				Error(_T("IDirect3DDevice9::CreateVertexBuffer failed"));
 				return result;
 			}
 			SplitBuffer(vb);
@@ -1478,7 +1551,7 @@ HRESULT CPreview::SetMeshStreamSource(list<CVertexBuffer>::iterator vb)
 		ActivateTerrainVBs();
 		// feed the vertex data into the buffer
 		CVertex *vertex_array;
-		result = active_vb->Lock(0, 0, ri_cast<void**>(&vertex_array), D3DLOCK_DISCARD);
+		result = active_vb->Lock(0, 0, ri_cast<void**>(&vertex_array), 0L);
 		if (D3D_OK != result)
 		{
 			Error(_T("IDirect3DVertexBuffer9::Lock failed"));
@@ -1501,7 +1574,7 @@ HRESULT CPreview::SetMeshStreamSource(list<CVertexBuffer>::iterator vb)
 	return D3D_OK;
 }
 
-void CPreview::SplitBuffer(std::list<CVertexBuffer>::iterator vb)
+void CPreview::SplitBuffer(list<CVertexBuffer>::iterator vb)
 {
 	// load buffers from the file
 	ActivateTerrainVBs();

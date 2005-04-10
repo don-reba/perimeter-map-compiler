@@ -557,8 +557,6 @@ void CCompiler::OnDestroy(HWND hWnd)
 					(save_info[i].name + "_is_visible").c_str(),
 					save_info[i].is_visible ? "true" : "false",
 					ini_path);
-			else
-				_RPT0(_CRT_WARN, "too few save_info entries");
 		}
 		// save preview settings
 		project.SaveSettings(ini_path);

@@ -87,10 +87,37 @@ void CProjectManager::Destroy()
 		map_data.Save((map_data.folder_path + map_data.map_name + _T(".pmproj")).c_str());
 		map_info.SignIn();
 	}
-	// destroy veiwers
+	// destroy viewers
 	stat_manager.Destroy();
 	preview.Destroy();
 	info_manager.Destroy();
+	// destroy texture
+	{
+		CPalettedTexture &texture_data(texture.SignOut());
+		if (NULL != texture_data.ptr)
+		{
+			texture_data.length = 0;
+			delete [] texture_data.ptr;
+		}
+	}
+	// destroy heightmap
+	{
+		CStaticArray<BYTE> &heightmap_data(heightmap.SignOut());
+		if (NULL != heightmap_data.ptr)
+		{
+			heightmap_data.length = 0;
+			delete [] heightmap_data.ptr;
+		}
+	}
+	// destroy lightmap
+	{
+		CStaticArray<BYTE> &lightmap_data(lightmap.SignOut());
+		if (NULL != lightmap_data.ptr)
+		{
+			lightmap_data.length = 0;
+			delete [] lightmap_data.ptr;
+		}
+	}
 }
 
 // create the files of the new project and load them
