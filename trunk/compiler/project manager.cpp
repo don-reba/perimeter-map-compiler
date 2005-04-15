@@ -27,7 +27,8 @@ CProjectManager::CProjectManager(void) :
 	texture_thread   (NULL),
 	hWnd             (NULL),
 	project_state    (PS_INACTIVE),
-	settings         (this)
+	settings         (this),
+	track_resources  (true)
 {
 	// link viewers
 	heightmap.AddViewer(&preview);
@@ -329,7 +330,7 @@ void CProjectManager::Pack()
 	compressed_buffer_size += header_size;
 	// record header
 	{
-		char compression_format[8] = { 'S', 'H', 'R', 'B', 'B', 'Z', '2', 0 };
+		char compression_format[8] = { 'S', 'H', 'R', 0, 'B', 'Z', '2', 0 };
 		CopyMemory(compressed_buffer, compression_format, 8);
 		CopyMemory(compressed_buffer + 8, &buffer_size, 4);
 	}
@@ -350,6 +351,7 @@ void CProjectManager::Pack()
 
 bool CProjectManager::Unpack(string shrub_file)
 {
+	InterlockedExchange(&track_resources, false);
 	// get the folder path
 	{
 		TCHAR temp_folder_path[MAX_PATH];
@@ -361,16 +363,17 @@ bool CProjectManager::Unpack(string shrub_file)
 	}
 	// load the packed Biboorat from the shrub file
 	BYTE *compressed_buffer;
-	const size_t compressed_buffer_size(LoadFile(shrub_file.c_str(), compressed_buffer));
+	const size_t file_size(LoadFile(shrub_file.c_str(), compressed_buffer));
 	// check that the file has an acceptable format
 	{
 		BYTE word[4];
 		// check the magic number
 		CopyMemory(word, compressed_buffer, 4);
-		if (word[0] != 'S' || word[1] != 'H' || word[2] != 'R' || word[3] != 'B')
+		if (word[0] != 'S' || word[1] != 'H' || word[2] != 'R' || word[3] != 0)
 		{
 			Error("the file is not a valid shrub");
 			delete [] compressed_buffer;
+			InterlockedExchange(&track_resources, true);
 			return false;
 		}
 		// check the compression format
@@ -379,6 +382,7 @@ bool CProjectManager::Unpack(string shrub_file)
 		{
 			Error("the shrub has an unfamiliar format");
 			delete [] compressed_buffer;
+			InterlockedExchange(&track_resources, true);
 			return false;
 		}
 	}
@@ -392,7 +396,7 @@ bool CProjectManager::Unpack(string shrub_file)
 			ri_cast<char*>(buffer),
 			&buffer_size,
 			ri_cast<char*>(compressed_buffer + 12),
-			compressed_buffer_size - 12,
+			file_size - 12,
 			0,
 			0));
 		if (BZ_OK != result)
@@ -403,9 +407,13 @@ bool CProjectManager::Unpack(string shrub_file)
 				Error(_T("Insufficient memory for decompression."));
 				break;
 			case BZ_OUTBUFF_FULL:
+				Error(_T("Outbuffer full. The shrub file is corrupt."));
+				break;
 			case BZ_DATA_ERROR:
-			case BZ_DATA_ERROR_MAGIC:
 				Error(_T("The shrub file is corrupt."));
+				break;
+			case BZ_DATA_ERROR_MAGIC:
+				Error(_T("Magic number mismatch. The shrub file is corrupt."));
 				break;
 			case BZ_UNEXPECTED_EOF:
 				Error(_T("Unexpected end of file during decompression."));
@@ -415,6 +423,7 @@ bool CProjectManager::Unpack(string shrub_file)
 			};
 			delete [] buffer;
 			delete [] compressed_buffer;
+			InterlockedExchange(&track_resources, true);
 			return false;
 		}
 	}
@@ -429,6 +438,7 @@ bool CProjectManager::Unpack(string shrub_file)
 	{
 		Error("the shrub has an unfamiliar format");
 		delete [] buffer;
+		InterlockedExchange(&track_resources, true);
 		return false;
 	}
 	// unpack map_info, heightmap, and texture
@@ -439,6 +449,7 @@ bool CProjectManager::Unpack(string shrub_file)
 	delete [] buffer;
 	// set project state
 	project_state = PS_SHRUB;
+	InterlockedExchange(&track_resources, true);
 	return true;
 }
 
@@ -490,8 +501,11 @@ void CProjectManager::Install()
 		}
 	}
 	// create and save map.tga
-	PathCombine(str, folder_path, _T("map.tga"));
-	SaveThumb(str);
+	{
+		PathCombine(str, folder_path, _T("map.tga"));
+		SIZE size = { 128, 128 };
+		SaveThumb(str, size);
+	}
 	// create and save world.ini
 	{
 		const CMapInfo &map_data(map_info.SignOutConst());
@@ -507,8 +521,36 @@ void CProjectManager::Install()
 	PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(str);
 	// append Texts.btdb
-	PathCombine(str, install_path.c_str(), "RESOURCE\\LocData\\Russian\\Text\\Texts.btdb");
-	AppendBTDB(str, folder_name.c_str());
+	{
+		string language;
+		// get the language of the distribution
+		{
+			PathCombine(str, install_path.c_str(), "Perimeter.ini");
+			ifstream ini(str);
+			if (!ini.is_open())
+			{
+				Error("Perimeter.ini could not be opened.");
+				return;
+			}
+			string line;
+			string target("DefaultLanguage=");
+			while (ini)
+			{
+				getline(ini, line);
+				size_t pos(line.find(target));
+				if (line.npos != pos)
+				{
+					language = line.substr(pos + target.size(), line.size() - target.size());
+					break;
+				}
+			}
+		}
+		//GetPrivateProfileString("Game", "DefaultLanguage", "Russian--", language, language_size, str);
+		PathCombine(str, install_path.c_str(), "RESOURCE\\LocData");
+		PathCombine(str, str, language.c_str());
+		PathCombine(str, str, "Text\\Texts.btdb");
+		AppendBTDB(str, folder_name.c_str());
+	}
 	// append WORLDS.PRM
 	PathCombine(str, install_path.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
 	AppendWorldsPrm(str, folder_name.c_str());
@@ -568,13 +610,23 @@ void CProjectManager::Install()
 	SaveMission(folder_path, folder_name.c_str(), false);
 	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
 	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-	SaveMission(folder_path, folder_name.c_str(), true);
+	SaveMission(folder_path, folder_name.c_str(), false);
 	// reassure the user
 	MessageBox(
 		hWnd,
 		_T("Installation has been completed successfully."),
 		_T("Success"),
 		MB_ICONINFORMATION | MB_OK);
+}
+
+void CProjectManager::SaveMapThumb()
+{
+	TCHAR path[MAX_PATH];
+	_tcscpy(path, map_info.SignOutConst().folder_path.c_str());
+	PathCombine(path, path, "thumbnail.png");
+	SIZE size = { 256, 256 };
+	if (SaveThumb(path, size))
+		MessageBox(hWnd, _T("The thumbnail was saved in the project folder."), _T("Success"), MB_OK);
 }
 
 void CProjectManager::ToggleStatManager(bool show)
@@ -621,6 +673,9 @@ void CProjectManager::SaveSettings(string ini_path)
 VOID CALLBACK CProjectManager::CheckFiles(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
 	CProjectManager* project = ri_cast<CProjectManager*>(idEvent);
+	// make sure tracking is allowed
+	if (!*ri_cast<bool*>(&project->track_resources))
+		return;
 	// get folder path
 	string folder_path = project->map_info.SignOutConst().folder_path;
 	project->map_info.SignIn();
@@ -1599,6 +1654,8 @@ bool CProjectManager::RegisterMap()
 			MessageBox(hWnd, _T("The name of this map is already in use."), error_name, MB_OK);
 		else if (0 == _tcscmp(buffer, _T("invalid")))
 			MessageBox(hWnd, _T("Invalid map name."), error_name, MB_OK);
+		else if (0 == _tcscmp(buffer, _T("reg_limit_exceeded")))
+			MessageBox(hWnd, _T("Registration limit for today exceeded."), error_name, MB_OK);
 		else
 			MessageBox(hWnd, _T("Map could not be registered."), error_name, MB_OK);
 		delete [] buffer;
@@ -1964,7 +2021,7 @@ void CProjectManager::SaveTexture(const TCHAR *path)
 }
 
 // create a thumbnail version of the map texture and save it
-void CProjectManager::SaveThumb(const TCHAR *path)
+bool CProjectManager::SaveThumb(const TCHAR *path, SIZE size)
 {
 	// get dimensions of the map
 	SIZE map_size;
@@ -2021,24 +2078,25 @@ void CProjectManager::SaveThumb(const TCHAR *path)
 		}
 		heightmap.SignIn();
 	}
-	// reduce the size of the image to 128x128
-	if (FALSE == image.rescale(128, 128, FILTER_BOX))
+	// resize the image
+	if (FALSE == image.rescale(
+		static_cast<WORD>(size.cx),
+		static_cast<WORD>(size.cy),
+		FILTER_BILINEAR))
 	{
 		Error(_T("fipImage::rescale failed"));
-		return;
+		return false;
 	}
 	// flip the image vertically
 	if (FALSE == image.flipVertical())
 		Error(_T("fipImage::flipVertical failed"));
 	// save the image
 	if (FALSE == image.save(path))
-		Error(_T("fipImage::save failed"));
-	// reduce the size of the image to 128x128
-	if (FALSE == image.rescale(128, 128, FILTER_BOX))
 	{
-		Error(_T("fipImage::rescale failed"));
-		return;
+		Error(_T("fipImage::save failed"));
+		return false;
 	}
+	return true;
 }
 
 // create the VMP file and save it
@@ -2419,6 +2477,8 @@ bool CProjectManager::UnpackMapInfo(TiXmlNode *node)
 	map_data.map_name = map_name_node->Value();
 	map_data.map_power_x = atoi(map_power_x_node->Value());
 	map_data.map_power_y = atoi(map_power_y_node->Value());
+	// set window title
+	SetWindowText(hWnd, map_data.map_name.c_str());
 	// load the rest of the data
 	map_data.LoadFromXml(node);
 	// sign in and update

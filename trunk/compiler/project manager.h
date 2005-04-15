@@ -53,6 +53,7 @@ public:
 	void Pack();
 	bool Unpack(string shrub_file);
 	void Install();
+	void SaveMapThumb();
 	void ToggleStatManager(bool show);
 	void TogglePreview(bool show);
 	void ToggleInfoManager(bool show);
@@ -97,7 +98,7 @@ private:
 	void   SaveSPG(const TCHAR *path, const TCHAR *folder_name, const bool survival);
 	void   SaveSPH(const TCHAR *path, const TCHAR *folder_name, const bool survival);
 	void   SaveTexture(const TCHAR *path);
-	void   SaveThumb(const TCHAR *path);
+	bool   SaveThumb(const TCHAR *path, SIZE size);
 	void   SaveVMP(const TCHAR *path);
 	void   StackBlur(int *pix, int w, int h, int radius) const;
 	void   UnpackHeightmap(TiXmlNode *node, BYTE *buffer);
@@ -129,6 +130,8 @@ protected:
 	FILETIME texture_time;
 	// timer for keeping track of file's status
 	UINT_PTR file_timer;
+	// flag to prevent resource tracking when needed
+	LONG track_resources;
 protected:
 // serializable settings
 	CSerializable settings;

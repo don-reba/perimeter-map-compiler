@@ -23,6 +23,7 @@ public:
 		D3DCOLOR zero_layer_colour;
 		float    threshold;
 		bool     enable_lighting;
+		bool     enable_swap;
 	protected:
 		CPreview *parent;
 	};

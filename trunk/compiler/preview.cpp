@@ -161,15 +161,13 @@ INT_PTR CALLBACK CPreview::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 		HANDLE_MSG(hWnd, WM_SETCURSOR,      obj->OnSetCursor);
 		HANDLE_MSG(hWnd, WM_SHOWWINDOW,     obj->OnShowWindow);
 		HANDLE_MSG(hWnd, WM_SIZE,           obj->OnSize);
-		HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGED, obj->OnWindowPosChanging);
+		HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGING, obj->OnWindowPosChanging);
 	}
 	return FALSE;
 }
 
 BOOL CPreview::OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos)
 {
-	return TRUE;
-	SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
 	return TRUE;
 }
 
@@ -196,25 +194,41 @@ BOOL CPreview::OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
 BOOL CPreview::OnDestroy(HWND hWnd)
 {
 	// close threads
-	// TODO: force kill on timeout
-	if (NULL != heightmap_thread)
 	{
-		WaitForSingleObject(heightmap_thread, INFINITE);
-		CloseHandle(heightmap_thread);
-		heightmap_thread = NULL;
+		DWORD timeout(0x20000);
+		const TCHAR *timeout_msg(_T("A thread stopped responding and will be terminated."));
+		if (NULL != heightmap_thread)
+		{
+			if (WAIT_TIMEOUT == WaitForSingleObject(heightmap_thread, timeout))
+			{
+				Error(timeout_msg);
+				TerminateThread(heightmap_thread, 1);
+			};
+			CloseHandle(heightmap_thread);
+			heightmap_thread = NULL;
+		}
+		if (NULL != map_info_thread)
+		{
+			if (WAIT_TIMEOUT == WaitForSingleObject(map_info_thread, timeout))
+			{
+				Error(timeout_msg);
+				TerminateThread(map_info_thread, 1);
+			};
+			CloseHandle(map_info_thread);
+			map_info_thread = NULL;
+		}
+		if (NULL != texture_thread)
+		{
+			if (WAIT_TIMEOUT == WaitForSingleObject(texture_thread, timeout))
+			{
+				Error(timeout_msg);
+				TerminateThread(texture_thread, 1);
+			};
+			CloseHandle(texture_thread);
+			texture_thread = NULL;
+		}
 	}
-	if (NULL != map_info_thread)
-	{
-		WaitForSingleObject(map_info_thread, INFINITE);
-		CloseHandle(map_info_thread);
-		map_info_thread = NULL;
-	}
-	if (NULL != texture_thread)
-	{
-		WaitForSingleObject(texture_thread, INFINITE);
-		CloseHandle(texture_thread);
-		texture_thread = NULL;
-	}
+	// delete the terrain vertex buffer
 	{
 		track_usage = false;
 		CAutoCriticalSection auto_vb_section(&vb_section);
@@ -226,7 +240,8 @@ BOOL CPreview::OnDestroy(HWND hWnd)
 		      vector<CSection>::iterator i  (sections.begin());
 		const vector<CSection>::iterator end(sections.end());
 		for (; i != end; ++i)
-			i->texture->Release();
+			if (NULL != i->texture)
+				i->texture->Release();
 	}
 	// release terrain VB
 	if (NULL != active_vb)
@@ -264,6 +279,7 @@ BOOL CPreview::OnInitDialog(HWND hWnd, HWND hWndFocus, LPARAM lParam)
 	this->hWnd = hWnd;
 	InitializeDevice();
 	// create a thread to save heightmap data if it goes unused
+	if (settings.enable_swap)
 	{
 		DWORD thread_id;
 		CreateThread(NULL, 0, UsageTracker, this, 0, &thread_id);
@@ -2230,6 +2246,12 @@ void CPreview::CSerializable::Save(string file_name)
 		static_cast<int>((zero_layer_colour & 0x0000FF00) >> 8 ),
 		static_cast<int>((zero_layer_colour & 0x000000FF) >> 0 ));
 	WritePrivateProfileString(section_name, _T("color"), buffer, file_name.c_str());
+	// enable swap
+	WritePrivateProfileString(
+		section_name,
+		_T("enable swap"),
+		enable_swap ? _T("true") : _T("false"),
+		file_name.c_str());
 }
 
 void CPreview::CSerializable::Load(string file_name)
@@ -2267,7 +2289,6 @@ void CPreview::CSerializable::Load(string file_name)
 	}
 	// enable_lighting
 	{
-		const TCHAR * const section_name(_T("Project Settings")); // HACK
 		GetPrivateProfileString(
 			section_name,
 			_T("enable lighting"),
@@ -2277,15 +2298,22 @@ void CPreview::CSerializable::Load(string file_name)
 			file_name.c_str());
 		enable_lighting = (0 == _tcscmp(buffer, _T("true")));
 	}
+	// enable_swap
+	{
+		GetPrivateProfileString(
+			section_name,
+			_T("enable swap"),
+			_T("true"),
+			buffer,
+			buffer_size,
+			file_name.c_str());
+		enable_swap = (0 == _tcscmp(buffer, _T("true")));
+	}
 }
 
 void CPreview::CSerializable::Update()
 {
-	/*if (parent->map_info_valid)
+	if (parent->map_info_valid)
 		parent->BuildZeroLayerVB();
-	if (parent->heightmap_valid)
-		parent->BuildVB();
-	if (parent->texture_valid)
-		parent->InitializeTextures();
-	parent->Render();*/
+	InvalidateRect(parent->hWnd, NULL, FALSE);
 }

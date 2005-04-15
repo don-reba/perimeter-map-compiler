@@ -68,15 +68,15 @@
 			IntermediateDirectory="Release"
 			ConfigurationType="1"
 			CharacterSet="2"
-			WholeProgramOptimization="FALSE">
+			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
 				GlobalOptimizations="TRUE"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="TRUE"
-				FavorSizeOrSpeed="0"
+				FavorSizeOrSpeed="1"
 				OmitFramePointers="FALSE"
-				OptimizeForProcessor="0"
+				OptimizeForProcessor="3"
 				OptimizeForWindowsApplication="TRUE"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL"
 				StringPooling="TRUE"
@@ -318,19 +318,7 @@
 				RelativePath=".\server side\list_maps.php">
 			</File>
 			<File
-				RelativePath=".\server side\map_erase.php">
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
+				RelativePath=".\server side\admin\map_erase.php">
 			</File>
 			<File
 				RelativePath=".\server side\map_list.dat">
@@ -348,19 +336,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\server side\map_list_view.php">
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="TRUE">
-					<Tool
-						Name="VCCustomBuildTool"/>
-				</FileConfiguration>
+				RelativePath=".\server side\admin\map_list_view.php">
 			</File>
 			<File
 				RelativePath=".\server side\map_register.php">

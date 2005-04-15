@@ -1,11 +1,14 @@
 <?
 
 // definitions
-define('MAP_LIST_PATH',    'map_list.dat');
-define('SUCCESS_MSG',      'success');
-define('FAILURE_MSG',      'failure');
-define('TAKEN_MSG',        'taken');
-define('INVALID_NAME_MSG', 'invalid');
+define('MAP_LIST_PATH',      'map_list.dat');
+define('STATS_PATH',         'stat.dat');
+define('SUCCESS_MSG',        'success');
+define('FAILURE_MSG',        'failure');
+define('TAKEN_MSG',          'taken');
+define('INVALID_NAME_MSG',   'invalid');
+define('REG_LIMIT_EXCEEDED', 'reg_limit_exceeded');
+define('MAX_REGS_PER_DAY',   32);
 
 // check user agent
 if ($HTTP_USER_AGENT != 'Perimeter Map Compiler')
@@ -35,8 +38,6 @@ if ('UNREGISTERED' == $map_name)
 
 // read the map list
 $map_list = file_get_contents(MAP_LIST_PATH);
-if (!$map_list)
-	exit(FAILURE_MSG);
 $map_list = unserialize($map_list);
 if (!$map_list)
 	$map_list = array();
@@ -58,11 +59,31 @@ foreach ($map_list as $map)
 if (!$map_name_taken)
 	array_push($map_list, array('name' => $map_name, 'checksum' => $map_checksum));
 
+// get today's date
+$day = localtime(time(), TRUE);
+$day = $day['tm_yday'];
+
+// read stats
+$stats = file_get_contents(STATS_PATH);
+$stats = unserialize($map_list);
+if (!$stats || $stays['reg_per_day']['day'] != $day)
+	$stats = array('regs_per_day' => array('day' => $day, 'count' => 0));
+
+// make sure the number of registrations does not exceed limit
+if ($stats['regs_per_day']['count'] > MAX_REGS_PER_DAY)
+	exit(REG_LIMIT_EXCEEDED);
+
+// save the incremented count
+++$stats['regs_per_day']['count'];
+$file = fopen(STATS_PATH, 'w');
+if (!$file || !fwrite($file, serialize($stats)) || !fclose($file))
+	exit(FAILURE_MSG);
+
 // write the map list
 $file = fopen(MAP_LIST_PATH, 'w');
-if ($file && fwrite($file, serialize($map_list)) && fclose($file))
-	exit(SUCCESS_MSG);
-else
+if (!$file || !fwrite($file, serialize($map_list)) || !fclose($file))
 	exit(FAILURE_MSG);
+
+exit(SUCCESS_MSG);
 
 ?>

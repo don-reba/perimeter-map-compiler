@@ -93,7 +93,6 @@
 #define IDC_TEXTURE_COLOUR_QUALITY2     1040
 #define IDC_TEXTURE_COLOUR_SPEED        1040
 #define IDC_TEXTURE_COLOUR_QUALITY      1041
-#define IDC_CHECK1                      1042
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -103,6 +102,7 @@
 #define ID_FILE_NEWPROJECT              32780
 #define ID_FILE_MANAGEMAPS              32792
 #define ID_TOOLS_PREFERENCES            32797
+#define ID_TOOLS_SAVETHUMBNAIL          32800
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -111,7 +111,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        179
-#define _APS_NEXT_COMMAND_VALUE         32800
+#define _APS_NEXT_COMMAND_VALUE         32801
 #define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

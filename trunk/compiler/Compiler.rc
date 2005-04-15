@@ -101,6 +101,8 @@ BEGIN
     POPUP "Tools"
     BEGIN
         MENUITEM "Preferences\tF10",            ID_TOOLS_PREFERENCES
+        MENUITEM "Save Thumbnail",              ID_TOOLS_SAVETHUMBNAIL
+        , GRAYED
     END
     POPUP "&Help"
     BEGIN
@@ -270,10 +272,10 @@ BEGIN
     LTEXT           "0:",IDC_STATIC,7,153,8,8
 END
 
-IDD_PREFERENCES DIALOGEX 0, 0, 173, 154
+IDD_PREFERENCES DIALOGEX 0, 0, 173, 153
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-EXSTYLE WS_EX_TOPMOST
+EXSTYLE WS_EX_TOPMOST | WS_EX_TOOLWINDOW
 CAPTION "Preferences"
 FONT 8, "MS Shell Dlg", 400, 0, 0xCC
 BEGIN
@@ -289,9 +291,9 @@ BEGIN
     CONTROL         "",IDC_ZERO_PLAST_OPACITY_SPIN,"msctls_updown32",
                     UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | 
                     UDS_AUTOBUDDY | UDS_ARROWKEYS,156,92,10,12
-    PUSHBUTTON      "OK",IDOK,7,133,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,61,133,50,14
-    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,133,50,14
+    PUSHBUTTON      "OK",IDOK,7,132,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,61,132,50,14
+    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,132,50,14
     LTEXT           "",IDC_ZERO_PLAST_COLOUR,120,78,13,8,SS_SUNKEN
     GROUPBOX        "Map Preview",IDC_STATIC,7,49,159,77,BS_CENTER
     LTEXT           "Mesh tolerance (0-8)",IDC_STATIC,19,62,89,8
@@ -307,11 +309,12 @@ END
 IDD_ABOUTBOX DIALOGEX 0, 0, 234, 133
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOPMOST
 CAPTION "About Perimeter Map Compiler"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,116,112,50,14
-    LTEXT           "Perimeter Map Compiler 1.0 Beta 3\nCopyright 2005 Don Reba",
+    LTEXT           "Perimeter Map Compiler 1.0\nCopyright (c) 2005 Don Reba",
                     IDC_STATIC,49,47,177,19
     LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",
                     IDC_STATIC,49,68,177,35
@@ -385,7 +388,7 @@ BEGIN
         VERTGUIDE, 120
         VERTGUIDE, 156
         TOPMARGIN, 7
-        BOTTOMMARGIN, 147
+        BOTTOMMARGIN, 146
     END
 
     IDD_ABOUTBOX, DIALOG

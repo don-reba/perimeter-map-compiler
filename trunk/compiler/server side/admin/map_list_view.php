@@ -36,7 +36,7 @@
 <?
 
 // definitions
-define('MAP_LIST_PATH', 'map_list.dat');
+define('MAP_LIST_PATH', '../map_list.dat');
 define('FAILURE_MSG',   'failure');
 
 // read the map list

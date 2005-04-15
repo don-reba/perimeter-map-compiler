@@ -26,6 +26,7 @@ protected:
 	BOOL   OnLButtonUp(HWND hWnd, int x, int y, UINT keyFlags);
 	BOOL   OnMouseMove(HWND hWnd, int x, int y, UINT codeHitTest);
 	BOOL   OnSetCursor(HWND hWnd, HWND hWndCursor, UINT codeHitTest, UINT msg);
+	BOOL   OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos);
 protected:
 	// data
 	static const size_t num_bk_colours = 4;   // number of background colours to cycle through

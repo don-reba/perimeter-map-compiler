@@ -1,7 +1,7 @@
 <?
 
 // definitions
-define('MAP_LIST_PATH',     'map_list.dat');
+define('MAP_LIST_PATH',     '../map_list.dat');
 define('INVALID_INDEX_MSG', 'invalid map index');
 define('OUT_OF_BOUNDS_MSG', 'map index out of bounds');
 define('SUCCESS_MSG',       'success');

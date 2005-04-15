@@ -66,8 +66,14 @@ INT_PTR CALLBACK CAbout::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		HANDLE_MSG(hWnd, WM_LBUTTONUP,      obj->OnLButtonUp);
 		HANDLE_MSG(hWnd, WM_MOUSEMOVE,      obj->OnMouseMove);
 		HANDLE_MSG(hWnd, WM_SETCURSOR,      obj->OnSetCursor);
+		HANDLE_MSG(hWnd, WM_WINDOWPOSCHANGING, obj->OnWindowPosChanging);
 	}
 	return FALSE;
+}
+
+BOOL CAbout::OnWindowPosChanging(HWND hWnd, WINDOWPOS *wpos)
+{
+	return TRUE;
 }
 
 VOID CALLBACK CAbout::ChangeBackground(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)

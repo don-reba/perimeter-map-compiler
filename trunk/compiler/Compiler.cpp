@@ -401,8 +401,9 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 					// create the project
 					project.NewProject(project_folder, dlg.map_size, dlg.map_name);
 					// change menu state
-					EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,   MF_ENABLED);
-					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,         MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB,      MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_TOOLS_SAVETHUMBNAIL, MF_ENABLED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT, MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,  MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB, MF_DISABLED | MF_GRAYED);
@@ -419,8 +420,9 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 				// open the project
 				project.OpenProject(project_file);
 				// change menu state
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,   MF_ENABLED);
-				EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
+				EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,         MF_ENABLED);
+				EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB,      MF_ENABLED);
+				EnableMenuItem(GetMenu(hWnd), ID_TOOLS_SAVETHUMBNAIL, MF_ENABLED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT, MF_DISABLED | MF_GRAYED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,  MF_DISABLED | MF_GRAYED);
 				EnableMenuItem(GetMenu(hWnd), ID_FILE_UNPACKSHRUB, MF_DISABLED | MF_GRAYED);
@@ -448,8 +450,9 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 				if (project.Unpack(shrub_file))
 				{
 					// change menu state
-					EnableMenuItem(GetMenu(hWnd), ID_FILE_SAVEPROJECT,  MF_ENABLED);
-					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB, MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_SAVEPROJECT,    MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_FILE_INSTALLSHRUB,   MF_ENABLED);
+					EnableMenuItem(GetMenu(hWnd), ID_TOOLS_SAVETHUMBNAIL, MF_ENABLED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_OPENPROJECT,  MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_NEWPROJECT,   MF_DISABLED | MF_GRAYED);
 					EnableMenuItem(GetMenu(hWnd), ID_FILE_PACKSHRUB,    MF_DISABLED | MF_GRAYED);
@@ -481,7 +484,9 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 			about_dlg.DoModal(hInstance, hWnd);
 		} break;
 	case IDM_EXIT:
+		ToggleWaitCursor(true);
 		DestroyWindow(hWnd);
+		ToggleWaitCursor(false);
 		break;
 	case IDC_STAT_MANAGER_BTN:
 		project.ToggleStatManager(Button_GetCheck(hwndCtl) == BST_CHECKED);
@@ -491,6 +496,11 @@ void CCompiler::OnCommand(HWND hWnd, int id, HWND hwndCtl, UINT codeNotify)
 		break;
 	case IDC_INFO_MANAGER_BTN:
 		project.ToggleInfoManager(Button_GetCheck(hwndCtl) == BST_CHECKED);
+		break;
+	case ID_TOOLS_SAVETHUMBNAIL:
+		ToggleWaitCursor(true);
+		project.SaveMapThumb();
+		ToggleWaitCursor(false);
 		break;
 	default:
 		FORWARD_WM_COMMAND(hWnd, id, hwndCtl, codeNotify, DefWindowProc);
