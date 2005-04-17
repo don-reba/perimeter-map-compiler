@@ -1156,6 +1156,7 @@ bool CProjectManager::GetInstallPath(string &install_path) const
 		DWORD version;
 		DWORD version_length;
 		DWORD version_type;
+		bool russian(true);
 		if (ERROR_SUCCESS != RegQueryValueEx(
 			perimeter_key,
 			_T("Version"),
@@ -1164,37 +1165,58 @@ bool CProjectManager::GetInstallPath(string &install_path) const
 			NULL,
 			&version_length))
 		{
-			RegCloseKey(perimeter_key);
-			Error(_T("RegQueryValueEx failed"));
-			return false;
+			russian = false;
 		}
-		if (version_length != 4 || version_type != REG_DWORD)
+		if (russian)
 		{
-			RegCloseKey(perimeter_key);
-			Error(_T("Wrong Version type."));
-			return false;
+			if (version_length != 4 || version_type != REG_DWORD)
+			{
+				RegCloseKey(perimeter_key);
+				Error(_T("Wrong Version type."));
+				return false;
+			}
+			if (ERROR_SUCCESS != RegQueryValueEx(
+				perimeter_key,
+				_T("Version"),
+				NULL,
+				NULL,
+				ri_cast<BYTE*>(&version),
+				&version_length))
+			{
+				RegCloseKey(perimeter_key);
+				Error(_T("RegQueryValueEx failed"));
+				return false;
+			}
+			if (version != 101)
+			{
+				RegCloseKey(perimeter_key);
+				MessageBox(
+					hWnd,
+					_T("Incompatible Perimeter version. Please make sure you have version 1.01."),
+					_T("Installation Error"),
+					MB_OK);
+				return false;
+			}
 		}
-		if (ERROR_SUCCESS != RegQueryValueEx(
-			perimeter_key,
-			_T("Version"),
-			NULL,
-			NULL,
-			ri_cast<BYTE*>(&version),
-			&version_length))
+		else
 		{
-			RegCloseKey(perimeter_key);
-			Error(_T("RegQueryValueEx failed"));
-			return false;
-		}
-		if (version != 101)
-		{
-			RegCloseKey(perimeter_key);
-			MessageBox(
-				hWnd,
-				_T("Incompatible Perimeter version. Please make sure you have version 1.01."),
-				_T("Installation Error"),
-				MB_OK);
-			return false;
+			HKEY patch_key;
+			if (ERROR_SUCCESS != RegOpenKeyEx(
+				HKEY_LOCAL_MACHINE,
+				_T("SOFTWARE\\Codemasters\\Perimeter Patch 1.01"),
+				0,
+				KEY_READ,
+				&patch_key))
+			{
+				RegCloseKey(perimeter_key);
+				MessageBox(
+					hWnd,
+					_T("Incompatible Perimeter version. Please make sure you have version 1.01."),
+					_T("Installation Error"),
+					MB_OK);
+				return false;
+			}
+			RegCloseKey(patch_key);
 		}
 	}
 	// get path to Perimeter's installation folder
@@ -1203,7 +1225,7 @@ bool CProjectManager::GetInstallPath(string &install_path) const
 		DWORD install_path_length;
 		if (ERROR_SUCCESS != RegQueryValueEx(
 			perimeter_key,
-			_T("Install_Path"),
+			_T("INSTALL_PATH"),
 			NULL,
 			&install_path_type,
 			NULL,

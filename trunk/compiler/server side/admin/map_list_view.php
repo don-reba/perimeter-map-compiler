@@ -32,7 +32,7 @@
 				<p>delete map number <input type="text" name="map_index" size="2" /> <input type="submit" value=">" /></p>
 			</form>
 			<table cellspacing="0" cellpadding="0">
-				<col style="column1"><col class="column2"><col class="column3">
+				<col class="column1"><col class="column2"><col class="column3">
 <?
 
 // definitions
