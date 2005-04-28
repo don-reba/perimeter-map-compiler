@@ -1,0 +1,2654 @@
+SavePrm = {
+	version = "V1.10";
+	worldName = "%folder_name%";
+	players = {
+		4;
+		{
+			frame = "struct SaveUnitFrameData" {
+				unitID = 2;
+				attributeID = UNIT_ATTRIBUTE_FRAME;
+				position = {
+					%frame_position_0%
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 0.;
+				label = "";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				basementInstalled = false;
+				accumulatedEnergy = 0.988405;
+				zeroLayerCounter = 0;
+				weaponChargeLevel = 1.;
+				wayPoints = {
+					0;
+				};
+				attached = false;
+				attaching = false;
+				powered = false;
+				spiralLevel = 1.;
+				squad = "struct SaveUnitSquadData" {
+					unitID = 1;
+					attributeID = UNIT_ATTRIBUTE_SQUAD;
+					position = {
+						1151.3 1169.11 0.
+					};
+					orientaion = {
+						1. 0. 0. 0.
+					};
+					radius = 0.;
+					label = "";
+					damageMolecula = {
+						isAlive = true;
+						elementsDead = {
+							5;
+							0,
+							0,
+							0,
+							0,
+							0
+						};
+					};
+					stablePosition = {
+						1151.3 1169.11
+					};
+					currentMutation = UNIT_ATTRIBUTE_NONE;
+					curvatureRadius = 0.;
+					squadMembers = {
+						0;
+					};
+					wayPoints = {
+						0;
+					};
+					patrolPoints = {
+						0;
+					};
+					patrolIndex = 0;
+					attackPoints = {
+						0;
+					};
+					squadToFollow = {
+						unitID = 0;
+						playerID = 0;
+					};
+					offensiveMode = false;
+					atomsRequested = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+					atomsPaused = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+					mutationEnergy = 0.;
+				};
+				frameSlots = {
+					5;
+					0,
+					0,
+					0,
+					0,
+					0
+				};
+				slotsData = {
+					5;
+					{
+						productionID = UNIT_ATTRIBUTE_NONE;
+						status = 2;
+						progress = 0.;
+					},
+					{
+						productionID = UNIT_ATTRIBUTE_NONE;
+						status = 2;
+						progress = 0.;
+					},
+					{
+						productionID = UNIT_ATTRIBUTE_NONE;
+						status = 2;
+						progress = 0.;
+					},
+					{
+						productionID = UNIT_ATTRIBUTE_NONE;
+						status = 2;
+						progress = 0.;
+					},
+					{
+						productionID = UNIT_ATTRIBUTE_NONE;
+						status = 2;
+						progress = 0.;
+					}
+				};
+				belligerent = BELLIGERENT_EXODUS0;
+				catched = false;
+			};
+			buildings = {
+				0;
+			};
+			catchedFrames = {
+				0;
+			};
+			compAndUserID = 0;
+		},
+		{
+			frame = 0;
+			buildings = {
+				0;
+			};
+			catchedFrames = {
+				0;
+			};
+			compAndUserID = 0;
+		},
+		{
+			frame = 0;
+			buildings = {
+				0;
+			};
+			catchedFrames = {
+				0;
+			};
+			compAndUserID = 0;
+		},
+		{
+			frame = 0;
+			buildings = {
+				0;
+			};
+			catchedFrames = {
+				0;
+			};
+			compAndUserID = 0;
+		}
+	};
+	environment = {
+		objects = {
+			0;
+		};
+	};
+	filth = {
+		objects = {
+			28;
+			"struct SaveUnitFilthData" {
+				unitID = 1;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					865. 391. 51.
+				};
+				orientaion = {
+					0.979045 0. 0. -0.203644
+				};
+				radius = 32.;
+				label = "_Муравьи1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_ANTS2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 60.;
+				sleepPeriod = 50.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 50.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 15;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 2;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1318. 947. 124.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Муравьи2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_ANTS2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 60.;
+				sleepPeriod = 50.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 50.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 15;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 3;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					790.284 1401.09 84.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Муравьи3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_ANTS2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 60.;
+				sleepPeriod = 50.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 50.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 15;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 4;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					303. 852. 54.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Муравьи4";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_ANTS2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 60.;
+				sleepPeriod = 50.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 50.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 15;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 6;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1387. 398. 113.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Пауки4";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SNAKE;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 120.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 7;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					266. 448. 75.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Пауки3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SNAKE;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 120.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 8;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					416. 1439. 155.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Пауки2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SNAKE;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 120.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 9;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1645. 646. 92.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Приведения1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_GHOST;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 240.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 10;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					376. 315. 75.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Приведения2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_GHOST;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 240.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 12;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1542. 1567. 78.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Приведения4";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_GHOST;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 240.;
+				sleepPeriod = 70.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 70.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 20;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 14;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1671. 1102. 65.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Акулы2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SHARK;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 360.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 15;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 15;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1290. 183. 81.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Акулы3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SHARK;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 360.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 5;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 16;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					234.581 1472.99 148.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Акулы4";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_SHARK;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 360.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 5;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 21;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					682. 248. 58.
+				};
+				orientaion = {
+					0.720272 0. 0. -0.693691
+				};
+				radius = 32.;
+				label = "_Червь1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_WORM;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 600.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 1;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 22;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1658.14 960.242 214.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Червь2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_WORM;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 600.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 1;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 23;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					738. 1723. 172.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Червь3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_WORM;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 600.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 1;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 25;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1797. 821. 148.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Демон2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_DAEMON;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 720.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 10;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 26;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1606.72 1704.57 -36.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Демон3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_DAEMON;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 720.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 10;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 28;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1701.72 1897.23 350.
+				};
+				orientaion = {
+					0.999988 0. 0. 4.88279e-003
+				};
+				radius = 32.;
+				label = "_Д2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_DRAGON2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 840.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 1;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 29;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					292. 1861. 244.
+				};
+				orientaion = {
+					0.999988 0. 0. 4.88279e-003
+				};
+				radius = 32.;
+				label = "_Д3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_DRAGON2;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 840.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 1;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveGeoBreak" {
+				unitID = 32;
+				attributeID = UNIT_ATTRIBUTE_GEO_HEAD;
+				position = {
+					589. 622. 39.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 0.;
+				label = "_Морда2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				sleep = false;
+				firstSleepTime = 960.;
+				sleepPeriod = 30.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 10.;
+				deltaAttackPeriond = 0.;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				geoRadius = 1.;
+				num_break = 0;
+			},
+			"struct SaveGeoBreak" {
+				unitID = 33;
+				attributeID = UNIT_ATTRIBUTE_GEO_BREAK;
+				position = {
+					1027. 765. 118.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 0.;
+				label = "_Трещина1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				sleep = false;
+				firstSleepTime = 1080.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 30.;
+				deltaAttackPeriond = 0.;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				geoRadius = 8.;
+				num_break = 0;
+			},
+			"struct SaveGeoBreak" {
+				unitID = 34;
+				attributeID = UNIT_ATTRIBUTE_GEO_BREAK;
+				position = {
+					611. 1188. 66.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 0.;
+				label = "_Трещина2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				sleep = false;
+				firstSleepTime = 1080.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 30.;
+				deltaAttackPeriond = 0.;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				geoRadius = 8.;
+				num_break = 0;
+			},
+			"struct SaveGeoFault" {
+				unitID = 35;
+				attributeID = UNIT_ATTRIBUTE_GEO_FAULT;
+				position = {
+					324.153 779.054 53.
+				};
+				orientaion = {
+					0.998284 0. 0. -5.85602e-002
+				};
+				radius = 0.;
+				label = "_Разлом1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				sleep = false;
+				firstSleepTime = 1320.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 30.;
+				deltaAttackPeriond = 0.;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				length = 1000.;
+				angle = 0.;
+			},
+			"struct SaveGeoFault" {
+				unitID = 36;
+				attributeID = UNIT_ATTRIBUTE_GEO_FAULT;
+				position = {
+					866. 1623. 140.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 0.;
+				label = "_Разлом2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				sleep = false;
+				firstSleepTime = 1320.;
+				sleepPeriod = 100.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 30.;
+				deltaAttackPeriond = 0.;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				length = 1000.;
+				angle = 0.;
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 37;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1208.73 933.826 105.
+				};
+				orientaion = {
+					0.998284 0. 0. 5.85602e-002
+				};
+				radius = 32.;
+				label = "_Вулкан1";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_VOLCANO;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 1560.;
+				sleepPeriod = 120.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 50;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 38;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					1095.39 1401.01 88.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Вулкан2";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_VOLCANO;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 1560.;
+				sleepPeriod = 120.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 50;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			},
+			"struct SaveUnitFilthData" {
+				unitID = 39;
+				attributeID = UNIT_ATTRIBUTE_FILTH_SPOT;
+				position = {
+					502. 487. 60.
+				};
+				orientaion = {
+					1. 0. 0. 0.
+				};
+				radius = 32.;
+				label = "_Вулкан3";
+				damageMolecula = {
+					isAlive = true;
+					elementsDead = {
+						5;
+						0,
+						0,
+						0,
+						0,
+						0
+					};
+				};
+				filthType = FILTH_SPOT_ID_VOLCANO;
+				attackWidth = -1.;
+				attackDirection = 0.;
+				sleep = false;
+				firstSleepTime = 1560.;
+				sleepPeriod = 120.;
+				deltaSleepPeriod = 0.;
+				attackPeriond = 100.;
+				deltaAttackPeriond = 0.;
+				creatureNum = 50;
+				activatingUnit = UNIT_ATTRIBUTE_NONE;
+				activatingDistance = 100.;
+				attack_player = FILTH_ATTACK_ALL;
+				initial_geoprocess = true;
+				sleep_timer = 0;
+				create_first = true;
+				hole_position = {
+					0;
+				};
+				hole_position_inited = {
+					0;
+				};
+				kill_of_end = false;
+				swarmList = {
+					0;
+				};
+			}
+		};
+	};
+	nobodysBuildings = {
+		objects = {
+			0;
+		};
+	};
+	worldObjects = {
+		alphaPotentials = {
+			0;
+		};
+	};
+	activeTasks = {
+		0;
+	};
+	manualData = {
+		missionDescription = "";
+		soundTracks = {
+			0;
+		};
+		players = {
+			1;
+			{
+				belligerent = BELLIGERENT_EXODUS0;
+				strategy = {
+					name = "";
+					triggers = {
+						5;
+						{
+							name = "START";
+							condition = "struct ConditionSwitcher" {
+								state_ = true;
+								internalColor_ = 0;
+								type = AND;
+								conditions = {
+									0;
+								};
+							};
+							action = 0;
+							outcomingLinks = {
+								1;
+								{
+									triggerName = "ппп";
+									color = STRATEGY_RED;
+									type = THIN;
+									active_ = false;
+									internalColor_ = 0;
+									parentOffsetX_ = 113;
+									parentOffsetY_ = 16;
+									childOffsetX_ = -115;
+									childOffsetY_ = -16;
+								}
+							};
+							state_ = CHECKING;
+							executionCounter_ = 0;
+							internalColor_ = 0;
+							cellNumberX = 0;
+							cellNumberY = 0;
+							left_ = 0;
+							top_ = 0;
+							right_ = 256;
+							bottom_ = 32;
+						},
+						{
+							name = "Camera";
+							condition = "struct ConditionSwitcher" {
+								state_ = true;
+								internalColor_ = 0;
+								type = AND;
+								conditions = {
+									0;
+								};
+							};
+							action = "struct ActionSetCamera" {
+								internalColor_ = 0;
+								cameraSplineName = "Camera0";
+								stepTime = 0.;
+								cycles = 0;
+								smoothTransition = false;
+							};
+							outcomingLinks = {
+								0;
+							};
+							state_ = CHECKING;
+							executionCounter_ = 0;
+							internalColor_ = 0;
+							cellNumberX = 1;
+							cellNumberY = 0;
+							left_ = 288;
+							top_ = 0;
+							right_ = 544;
+							bottom_ = 32;
+						},
+						{
+							name = "UserCamera";
+							condition = "struct ConditionSwitcher" {
+								state_ = false;
+								internalColor_ = 0;
+								type = AND;
+								conditions = {
+									0;
+								};
+							};
+							action = 0;
+							outcomingLinks = {
+								0;
+							};
+							state_ = SLEEPING;
+							executionCounter_ = 0;
+							internalColor_ = 0;
+							cellNumberX = 2;
+							cellNumberY = 0;
+							left_ = 576;
+							top_ = 0;
+							right_ = 832;
+							bottom_ = 32;
+						},
+						{
+							name = "поражение";
+							condition = "struct ConditionSwitcher" {
+								state_ = false;
+								internalColor_ = 0;
+								type = AND;
+								conditions = {
+									1;
+									{
+										type = INVERTED;
+										condition = "struct ConditionObjectExists" {
+											state_ = true;
+											internalColor_ = 0;
+											object = UNIT_ATTRIBUTE_FRAME;
+											counter = 1;
+											playerType = AI_PLAYER_TYPE_ME;
+											constructedAndConstructing = true;
+										};
+									}
+								};
+							};
+							action = "struct ActionDefeat" {
+								internalColor_ = 0;
+							};
+							outcomingLinks = {
+								0;
+							};
+							state_ = SLEEPING;
+							executionCounter_ = 0;
+							internalColor_ = 0;
+							cellNumberX = 0;
+							cellNumberY = 1;
+							left_ = 0;
+							top_ = 64;
+							right_ = 256;
+							bottom_ = 96;
+						},
+						{
+							name = "ппп";
+							condition = "struct ConditionSwitcher" {
+								state_ = true;
+								internalColor_ = 0;
+								type = AND;
+								conditions = {
+									0;
+								};
+							};
+							action = "struct Action" {
+								internalColor_ = 0;
+							};
+							outcomingLinks = {
+								1;
+								{
+									triggerName = "поражение";
+									color = STRATEGY_RED;
+									type = THIN;
+									active_ = false;
+									internalColor_ = 0;
+									parentOffsetX_ = -128;
+									parentOffsetY_ = -10;
+									childOffsetX_ = 114;
+									childOffsetY_ = 16;
+								}
+							};
+							state_ = SLEEPING;
+							executionCounter_ = 0;
+							internalColor_ = 0;
+							cellNumberX = 1;
+							cellNumberY = 2;
+							left_ = 288;
+							top_ = 128;
+							right_ = 544;
+							bottom_ = 160;
+						}
+					};
+					left_ = -43;
+					top_ = -163;
+					right_ = 793;
+					bottom_ = 577;
+				};
+				strategies = {
+					0;
+				};
+			}
+		};
+		controls = {
+			134;
+			{
+				controlID = SQSH_STATIC_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GAME_SCREEN_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BACKGRND_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_MAP_WINDOW_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_WORKAREA2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_WORKAREA3_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_WORKAREA4_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FIELD_ON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FIELD_OFF_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SOLDIER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_OFFICER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TECHNIC_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TOGETHER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_YADRO_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_YADRO_EX_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SOLDIER_PLANT_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_OFFICER_PLANT_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TECHNIC_PLANT_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_COMMANDER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_RELAY_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION3_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION4_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION5_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION_EXODUS_LAB_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION_EMPIRE_LAB_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATION_HARKBACK_LAB_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_CORRIDOR_ALPHA_ID;
+				enabled = true;
+				visible = false;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_CORRIDOR_OMEGA_ID;
+				enabled = true;
+				visible = false;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_STATIC_BOMB_ID;
+				enabled = true;
+				visible = false;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_LASER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_ROCKET_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_HOWITZER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_FILTH_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_GIMLET_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_SUBCHASER_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_GUN_BALLISTIC_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FRAME_TERRAIN_BUILD1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FRAME_TERRAIN_BUILD2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FRAME_TERRAIN_BUILD3_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FRAME_TERRAIN_BUILD4_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_FRAME_TERRAIN_BUILD5_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_DISINTEGRATE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT1;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT2;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT3;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT4;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT5;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT6;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT7;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT8;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT9;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT10;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT11;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT12;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT13;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT14;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT15;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT16;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT17;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT18;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT19;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT20;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT21;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT22;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT23;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT24;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SQUAD_UNIT25;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SPEED_PAUSE;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SPEED_50;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SPEED_100;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SPEED_150;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_MENU_BUTTON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TASK_BUTTON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_REPLAY_PLAYER_BUTTON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_EMBLEM_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TAB_BUILD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = -1;
+			},
+			{
+				controlID = SQSH_TAB_BUILD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TAB_BUILD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 1;
+			},
+			{
+				controlID = SQSH_TAB_BUILD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 2;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = -1;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 1;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 2;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 3;
+			},
+			{
+				controlID = SQSH_TAB_SQUAD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 4;
+			},
+			{
+				controlID = SQSH_HINT_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_MOVE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_STOP_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_STOP2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_SQ_ATTACK_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_SQ_BACK_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_SQ_OFDEF_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_SQ_PATROL_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_BRIG_BACK_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_BRIG_CHANGE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_BRIG_BUILD_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_START_CHARGE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_STOP_CHARGE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UNIT_CHARGE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_POWERON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_POWEROFF_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_SELL_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_LASER1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_LASER2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_BOMB1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_BOMB2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_ROCKET1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_ROCKET2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_EXODUS1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_EXODUS2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_EMPIRE1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_EMPIRE2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_HARKBACK1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_HARKBACK2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_FLY_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_SUBTERRA_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_UPGRADE_OMEGA_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_FIELDON_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_FIELDOFF_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_FRAME_INSTALL_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_FRAME_ALARM_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_SELPANEL_FRAME_TELEPORTATE_ID;
+				enabled = true;
+				visible = false;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_PROGRESS_ENERGY;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_PROGRESS_COLLECTED;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_RAMKA_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_INFOWND_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BAR_SQUAD1_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BAR_SQUAD2_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BAR_SQUAD3_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BAR_SQUAD4_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			},
+			{
+				controlID = SQSH_BAR_SQUAD5_ID;
+				enabled = true;
+				visible = true;
+				flashing = false;
+				tabNumber = 0;
+			}
+		};
+		spiralChargingEnergy = 2.;
+		spiralChargingTime = 100000;
+		spiralChargingPriority = 170;
+		zeroLayerHeight = 80;
+		cameras = {
+			1;
+			{
+				name = "Camera0";
+				path = {
+					0;
+				};
+				useAsSpline = false;
+				position = {
+					%camera_position_0%
+				};
+				angle = {
+					0.314159 1.56986
+				};
+				distance = 1000.;
+			}
+		};
+		buildingInstallerInstructions = {
+			0;
+		};
+		omegaMissionType = OMEGA_UPGRADE;
+		alphaActivationDistance = 200.;
+		omegaActivationDistance = 1000.;
+		interfaceEnabled = true;
+		loadHardness = false;
+	};
+};
