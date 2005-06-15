@@ -159,13 +159,7 @@
 				RelativePath=".\main wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\map info.cpp">
-			</File>
-			<File
 				RelativePath=".\map manager.cpp">
-			</File>
-			<File
-				RelativePath=".\map settings wnd.cpp">
 			</File>
 			<File
 				RelativePath=".\panel wnd.cpp">
@@ -233,9 +227,6 @@
 				RelativePath=".\main wnd.h">
 			</File>
 			<File
-				RelativePath=".\map info.h">
-			</File>
-			<File
 				RelativePath=".\map manager.h">
 			</File>
 			<File
@@ -285,9 +276,6 @@
 			</File>
 			<File
 				RelativePath=".\util.h">
-			</File>
-			<File
-				RelativePath=".\viewer.h">
 			</File>
 			<File
 				RelativePath=".\window.h">
@@ -434,6 +422,9 @@
 				</FileConfiguration>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\readme.txt">
+		</File>
 		<File
 			RelativePath=".\resource\spg.bz2">
 		</File>

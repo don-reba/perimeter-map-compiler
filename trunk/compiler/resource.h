@@ -44,7 +44,6 @@
 #define IDB_BITMAP1                     181
 #define IDB_STATS                       181
 #define IDB_INFO                        182
-#define IDI_ICON2                       184
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_LIGHTING                    1000
