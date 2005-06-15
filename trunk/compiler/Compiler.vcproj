@@ -22,10 +22,14 @@
 				Optimization="0"
 				InlineFunctionExpansion="0"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL"
+				GeneratePreprocessedFile="0"
+				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				UsePrecompiledHeader="3"
+				RuntimeTypeInfo="TRUE"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="stdafx.h"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="3"/>
@@ -71,7 +75,8 @@
 			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
-				GlobalOptimizations="TRUE"
+				Optimization="0"
+				GlobalOptimizations="FALSE"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
@@ -80,14 +85,17 @@
 				OptimizeForWindowsApplication="TRUE"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL"
 				StringPooling="TRUE"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
-				BufferSecurityCheck="TRUE"
+				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="1"
-				UsePrecompiledHeader="3"
+				RuntimeTypeInfo="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderThrough="stdafx.h"
 				BrowseInformation="1"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="1"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -130,16 +138,25 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath=".\about.cpp">
+				RelativePath=".\about wnd.cpp">
+			</File>
+			<File
+				RelativePath=".\app.cpp">
 			</File>
 			<File
 				RelativePath=".\btdb.cpp">
 			</File>
 			<File
-				RelativePath=".\Compiler.cpp">
+				RelativePath=".\error handler.cpp">
 			</File>
 			<File
-				RelativePath=".\info manager.cpp">
+				RelativePath=".\file tracker.cpp">
+			</File>
+			<File
+				RelativePath=".\info wnd.cpp">
+			</File>
+			<File
+				RelativePath=".\main wnd.cpp">
 			</File>
 			<File
 				RelativePath=".\map info.cpp">
@@ -148,37 +165,40 @@
 				RelativePath=".\map manager.cpp">
 			</File>
 			<File
+				RelativePath=".\map settings wnd.cpp">
+			</File>
+			<File
+				RelativePath=".\panel wnd.cpp">
+			</File>
+			<File
+				RelativePath=".\pmc wnd.cpp">
+			</File>
+			<File
 				RelativePath=".\preference data.cpp">
 			</File>
 			<File
-				RelativePath=".\preferences.cpp">
+				RelativePath=".\preference wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\preview.cpp">
+				RelativePath=".\preview wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\project dialog.cpp">
+				RelativePath=".\project create wnd.cpp">
 			</File>
 			<File
 				RelativePath=".\project manager.cpp">
 			</File>
 			<File
-				RelativePath=".\stat manager.cpp">
+				RelativePath=".\project tasks.cpp">
+			</File>
+			<File
+				RelativePath=".\stat wnd.cpp">
 			</File>
 			<File
 				RelativePath=".\stdafx.cpp">
-				<FileConfiguration
-					Name="Debug|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"/>
-				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\task common.cpp">
 			</File>
 		</Filter>
 		<Filter
@@ -186,19 +206,31 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
-				RelativePath=".\about.h">
+				RelativePath=".\about wnd.h">
+			</File>
+			<File
+				RelativePath=".\app data.h">
+			</File>
+			<File
+				RelativePath=".\app.h">
 			</File>
 			<File
 				RelativePath=".\btdb.h">
 			</File>
 			<File
-				RelativePath=".\Compiler.h">
+				RelativePath=".\error handler.h">
 			</File>
 			<File
-				RelativePath=".\data.h">
+				RelativePath=".\file tracker.h">
 			</File>
 			<File
-				RelativePath=".\info manager.h">
+				RelativePath=".\foreach.h">
+			</File>
+			<File
+				RelativePath=".\info wnd.h">
+			</File>
+			<File
+				RelativePath=".\main wnd.h">
 			</File>
 			<File
 				RelativePath=".\map info.h">
@@ -207,34 +239,58 @@
 				RelativePath=".\map manager.h">
 			</File>
 			<File
+				RelativePath=".\map settings.h">
+			</File>
+			<File
+				RelativePath=".\panel wnd.h">
+			</File>
+			<File
+				RelativePath=".\pmc wnd.h">
+			</File>
+			<File
 				RelativePath=".\preference data.h">
 			</File>
 			<File
-				RelativePath=".\preferences.h">
+				RelativePath=".\preference wnd.h">
 			</File>
 			<File
-				RelativePath=".\preview.h">
+				RelativePath=".\preview wnd.h">
 			</File>
 			<File
-				RelativePath=".\project dialog.h">
+				RelativePath=".\project create wnd.h">
+			</File>
+			<File
+				RelativePath=".\project data.h">
 			</File>
 			<File
 				RelativePath=".\project manager.h">
 			</File>
 			<File
-				RelativePath=".\Resource.h">
+				RelativePath=".\project tasks.h">
 			</File>
 			<File
-				RelativePath=".\stat manager.h">
+				RelativePath=".\resource.h">
+			</File>
+			<File
+				RelativePath=".\stat wnd.h">
+			</File>
+			<File
+				RelativePath=".\static serializer.h">
 			</File>
 			<File
 				RelativePath=".\stdafx.h">
+			</File>
+			<File
+				RelativePath=".\task common.h">
 			</File>
 			<File
 				RelativePath=".\util.h">
 			</File>
 			<File
 				RelativePath=".\viewer.h">
+			</File>
+			<File
+				RelativePath=".\window.h">
 			</File>
 		</Filter>
 		<Filter
@@ -257,7 +313,16 @@
 				RelativePath=".\details window.ico">
 			</File>
 			<File
+				RelativePath=".\resource\details.bmp">
+			</File>
+			<File
+				RelativePath=".\resource\details.ico">
+			</File>
+			<File
 				RelativePath=".\green light.ico">
+			</File>
+			<File
+				RelativePath=".\resource\green light.ico">
 			</File>
 			<File
 				RelativePath=".\icon1.ico">
@@ -272,6 +337,15 @@
 				RelativePath=".\preview window.ico">
 			</File>
 			<File
+				RelativePath=".\resource\preview.bmp">
+			</File>
+			<File
+				RelativePath=".\resource\preview.ico">
+			</File>
+			<File
+				RelativePath=".\resource\red light.ico">
+			</File>
+			<File
 				RelativePath=".\red light.ico">
 			</File>
 			<File
@@ -281,10 +355,10 @@
 				RelativePath=".\shrub(small grayscale).ico">
 			</File>
 			<File
-				RelativePath=".\shrub.ico">
+				RelativePath=".\resource\shrub.ico">
 			</File>
 			<File
-				RelativePath=".\resource\shrub.ico">
+				RelativePath=".\shrub.ico">
 			</File>
 			<File
 				RelativePath=".\resource\shrub2.ico">
@@ -296,19 +370,25 @@
 				RelativePath=".\small.ico">
 			</File>
 			<File
+				RelativePath=".\resource\stat window.ico">
+			</File>
+			<File
 				RelativePath=".\stat window.ico">
 			</File>
 			<File
-				RelativePath=".\resource\stat window.ico">
+				RelativePath=".\resource\stats.bmp">
+			</File>
+			<File
+				RelativePath=".\resource\stats.ico">
 			</File>
 			<File
 				RelativePath=".\Triangle.bmp">
 			</File>
 			<File
-				RelativePath=".\resource\triangle.ico">
+				RelativePath=".\triangle.ico">
 			</File>
 			<File
-				RelativePath=".\triangle.ico">
+				RelativePath=".\resource\triangle.ico">
 			</File>
 		</Filter>
 		<Filter

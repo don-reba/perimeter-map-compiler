@@ -70,13 +70,15 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_CAN
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+IDI_RED_LIGHT           ICON                    "resource\\red light.ico"
 IDI_SHRUB_ACTIVE        ICON                    "resource/shrub.ico"
 IDI_SHRUB_INACTIVE      ICON                    "resource/shrub2.ico"
-IDI_IM                  ICON                    "resource/details window.ico"
-IDI_MP                  ICON                    "resource/preview window.ico"
-IDI_SM                  ICON                    "resource/stat window.ico"
+IDI_IM                  ICON                    "resource/details.ico"
+IDI_MP                  ICON                    "resource/preview.ico"
+IDI_SM                  ICON                    "resource/stats.ico"
 IDI_TRIANGLE            ICON                    "resource/triangle.ico"
 IDI_COMPILER            ICON                    "resource/compiler.ico"
+IDI_GREEN_LIGHT         ICON                    "resource\\green light.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -90,10 +92,10 @@ BEGIN
         MENUITEM "&New Project\tCtrl-N",        ID_FILE_NEWPROJECT
         MENUITEM "&Open Project\tCtrl-O",       ID_FILE_OPENPROJECT
         MENUITEM SEPARATOR
-        MENUITEM "&Pack Shrub\tCtrl-P",         ID_FILE_PACKSHRUB, GRAYED
+        MENUITEM "&Pack Shrub\tCtrl-P",         ID_FILE_PACKSHRUB
         MENUITEM "&Unpack Shrub\tCtrl-U",       ID_FILE_UNPACKSHRUB
         MENUITEM SEPARATOR
-        MENUITEM "&Install Map\tCtrl-I",        ID_FILE_INSTALLSHRUB, GRAYED
+        MENUITEM "&Install Map\tCtrl-I",        ID_FILE_INSTALLSHRUB
         MENUITEM "&Manage Maps\tCtrl-M",        ID_FILE_MANAGEMAPS
         MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt-F4",               IDM_EXIT
@@ -102,7 +104,6 @@ BEGIN
     BEGIN
         MENUITEM "Preferences\tF10",            ID_TOOLS_PREFERENCES
         MENUITEM "Save Thumbnail",              ID_TOOLS_SAVETHUMBNAIL
-        , GRAYED
     END
     POPUP "&Help"
     BEGIN
@@ -136,16 +137,16 @@ END
 // Dialog
 //
 
-IDD_PROJECT_DLG DIALOGEX 0, 0, 125, 69
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+IDD_PROJECT_DLG DIALOGEX 0, 0, 125, 63
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
 CAPTION "Project Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     COMBOBOX        IDC_MAP_SIZE,50,22,68,128,CBS_DROPDOWN | CBS_SORT | 
                     WS_VSCROLL | WS_TABSTOP
-    DEFPUSHBUTTON   "OK",IDOK,7,48,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,68,48,50,14
+    DEFPUSHBUTTON   "OK",IDOK,7,42,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,68,42,50,14
     LTEXT           "map size",IDC_STATIC,7,24,37,8
     LTEXT           "map name",IDC_STATIC,7,9,34,8
     EDITTEXT        IDC_MAP_NAME,50,7,68,12,ES_AUTOHSCROLL
@@ -177,77 +178,54 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION |
 CAPTION "Details"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    EDITTEXT        IDC_ZERO_PLAST,76,18,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+    EDITTEXT        IDC_ZERO_PLAST,76,18,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_ZERO_PLAST_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | WS_DISABLED,110,18,11,14
-    EDITTEXT        IDC_FOG_START,76,32,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
-    EDITTEXT        IDC_FOG_END,76,46,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS,110,18,11,14
+    EDITTEXT        IDC_FOG_START,76,32,38,12,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_FOG_END,76,46,38,12,ES_AUTOHSCROLL | ES_NUMBER
     PUSHBUTTON      "",IDC_FOG_COLOUR_BTN,92,62,13,8,BS_ICON | BS_CENTER | 
-                    BS_VCENTER | WS_DISABLED
-    EDITTEXT        IDC_SP1_X,26,91,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    BS_VCENTER
+    EDITTEXT        IDC_SP1_X,26,91,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP1_X_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,90,11,
-                    14
-    EDITTEXT        IDC_SP1_Y,76,91,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,58,90,11,14
+    EDITTEXT        IDC_SP1_Y,76,91,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP1_Y_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,90,11,
-                    14
-    EDITTEXT        IDC_SP2_X,26,106,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,108,90,11,14
+    EDITTEXT        IDC_SP2_X,26,106,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP2_X_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,105,11,
-                    14
-    EDITTEXT        IDC_SP2_Y,76,106,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,58,105,11,14
+    EDITTEXT        IDC_SP2_Y,76,106,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP2_Y_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,105,11,
-                    14
-    EDITTEXT        IDC_SP3_X,26,121,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,108,105,11,14
+    EDITTEXT        IDC_SP3_X,26,121,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP3_X_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,120,11,
-                    14
-    EDITTEXT        IDC_SP3_Y,76,121,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,58,120,11,14
+    EDITTEXT        IDC_SP3_Y,76,121,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP3_Y_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,120,11,
-                    14
-    EDITTEXT        IDC_SP4_X,26,136,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,108,120,11,14
+    EDITTEXT        IDC_SP4_X,26,136,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP4_X_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,135,11,
-                    14
-    EDITTEXT        IDC_SP4_Y,76,136,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,58,135,11,14
+    EDITTEXT        IDC_SP4_Y,76,136,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP4_Y_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,135,11,
-                    14
-    EDITTEXT        IDC_SP0_X,26,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,108,135,11,14
+    EDITTEXT        IDC_SP0_X,26,151,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP0_X_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,58,150,11,
-                    14
-    EDITTEXT        IDC_SP0_Y,76,151,38,12,ES_AUTOHSCROLL | ES_NUMBER | 
-                    WS_DISABLED
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,58,150,11,14
+    EDITTEXT        IDC_SP0_Y,76,151,38,12,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SP0_Y_SPIN,"msctls_updown32",UDS_WRAP | 
                     UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | 
-                    UDS_ARROWKEYS | UDS_NOTHOUSANDS | WS_DISABLED,108,150,11,
-                    14
+                    UDS_ARROWKEYS | UDS_NOTHOUSANDS,108,150,11,14
     LTEXT           "y",IDC_STATIC,68,108,8,8
     LTEXT           "Zero-level (0-255)",IDC_STATIC,7,20,64,8
     LTEXT           "Fog End",IDC_STATIC,7,48,64,8
@@ -272,10 +250,10 @@ BEGIN
     LTEXT           "0:",IDC_STATIC,7,153,8,8
 END
 
-IDD_PREFERENCES DIALOGEX 0, 0, 173, 153
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
-    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-EXSTYLE WS_EX_TOPMOST | WS_EX_TOOLWINDOW
+IDD_PREFERENCES DIALOGEX 0, 0, 173, 154
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOPMOST
 CAPTION "Preferences"
 FONT 8, "MS Shell Dlg", 400, 0, 0xCC
 BEGIN
@@ -291,9 +269,9 @@ BEGIN
     CONTROL         "",IDC_ZERO_PLAST_OPACITY_SPIN,"msctls_updown32",
                     UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | 
                     UDS_AUTOBUDDY | UDS_ARROWKEYS,156,92,10,12
-    PUSHBUTTON      "OK",IDOK,7,132,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,61,132,50,14
-    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,132,50,14
+    PUSHBUTTON      "OK",IDOK,7,133,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,61,133,50,14
+    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,133,50,14
     LTEXT           "",IDC_ZERO_PLAST_COLOUR,120,78,13,8,SS_SUNKEN
     GROUPBOX        "Map Preview",IDC_STATIC,7,49,159,77,BS_CENTER
     LTEXT           "Mesh tolerance (0-8)",IDC_STATIC,19,62,89,8
@@ -347,7 +325,7 @@ BEGIN
         VERTGUIDE, 44
         VERTGUIDE, 50
         TOPMARGIN, 7
-        BOTTOMMARGIN, 62
+        BOTTOMMARGIN, 56
     END
 
     IDD_STAT_DLG, DIALOG
@@ -388,7 +366,7 @@ BEGIN
         VERTGUIDE, 120
         VERTGUIDE, 156
         TOPMARGIN, 7
-        BOTTOMMARGIN, 146
+        BOTTOMMARGIN, 147
     END
 
     IDD_ABOUTBOX, DIALOG
@@ -430,6 +408,15 @@ IDR_WORLDS_LIST         TEXT                    "resource/worlds_list.txt"
 IDR_SPG                 BZ2                     "resource/spg.bz2"
 IDR_SPH                 BZ2                     "resource/sph.bz2"
 IDR_SURVIVAL_SPG        BZ2                     "resource\\survival_spg.bz2"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_PREVIEW             BITMAP                  "resource\\preview.bmp"
+IDB_STATS               BITMAP                  "resource\\stats.bmp"
+IDB_INFO                BITMAP                  "resource\\details.bmp"
 
 /////////////////////////////////////////////////////////////////////////////
 //

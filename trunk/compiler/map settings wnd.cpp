@@ -1,4 +1,19 @@
 #include "StdAfx.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 #include "map info.h"
 #include "resource.h"
 #include <map>
@@ -339,3 +354,4 @@ inline int CMapInfo::exp2(unsigned int n) const
 	}
 	return e;
 }
+*/

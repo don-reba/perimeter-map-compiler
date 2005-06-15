@@ -6,73 +6,73 @@ using std::ifstream;
 using std::ofstream;
 using std::find;
 
-//---------------------
-// CBTDB implementation
-//---------------------
-CBTDB::CBTDB(const TCHAR * const btdb_file)
+//--------------------
+// Btdb implementation
+//--------------------
+Btdb::Btdb(LPCTSTR btdb_file)
 {
 	DWORD size(0);
-	CBtdbEntry entry;
+	BtdbEntry entry;
 	// save the path
-	this->btdb_file = btdb_file;
+	btdb_file_ = btdb_file;
 	// read in the contents of btdb into an array
 	ifstream btdb_in(btdb_file, std::ios::ios_base::binary);
-	is_open = btdb_in.is_open();
-	if (!is_open)
+	is_open_ = btdb_in.is_open();
+	if (!is_open_)
 		return;
 	btdb_in.read(ri_cast<char*>(&size), 4);
 	for (DWORD i(0); i != size; ++i)
 	{
-		// read in title
-		btdb_in.read(ri_cast<char*>(&entry.title_size), 4);
-		entry.title = new char[entry.title_size];
-		btdb_in.read(entry.title, entry.title_size);
-		// read in content
-		btdb_in.read(ri_cast<char*>(&entry.content_size), 4);
-		entry.content = new char[entry.content_size];
-		btdb_in.read(entry.content, entry.content_size);
-		// read in auxillary
-		btdb_in.read(ri_cast<char*>(&entry.auxillary_size), 4);
-		entry.auxillary = new char[entry.auxillary_size];
-		btdb_in.read(entry.auxillary, entry.auxillary_size);
+		// read in title_
+		btdb_in.read(ri_cast<char*>(&entry.title_size_), 4);
+		entry.title_ = new char[entry.title_size_];
+		btdb_in.read(entry.title_, entry.title_size_);
+		// read in content_
+		btdb_in.read(ri_cast<char*>(&entry.content_size_), 4);
+		entry.content_ = new char[entry.content_size_];
+		btdb_in.read(entry.content_, entry.content_size_);
+		// read in auxillary_
+		btdb_in.read(ri_cast<char*>(&entry.auxillary_size_), 4);
+		entry.auxillary_ = new char[entry.auxillary_size_];
+		btdb_in.read(entry.auxillary_, entry.auxillary_size_);
 		// add the entry to the arrray
-		entries.push_back(entry);
+		entries_.push_back(entry);
 	}
 	btdb_in.close();
 }
 
-CBTDB::~CBTDB()
+Btdb::~Btdb()
 {
 	Flush();
-	vector<CBtdbEntry>::iterator i(entries.begin());
-	const vector<CBtdbEntry>::const_iterator end(entries.end());
+	vector<BtdbEntry>::iterator i(entries_.begin());
+	const vector<BtdbEntry>::const_iterator end(entries_.end());
 	for (; i != end; ++i)
 		i->Delete();
 }
 
-void CBTDB::AddMapEntry(const string &title, const string &content)
+void Btdb::AddMapEntry(const string &title, const string &content)
 {
-	CBtdbEntry entry;
-	// create title
+	BtdbEntry entry;
+	// create title_
 	const char * const title_prefix("MapNames.");
 	const size_t title_prefix_size(strlen(title_prefix));
-	entry.title_size = title_prefix_size + title.size() + 1;
-	entry.title = new char[entry.title_size];
-	strcpy(entry.title, title_prefix);
-	strcpy(entry.title + title_prefix_size, title.c_str());
-	// create content
-	entry.content_size = content.size() + 1;
-	entry.content = new char[entry.content_size];
-	strcpy(entry.content, content.c_str());
-	// create auxillary
-	entry.auxillary_size = 1;
-	entry.auxillary = new char[entry.auxillary_size];
-	*entry.auxillary = '\0';
+	entry.title_size_ = title_prefix_size + title.size() + 1;
+	entry.title_ = new char[entry.title_size_];
+	strcpy(entry.title_, title_prefix);
+	strcpy(entry.title_ + title_prefix_size, title.c_str());
+	// create content_
+	entry.content_size_ = content.size() + 1;
+	entry.content_ = new char[entry.content_size_];
+	strcpy(entry.content_, content.c_str());
+	// create auxillary_
+	entry.auxillary_size_ = 1;
+	entry.auxillary_ = new char[entry.auxillary_size_];
+	*entry.auxillary_ = '\0';
 	// add the entry
 	AddEntry(entry);
 }
 
-void CBTDB::RemoveMapEntry(const string &title)
+void Btdb::RemoveMapEntry(const string &title)
 {
 	const char * const title_prefix("MapNames.");
 	const size_t title_prefix_size(strlen(title_prefix));
@@ -82,79 +82,79 @@ void CBTDB::RemoveMapEntry(const string &title)
 	RemoveEntry(char_title);
 }
 
-void CBTDB::AddEntry(const CBtdbEntry &entry)
+void Btdb::AddEntry(const BtdbEntry &entry)
 {
-	vector<CBtdbEntry>::iterator entry_i(find(entries.begin(), entries.end(), entry));
-	if (entries.end() != entry_i)
+	vector<BtdbEntry>::iterator entry_i(find(entries_.begin(), entries_.end(), entry));
+	if (entries_.end() != entry_i)
 	{
 		entry_i->Delete();
 		*entry_i = entry;
 	}
 	else
-		entries.push_back(entry);
+		entries_.push_back(entry);
 }
 
-void CBTDB::RemoveEntry(const char *title)
+void Btdb::RemoveEntry(const char *title)
 {
-	const vector<CBtdbEntry>::iterator entry_i(find(entries.begin(), entries.end(), title));
-	if (entries.end() != entry_i)
+	const vector<BtdbEntry>::iterator entry_i(find(entries_.begin(), entries_.end(), title));
+	if (entries_.end() != entry_i)
 	{
 		entry_i->Delete();
-		entries.erase(entry_i);
+		entries_.erase(entry_i);
 	}
 }
 
-void CBTDB::Flush()
+void Btdb::Flush()
 {
 	// create a new btdb
-	ofstream btdb_out(btdb_file.c_str(), std::ios::ios_base::binary);
-	// write number of entries
+	ofstream btdb_out(btdb_file_.c_str(), std::ios::ios_base::binary);
+	// write number of entries_
 	{
-		DWORD size = entries.size();
+		DWORD size = entries_.size();
 		btdb_out.write(ri_cast<char*>(&size), 4);
 	}
-	vector<CBtdbEntry>::const_iterator i(entries.begin());
-	const vector<CBtdbEntry>::const_iterator end(entries.end());
+	vector<BtdbEntry>::const_iterator i(entries_.begin());
+	const vector<BtdbEntry>::const_iterator end(entries_.end());
 	for (; i != end; ++i)
 	{
-		// write title
-		btdb_out.write(ri_cast<const char*>(&i->title_size), 4);
-		btdb_out.write(i->title, i->title_size);
+		// write title_
+		btdb_out.write(ri_cast<const char*>(&i->title_size_), 4);
+		btdb_out.write(i->title_, i->title_size_);
 		// write conent
-		btdb_out.write(ri_cast<const char*>(&i->content_size), 4);
-		btdb_out.write(i->content, i->content_size);
-		// write auxillary
-		btdb_out.write(ri_cast<const char*>(&i->auxillary_size), 4);
-		btdb_out.write(i->auxillary, i->auxillary_size);
+		btdb_out.write(ri_cast<const char*>(&i->content_size_), 4);
+		btdb_out.write(i->content_, i->content_size_);
+		// write auxillary_
+		btdb_out.write(ri_cast<const char*>(&i->auxillary_size_), 4);
+		btdb_out.write(i->auxillary_, i->auxillary_size_);
 	}
 	btdb_out.close();
 }
 
-//---------------------------------
-// CBTDB::CBtdbEntry implementation
-//---------------------------------
-CBTDB::CBtdbEntry::CBtdbEntry()
-	:title    (NULL)
-	,content  (NULL)
-	,auxillary(NULL)
+//-------------------------------
+// BTDB::BtdbEntry implementation
+//-------------------------------
+Btdb::BtdbEntry::BtdbEntry()
+	:title_    (NULL)
+	,content_  (NULL)
+	,auxillary_(NULL)
 {}
 
-bool CBTDB::CBtdbEntry::operator == (const char *title) const
+bool Btdb::BtdbEntry::operator == (const char *title) const
 {
-	return 0 == strcmp(title, this->title);
+	return 0 == strcmp(title_, title_);
 }
 
-bool CBTDB::CBtdbEntry::operator == (const CBTDB::CBtdbEntry &entry) const
+bool Btdb::BtdbEntry::operator == (const Btdb::BtdbEntry &entry) const
 {
-	// compare by title only
+	// compare by title_ only
 	return
-		entry.title_size == title_size &&
-		0 == memcmp(entry.title, title, title_size);
+		entry.title_size_ == title_size_ &&
+		0 == memcmp(entry.title_, title_, title_size_);
 }
 
-void CBTDB::CBtdbEntry::Delete()
+void Btdb::BtdbEntry::Delete()
 {
-	delete [] title;
-	delete [] content;
-	delete [] auxillary;
+	delete [] title_;
+	delete [] content_;
+	delete [] auxillary_;
 }

@@ -1,15 +1,9 @@
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
-
 
 #pragma warning(disable: 4100)
 #pragma warning(disable: 4702)
 #pragma warning(disable: 4355)
-
+#pragma warning(disable: 4512)
 
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #define _WIN32_WINDOWS 0x0401    // require Win98 or NT 4 at minimum
@@ -27,19 +21,24 @@
 #include <time.h>
 // some necessary STL
 #include <string>
-using std::string;
+typedef std::basic_string<char>    string;
+typedef std::basic_string<wchar_t> wstring;
+typedef std::basic_string<TCHAR>   tstring;
+typedef std::basic_stringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > tstringstream;
 #include <vector>
 using std::vector;
+// third party libraries
+#include <bzip2-1.0.2\bzlib.h>
+#include <FreeImage\Wrapper\FreeImagePlus\FreeImagePlus.h>
+#include <jasper\jasper.h>
+#include <tinyxml\tinyxml.h>
 // project-wide utilites
 #include "util.h"
-
-
-// additional message crackers
-/* void Cls_OnCaptureChanged(HWND hwnd, HWND hwndCaptureReciever) */
-#define HANDLE_WM_CAPTURECHANGED(hwnd, wParam, lParam, fn) \
-    ((fn)((hwnd), (HWND)(lParam)))
-
-
+#include "foreach.h"
+// useful typedefs and definitions
 #define ri_cast reinterpret_cast
-
-// TODO: reference additional headers your program requires here
+typedef unsigned int uint;
+typedef unsigned long ulong;
+// extremely annoying definitions
+#undef min
+#undef max

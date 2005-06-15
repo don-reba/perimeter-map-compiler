@@ -1,39 +1,39 @@
 #pragma once
 
-class CBTDB
+class Btdb
 {
-protected:
+private:
 	// one entry of a btdb file
-	struct CBtdbEntry
+	struct BtdbEntry
 	{
 	// functions
-		CBtdbEntry();
+		BtdbEntry();
 		bool operator == (const char *title) const;
-		bool operator == (const CBTDB::CBtdbEntry &entry) const;
+		bool operator == (const Btdb::BtdbEntry &entry) const;
 		void Delete();
 	//data
-		char *title;
-		char *content;
-		char *auxillary;
-		DWORD title_size;
-		DWORD content_size;
-		DWORD auxillary_size;
+		char *auxillary_;
+		DWORD auxillary_size_;
+		char *content_;
+		DWORD content_size_;
+		char *title_;
+		DWORD title_size_;
 	};
 public:
 // construction/destruction
-	CBTDB(const TCHAR * const btdb_file);
-	~CBTDB();
+	Btdb(LPCTSTR btdb_file);
+	~Btdb();
 // interface
 	void AddMapEntry(const string &title, const string &content);
 	void RemoveMapEntry(const string &title);
 	void Flush();
-protected:
+private:
 // utilities
-	void AddEntry(const CBtdbEntry &entry);
+	void AddEntry(const BtdbEntry &entry);
 	void RemoveEntry(const char *title);
-protected:
+private:
 // data
-	vector<CBtdbEntry> entries;
-	string             btdb_file;
-	bool               is_open;
+	vector<BtdbEntry> entries_;
+	string            btdb_file_;
+	bool              is_open_;
 };

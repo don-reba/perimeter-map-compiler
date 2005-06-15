@@ -1,5 +1,13 @@
 #include "StdAfx.h"
-#include ".\preference data.h"
+
+
+
+
+
+
+
+/*
+#include "preference data.h"
 
 CPreferenceData::CPreferenceData()
 {
@@ -20,3 +28,4 @@ void CPreferenceData::SignOut()
 {	
 	EnterCriticalSection(&critical_section);
 }
+*/

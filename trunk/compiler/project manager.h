@@ -1,138 +1,99 @@
 #pragma once
 
-#include "data.h"
-#include "info manager.h"
-#include "preference data.h"
-#include "preview.h"
-#include "stat manager.h"
-#include <map>
-#include <jasper\jasper.h>
-#include <FreeImage\Wrapper\FreeImagePlus\FreeImagePlus.h>
-#include <tinyxml/tinyxml.h>
+#include "error handler.h"
+#include "info wnd.h"
+#include "file tracker.h"
+#include "preview wnd.h"
+#include "project tasks.h"
+#include "stat wnd.h"
 
-class CProjectManager
+#include <queue>
+
+class MainWnd;
+
+//-------------------------------------------------------
+// project manager definition
+// this class does most of the work, in a separate thread
+//-------------------------------------------------------
+class ProjectManager : ErrorHandler
 {
+// callbacks
 public:
-	// view window creation attributes
-	struct WndAttributes
-	{
-		RECT rect;
-		HWND button;
-		bool is_visible;
+	// toggles busy state
+	struct TasksLeft {
+		virtual void operator() (uint task_count) = 0;
 	};
-	// data that persists through sessions and can be changed at the user's whim
-	struct CSerializable : public CPreferenceData
-	{
-		CSerializable(CProjectManager *parent);
-		// interface
-		void Save(string file_name);
-		void Load(string file_name);
-		void Update();
-		// data
-		bool texture_colour_quality;
-		bool enable_lighting;
-	private:
-		CProjectManager *parent;
-	};
-
-public:
-	CProjectManager(void);
-	~CProjectManager(void);
-
-public:
-	// interface
-	void Create(
-		HWND  hWnd,
-		const WndAttributes &stat_manager_attributes,
-		const WndAttributes &preview_attributes,
-		const WndAttributes &info_manager_attributes,
-		const TCHAR * const ini_path);
-	void Destroy();
-	void NewProject(string project_folder, SIZE map_size, string map_name);
-	void OpenProject(string project_file);
-	void Pack();
-	bool Unpack(string shrub_file);
-	void Install();
-	void SaveMapThumb();
-	void ToggleStatManager(bool show);
-	void TogglePreview(bool show);
-	void ToggleInfoManager(bool show);
-	vector<CViewer::WndSaveInfo> GetSaveInfo();
-	CPreview::CSerializable *GetPreviewSettings();
-	CSerializable *GetProjectSettings();
-	void SaveSettings(string ini_path);
-protected:
-	// static functions
-	static VOID CALLBACK CheckFiles(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
-	static DWORD WINAPI HeightmapLoadThreadProc(LPVOID lpParameter);
-	static DWORD WINAPI TextureLoadThreadProc(LPVOID lpParameter);
+// FileTracker callback implementations
 private:
-	// utility functions
-	void   AppendBTDB(const TCHAR *path, const char *folder_name);
-	void   AppendWorldsPrm(const TCHAR *path, const TCHAR *folder_name) const;
-	void   CleanUp();
-	void   CreateHeightmapThread();
-	void   CreateTextureThread();
-	void   CreateLightMap(const BYTE *heightmap, SIZE size);
-	DWORD  CalculateChecksum();
-	void   DefaultHeightmap();
-	void   DefaultMapInfo();
-	void   DefaultTexture();
-	void   Error(string message) const;
-	void   Extrapolate(int *pix, int w, int h) const;
-	int    GenerateId() const;
-	bool   GetInstallPath(string &install_path) const;
-	DWORD  LoadFile(const TCHAR *name, BYTE *&pBuffer) const;
-	void   LoadHeightmap();
-	void   LoadTexture();
-	int    PackHeightmap(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
-	void   PackMapInfo(TiXmlNode &node);
-	int    PackTexture(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask);
-	bool   RegisterMap();
-	void   SaveHeightmap(const TCHAR *path);
-	void   SaveMapInfo(const TCHAR *path);
-	bool   SaveMemToFile(const TCHAR *path, const BYTE *buffer, DWORD size) const;
-	void   SaveMission(const TCHAR *path, const TCHAR *folder_name, bool survival);
-	void   SavePalette(const TCHAR *path);
-	void   SaveShrub(const TCHAR *path, const BYTE *buffer, DWORD size) const;
-	void   SaveSPG(const TCHAR *path, const TCHAR *folder_name, const bool survival);
-	void   SaveSPH(const TCHAR *path, const TCHAR *folder_name, const bool survival);
-	void   SaveTexture(const TCHAR *path);
-	bool   SaveThumb(const TCHAR *path, SIZE size);
-	void   SaveVMP(const TCHAR *path);
-	void   StackBlur(int *pix, int w, int h, int radius) const;
-	void   UnpackHeightmap(TiXmlNode *node, BYTE *buffer);
-	bool   UnpackMapInfo(TiXmlNode *node);
-	void   UnpackTexture(TiXmlNode *node, BYTE *buffer);
-	// math
-	inline int exp2(unsigned int n) const;
-	inline int log2(unsigned int n) const;
-protected:
-	// main application framework
-	CData<CStaticArray<BYTE> > heightmap;
-	CData<CPalettedTexture>    texture;
-	CData<CMapInfo>            map_info;
-	CData<CStaticArray<BYTE> > lightmap;
-	CInfoManager info_manager;
-	CPreview     preview;
-	CStatManager stat_manager;
-	// window information
-	HWND hWnd;
-	RECT stat_window_rect;
-	// multithreading
-	HANDLE heightmap_thread;
-	HANDLE texture_thread;
-	// project settings
-	size_t map_placement;
-	enum { PS_INACTIVE, PS_PROJECT, PS_SHRUB } project_state;
-	// times the files were last written to
-	FILETIME heightmap_time;
-	FILETIME texture_time;
-	// timer for keeping track of file's status
-	UINT_PTR file_timer;
-	// flag to prevent resource tracking when needed
-	LONG track_resources;
-protected:
-// serializable settings
-	CSerializable settings;
+	class FileNotFound : public FileTracker::FileNotFound
+	{
+	public:
+		FileNotFound(TaskData &task_data);
+		void operator() (uint id, LPCTSTR path);
+	private:
+		TaskData &task_data_;
+	};
+	struct FileUpdated : FileTracker::FileUpdated
+	{
+		FileUpdated(ProjectManager &project_manager);
+		void operator() (const IdsType &ids);
+		ProjectManager &project_manager_;
+	};
+// type definitions
+private:
+	typedef std::queue<Task*> QueueType;
+// construction/destruction
+public:
+	ProjectManager(
+		MainWnd    &main_wnd,
+		InfoWnd    &info_wnd,
+		PreviewWnd &preview_wnd,
+		StatWnd    &stat_wnd
+	);
+	~ProjectManager();
+// interface
+public:
+	// initialization
+	bool Initialize();
+	void Close();
+	// project management
+	void CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size);
+	void OpenProject(LPCTSTR project_path, bool new_project = false);
+	// shrub management
+	void PackShrub();
+	void UnpackShrub(LPCTSTR shrub_path);
+	// map management
+	void InstallMap();
+	// miscellaneous
+	void SaveThumbnail();
+	// data management
+	void ReloadFiles(bool reload_heightmap, bool reload_texture);
+	// settings
+	void UpdateSettings();
+// internal function
+private:
+	static DWORD WINAPI ProcessorThread(LPVOID parameter);
+	void AddTask(Task *task);
+// data
+private:
+	// threading
+	HANDLE           processor_thread_;
+	CRITICAL_SECTION processor_section_;
+	bool             stop_processing_;
+	QueueType        tasks_;
+	// windows
+	InfoWnd    &info_wnd_;
+	PreviewWnd &preview_wnd_;
+	StatWnd    &stat_wnd_;
+	// project
+	tstring      folder_path_;
+	FileTracker  tracker_;
+	ProjectState project_state_;
+// callback implementation instances
+private:
+	FileUpdated  file_updated_;
+	FileNotFound file_not_found_;
+// callbacks
+public:
+	TasksLeft *tasks_left_;
 };

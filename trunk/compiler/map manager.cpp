@@ -1,4 +1,19 @@
 #include "StdAfx.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 #include "btdb.h"
 #include "map manager.h"
 #include "resource.h"
@@ -398,3 +413,4 @@ bool CMapManager::GetInstallPath(string &install_path) const
 	RegCloseKey(perimeter_key);
 	return true;
 }
+*/

@@ -40,6 +40,11 @@
 #define IDR_SURIVAL_SPG                 177
 #define IDR_SURVIVAL_SPG                177
 #define IDR_BZ22                        178
+#define IDB_PREVIEW                     180
+#define IDB_BITMAP1                     181
+#define IDB_STATS                       181
+#define IDB_INFO                        182
+#define IDI_ICON2                       184
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_LIGHTING                    1000
@@ -103,6 +108,11 @@
 #define ID_FILE_MANAGEMAPS              32792
 #define ID_TOOLS_PREFERENCES            32797
 #define ID_TOOLS_SAVETHUMBNAIL          32800
+#define ID_PANEL_WND_0                  32801
+#define ID_PANEL_WND_1                  32802
+#define ID_PANEL_WND_2                  32803
+#define ID_PANEL_WND_3                  32804
+#define ID_PANEL_WND_4                  32805
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -110,7 +120,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        179
+#define _APS_NEXT_RESOURCE_VALUE        185
 #define _APS_NEXT_COMMAND_VALUE         32801
 #define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           110
