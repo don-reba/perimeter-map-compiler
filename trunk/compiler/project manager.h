@@ -88,8 +88,8 @@ public:
 	bool Initialize();
 	void Close();
 	// project management
-	void CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size);
-	void OpenProject(LPCTSTR project_path, bool new_project = false);
+	void CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size, HWND main_hwnd);
+	void OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_project = false);
 	// shrub management
 	void PackShrub();
 	void UnpackShrub(LPCTSTR shrub_path);
@@ -98,7 +98,8 @@ public:
 	// miscellaneous
 	void SaveThumbnail();
 	// data management
-	void ReloadFiles(bool reload_heightmap, bool reload_texture);
+	void ReloadFiles(const IdsType &ids);
+	void CreateResouce(uint id);
 	// settings
 	void UpdateSettings();
 // internal function

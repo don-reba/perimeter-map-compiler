@@ -37,6 +37,7 @@
 #include "project manager.h"
 #include "project tasks.h"
 #include "resource.h"
+#include "resource management.h"
 #include "stat wnd.h"
 
 #include <algorithm>
@@ -48,6 +49,7 @@
 #include <shlobj.h>
 #include <sstream>
 
+using namespace RsrcMgmt;
 using namespace TaskCommon;
 
 //------------------------
@@ -82,8 +84,10 @@ void CreateDefaultFilesTask::operator() ()
 {
 	TCHAR path[MAX_PATH];
 	PathCombine(path, task_data_.project_folder_.c_str(), _T("heightmap.bmp"));
+	DeleteFile(path);
 	SaveHeightmap(path, NULL, task_data_.map_size_, *this);
 	PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp"));
+	DeleteFile(path);
 	SaveTexture(path, NULL, NULL, task_data_.map_size_, *this);
 }
 
@@ -98,7 +102,8 @@ UpdateDataTask::UpdateDataTask(
 	ProjectState project_state,
 	bool         fast_quantization,
 	bool         enable_lighting,
-	float        mesh_threshold)
+	float        mesh_threshold,
+	bool        display_texture)
 	:map_name_         (map_name)
 	,project_folder_   (project_folder)
 	,map_size_         (map_size)
@@ -106,6 +111,7 @@ UpdateDataTask::UpdateDataTask(
 	,fast_quantization_(fast_quantization)
 	,enable_lighting_  (enable_lighting)
 	,mesh_threshold_   (mesh_threshold)
+	,display_texture_  (display_texture)
 {}
 
 void UpdateDataTask::operator() ()
@@ -117,7 +123,8 @@ void UpdateDataTask::operator() ()
 	task_data_.fast_quantization_ = fast_quantization_;
 	task_data_.enable_lighting_   = enable_lighting_;
 	task_data_.mesh_threshold_    = mesh_threshold_;
-//	task_data_.map_info_.Load();
+	task_data_.display_texture_   = display_texture_;
+	task_data_.map_info_.Load();
 }
 
 //-----------------------------------
@@ -130,17 +137,21 @@ CacheProjectDataTask::CacheProjectDataTask(HWND &error_hwnd)
 
 void CacheProjectDataTask::operator() ()
 {
+	_ASSERTE(NULL == task_data_.hardness_);
 	_ASSERTE(NULL == task_data_.heightmap_);
 	_ASSERTE(NULL == task_data_.texture_);
+	task_data_.hardness_  = new Hardness (task_data_.map_size_, error_hwnd_);
 	task_data_.heightmap_ = new Heightmap(task_data_.map_size_, error_hwnd_);
 	task_data_.texture_   = new Texture  (task_data_.map_size_, error_hwnd_);
 	TCHAR path[MAX_PATH];
-	task_data_.heightmap_->Load(
-		PathCombine(path, task_data_.project_folder_.c_str(),
+	task_data_.hardness_->Load(PathCombine(
+		path, task_data_.project_folder_.c_str(),
+		_T("hardness.bmp")));
+	task_data_.heightmap_->Load(PathCombine(
+		path, task_data_.project_folder_.c_str(),
 		_T("heightmap.bmp")));
 	task_data_.texture_->Load(
-		PathCombine(path, task_data_.project_folder_.c_str(),
-		_T("texture.bmp")),
+		PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp")),
 		task_data_.fast_quantization_);
 }
 
@@ -150,10 +161,13 @@ void CacheProjectDataTask::operator() ()
 
 void FreeProjectDataTask::operator() ()
 {
+	_ASSERTE(NULL != task_data_.hardness_);
 	_ASSERTE(NULL != task_data_.heightmap_);
 	_ASSERTE(NULL != task_data_.texture_);
+	delete task_data_.hardness_;
 	delete task_data_.heightmap_;
 	delete task_data_.texture_;
+	task_data_.hardness_  = NULL;
 	task_data_.heightmap_ = NULL;
 	task_data_.texture_   = NULL;
 }
@@ -181,68 +195,105 @@ void LoadProjectDataTask::operator() ()
 {
 	_ASSERTE(resource_count == ids_.size());
 	TCHAR path[MAX_PATH];
+	Hardness  hardness (task_data_.map_size_, error_hwnd_);
 	Heightmap heightmap(task_data_.map_size_, error_hwnd_);
-	Texture   texture(task_data_.map_size_, error_hwnd_);
-	// set dependencies
-	/*if (ids_[RS_TEXTURE])
-		ids_[RS_HEIGHTMAP] = true;*/
-	// load
-	PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp"));
-	bool fq(task_data_.fast_quantization_);
-	if (ids_[RS_TEXTURE])
-		texture.Load(
-			path,
-			fq);
-	if (ids_[RS_HEIGHTMAP] || ids_[RS_TEXTURE])
-		heightmap.Load(PathCombine(path, task_data_.project_folder_.c_str(), _T("heightmap.bmp")));
-	// stat wnd
-	if (stat_wnd_.IsVisible())
+	Lightmap  lightmap (task_data_.map_size_, error_hwnd_);
+	Texture   texture  (task_data_.map_size_, error_hwnd_);
+	bool preview_wnd_visible(preview_wnd_.IsVisible());
+	bool stat_wnd_visible   (stat_wnd_.IsVisible());
+	// load data
+	bool load_hardness;
+	bool load_heightmap;
+	bool load_lightmap;
+	bool load_texture;
 	{
-		if (ids_[RS_HEIGHTMAP])
-			stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
-		if (ids_[RS_TEXTURE])
-			stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
+		// set dependencies
+		load_hardness = ids_[RS_HARDNESS];
+		load_texture = ids_[RS_TEXTURE];
+		load_lightmap =
+			preview_wnd_visible && (
+				 task_data_.display_texture_ && load_texture ||
+				!task_data_.display_texture_ && load_hardness);
+		load_heightmap = ids_[RS_HEIGHTMAP] || load_lightmap || stat_wnd_visible && ids_[RS_TEXTURE];
+		// load
+		if (load_hardness)
+			hardness.Load(PathCombine(path, task_data_.project_folder_.c_str(), _T("hardness.bmp")));
+		if (load_heightmap)
+			heightmap.Load(PathCombine(path, task_data_.project_folder_.c_str(), _T("heightmap.bmp")));
+		if (load_lightmap)
+			lightmap.Create(heightmap);
+		if (load_texture)
+			texture.Load(
+				PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp")),
+				task_data_.fast_quantization_);
 	}
-	else
-		stat_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
-	// preview wnd
-	if (preview_wnd_.IsVisible())
+	// update windows
 	{
-		Lightmap lightmap(task_data_.map_size_, error_hwnd_);
-		if (ids_[RS_TEXTURE])
+		// stat wnd
+		if (stat_wnd_visible)
 		{
-			if (task_data_.enable_lighting_)
-				lightmap.Create(heightmap);
-			TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-			if (NULL != allocation)
+			if (load_heightmap)
+				stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
+			if (load_texture)
+				stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
+		}
+		else
+			stat_wnd_.SetVisibilityNotification(new OnPanelVisible(ids_, project_manager_));
+		// preview wnd
+		if (preview_wnd_visible)
+		{
+			// update the heightmap
+			if (ids_[RS_HEIGHTMAP])
 			{
-				CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
-				SendTextureCommit(preview_wnd_.hwnd_);
-				delete allocation;
+				vector<SimpleVertex> vertices;
+				Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
+				SendSetTerrain(preview_wnd_.hwnd_, vertices);
+			}
+			// update the texture
+			if (task_data_.display_texture_)
+			{
+				if (load_texture)
+				{
+					TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
+					if (NULL != allocation)
+					{
+						CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
+						SendTextureCommit(preview_wnd_.hwnd_);
+						delete allocation;
+					}
+				}
+			}
+			else
+			{
+				if (load_hardness)
+				{
+					TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
+					if (NULL != allocation)
+					{
+						CreateTextures(hardness, *allocation, lightmap, task_data_.enable_lighting_);
+						SendTextureCommit(preview_wnd_.hwnd_);
+						delete allocation;
+					}
+				}
 			}
 		}
-		if (ids_[RS_HEIGHTMAP])
-		{
-			vector<SimpleVertex> vertices;
-			Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
-			SendSetTerrain(preview_wnd_.hwnd_, vertices);
-		}
+		else
+			preview_wnd_.SetVisibilityNotification(new OnPanelVisible(ids_, project_manager_));
 	}
-	else
-		preview_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
 }
 
 //--------------------------------------------------
 // LoadProjectDataTask::OnPanelVisible implemenation
 //--------------------------------------------------
 
-LoadProjectDataTask::OnPanelVisible::OnPanelVisible(ProjectManager &project_manager)
-	:project_manager_(project_manager)
+LoadProjectDataTask::OnPanelVisible::OnPanelVisible(const IdsType &ids, ProjectManager &project_manager)
+	:ids_(ids)
+	,project_manager_(project_manager)
 {}
 
 void LoadProjectDataTask::OnPanelVisible::operator ()(bool on)
 {
-	project_manager_.ReloadFiles(true, true);
+	project_manager_.ReloadFiles(ids_);
 }
 
 //-----------------------------
@@ -458,31 +509,62 @@ UnpackShrubTask::OnPanelVisible::OnPanelVisible(ProjectManager &project_manager)
 
 void UnpackShrubTask::OnPanelVisible::operator ()(bool on)
 {
-	project_manager_.ReloadFiles(true, true);
+	if (!on)
+		return;
+	IdsType ids;
+	ids.set();
+	project_manager_.ReloadFiles(ids);
 }
 
 //--------------------------------
 // InstallShrubTask implementation
 //--------------------------------
 
-InstallMapTask::InstallMapTask(HWND &hwnd)
-	:ErrorHandler(hwnd)
-	,hwnd_       (hwnd)
+InstallMapTask::InstallMapTask(HWND &hwnd, tstring &perimeter_path)
+	:ErrorHandler   (hwnd)
+	,hwnd_          (hwnd)
+	,perimeter_path_(perimeter_path)
 {}
 
 void InstallMapTask::operator() ()
 {
+	_ASSERTE(task_data_.hardness_  != NULL);
 	_ASSERTE(task_data_.heightmap_ != NULL);
 	_ASSERTE(task_data_.texture_   != NULL);
+	Hardness  &hardness (*task_data_.hardness_);
 	Heightmap &heightmap(*task_data_.heightmap_);
 	Texture   &texture  (*task_data_.texture_);
 	TCHAR      str        [MAX_PATH];
-	TCHAR      str2       [MAX_PATH];
 	TCHAR      folder_path[MAX_PATH];
 	tstring    install_path;
 	bool       overwriting(false);
-	if (!GetInstallPath(install_path, *this))
-		return;
+	uint       version(1);
+	// get install path
+	{
+		DWORD attributes(GetFileAttributes(perimeter_path_.c_str()));
+		if (INVALID_FILE_ATTRIBUTES == attributes)
+		{
+			if (!GetInstallPath(install_path, *this))
+				return;
+		}
+		else
+		{
+			if (perimeter_path_.size() >= MAX_PATH)
+			{
+				MacroDisplayError(_T("The installation path is too long."));
+				return;
+			}
+			if (0 == (FILE_ATTRIBUTE_DIRECTORY | attributes))
+			{
+				_tcscpy(str, perimeter_path_.c_str());
+				PathRemoveFileSpec(str);
+				install_path = str;
+			}
+			else
+				install_path = perimeter_path_;
+			version = 2;
+		}
+	}
 	// get the name to use for stuff that needs a name
 	// this is the map name for a registered map, and "UNREGISTERED" otherwise
 	// ASSUME shrubs are registered
@@ -529,7 +611,7 @@ void InstallMapTask::operator() ()
 	}
 	// create and save output.vmp
 	PathCombine(str, folder_path, _T("output.vmp"));
-	SaveVMP(heightmap, texture, str, *this);
+	SaveVMP(hardness, heightmap, texture, str, *this);
 	// create and save inDam.act
 	PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(texture, str, *this);
@@ -566,74 +648,50 @@ void InstallMapTask::operator() ()
 	}
 	// append WORLDS.PRM
 	PathCombine(str, install_path.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
-	AppendWorldsPrm(str, folder_name.c_str());
-	// copy some files from GLETSCHER's folder
-	// TODO: clean up on failure
+	AppendWorldsPrm(str, folder_name.c_str(), version);
+	// create save up.tga from a resource
+	PathCombine(str, folder_path, _T("up.tga"));
+	SaveImageFromResource(IDR_UP_TX, str, *this);
+	// create save leveledSurfaceTexture.tga from a resource
+	PathCombine(str, folder_path, _T("leveledSurfaceTexture.tga"));
+	SaveImageFromResource(IDR_SURFACE_TX, str, *this);
+	// create and save hardness.bin
+	PathCombine(str, folder_path, _T("hardness.bin"));
+	SaveHardness(str, task_data_.hardness_->data_, task_data_.map_size_, *this);
+	// generate mission files
+	switch (version)
 	{
-		// functor for copying a file from GLETSCHER to the map folder
-		const struct CopyFromGLETSCHER_T
-		{
-			CopyFromGLETSCHER_T(
-				ErrorHandler &error_handler,
-				LPTSTR        str1,
-				LPTSTR        str2,
-				LPCTSTR       folder_path,
-				LPCTSTR       install_path)
-				:error_handler_(error_handler)
-				,str1_        (str1)
-				,str2_        (str2)
-				,folder_path_ (folder_path)
-				,install_path_(install_path)
-			{}
-			inline bool operator() (const TCHAR *file_name) const
-			{
-				PathCombine(str2_, install_path_, _T("RESOURCE\\Worlds\\GLETSCHER"));
-				PathCombine(str2_, str2_, file_name);
-				PathCombine(str1_, folder_path_, file_name);
-				if (FALSE == CopyFile(str2_, str1_, FALSE))
-				{
-					tstring msg(file_name);
-					msg.append(_T(" could not be copied. Make sure the version of your game is at least 1.01."));
-					error_handler_.MacroDisplayError(msg.c_str());
-					return false;
-				}
-				return true;
-			}
-			ErrorHandler &error_handler_;
-			TCHAR        *str1_;
-			TCHAR        *str2_;
-			LPCTSTR       folder_path_;
-			LPCTSTR       install_path_;
-		} CopyFromGLETSCHER(*this, str, str2, folder_path, install_path.c_str());
-		// up.tga
-		if (!CopyFromGLETSCHER(_T("up.tga")))
-			return;
-		// leveledSurfaceTexture.tga
-		if (!CopyFromGLETSCHER(_T("leveledSurfaceTexture.tga")))
-			return;
-		// geoLattice.bin
-		if (!CopyFromGLETSCHER(_T("geoLattice.bin")))
-			return;
-		// inGeo.act
-		if (!CopyFromGLETSCHER(_T("inGeo.act")))
-			return;
+	case 1:
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission(folder_path, folder_name.c_str(), false);
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission(folder_path, folder_name.c_str(), false);
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission(folder_path, folder_name.c_str(), false);
+		break;
+	case 2:
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission2(folder_path, folder_name.c_str(), false);
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission2(folder_path, folder_name.c_str(), false);
+		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+		SaveMission2(folder_path, folder_name.c_str(), false);
+		break;
+	default:
+		DebugBreak();
 	}
-	// change to the mission directory
-	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle"));
-	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-	SaveMission(folder_path, folder_name.c_str(), false);
-	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
-	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-	SaveMission(folder_path, folder_name.c_str(), false);
-	PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-	PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-	SaveMission(folder_path, folder_name.c_str(), false);
 	// reassure the user
-	MessageBox(
+	/*MessageBox(
 		hwnd_,
 		_T("Installation has been completed successfully."),
 		_T("Success"),
-		MB_ICONINFORMATION | MB_OK);
+		MB_ICONINFORMATION | MB_OK);*/
 }
 
 // set the appropriate entry of Texts.btdb to the name of the map
@@ -661,35 +719,57 @@ void InstallMapTask::AppendBTDB(LPCTSTR path, LPCTSTR folder_name)
 	btdb.AddMapEntry(folder_name, map_name.c_str());
 }
 
-void InstallMapTask::AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name)
+void InstallMapTask::AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name, uint version)
 {
 	std::set<tstring> worlds;
 	// create a list of worlds
 	{
-		// open file
+		// read in strings from the worlds_list.txt resource
+		{
+			tistringstream worlds_list_stream;
+			// load the list of reserved names
+			{
+				size_t alloc(1024); // 1 KB
+				vector<TCHAR> result;
+				result.resize(alloc);
+				if (!UncompressResource(IDR_WORLDS_LIST, ri_cast<BYTE*>(&result[0]), alloc))
+				{
+					MacroDisplayError("Worlds list could not be loaded.");
+					return;
+				}
+				worlds_list_stream.str(&result[0]);
+			}
+			std::copy(
+				std::istream_iterator<tstring>(worlds_list_stream),
+				std::istream_iterator<tstring>(),
+				std::inserter(worlds, worlds.begin()));
+		}
+		if (2 == version)
+		{
+			tistringstream worlds_list_stream;
+			// load the list of reserved names
+			{
+				size_t alloc(1024); // 1 KB
+				vector<TCHAR> result;
+				result.resize(alloc);
+				if (!UncompressResource(IDR_WORLDS_LIST_2, ri_cast<BYTE*>(&result[0]), alloc))
+				{
+					MacroDisplayError("Worlds list could not be loaded.");
+					return;
+				}
+				worlds_list_stream.str(&result[0]);
+			}
+			std::copy(
+				std::istream_iterator<tstring>(worlds_list_stream),
+				std::istream_iterator<tstring>(),
+				std::inserter(worlds, worlds.begin()));
+		}
+		// open WORLDS.PRM
 		std::ifstream prm_file(path);
 		if (!prm_file.is_open())
 		{
 			MacroDisplayError(_T("Could not open WORLDS.PRM for reading."));
 			return;
-		}
-		// read in strings from the worlds_list.txt resource
-		{
-			std::istringstream worlds_list_stream;
-			// load the list of reserved names
-			{
-				HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_WORLDS_LIST), "Text"));
-				HGLOBAL resource(LoadResource(NULL, resource_info));
-				char *text(ri_cast<char*>(LockResource(resource)));
-				worlds_list_stream.str(text);
-			}
-			tstring world;
-			while (worlds_list_stream)
-			{
-				worlds_list_stream >> world;
-				if (!world.empty())
-					worlds.insert(world);
-			}
 		}
 		// read in strings from WORLDS.PRM
 		{
@@ -725,6 +805,7 @@ void InstallMapTask::AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name)
 	}
 }
 
+// v 1.01
 void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool survival)
 {
 	TCHAR str[MAX_PATH];
@@ -744,6 +825,24 @@ void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool surviva
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".sph"));
 	SaveSPH(str, folder_name, survival, *this);
+}
+
+// v 1.02 beta
+void InstallMapTask::SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool survival)
+{
+	TCHAR str[MAX_PATH];
+	// create an empty ".dat" file
+	_tcscpy(str, path);
+	PathAddExtension(str, _T(".dat"));
+	SaveMemToFile(str, NULL, 0, *this);
+	// create an empty ".gmp" file
+	_tcscpy(str, path);
+	PathAddExtension(str, _T(".gmp"));
+	SaveMemToFile(str, NULL, 0, *this);
+	// create the ".spg" file
+	_tcscpy(str, path);
+	PathAddExtension(str, _T(".spg"));
+	SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
 }
 
 //-----------------------------
@@ -782,4 +881,30 @@ void ChangeProjectTask::operator() ()
 {
 	info_wnd_.Update(read_only_);
 	preview_wnd_.ProjectChanged();
+}
+
+//----------------------------------
+// CreateResourceTask implementation
+//----------------------------------
+
+CreateResourceTask::CreateResourceTask(uint id, HWND error_hwnd)
+	:ErrorHandler(error_hwnd)
+	,id_(id)
+{}
+
+void CreateResourceTask::operator() ()
+{
+	TCHAR path[MAX_PATH];
+	switch (id_)
+	{
+	case RS_HARDNESS:
+		PathCombine(path, task_data_.project_folder_.c_str(), _T("hardness.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		{
+			Hardness hardness(task_data_.map_size_, error_hwnd_);
+			hardness.MakeDefault();
+			hardness.Save(path);
+		}
+		break;
+	}
 }

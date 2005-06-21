@@ -34,6 +34,7 @@
 #include "btdb.h"
 #include "map manager.h"
 #include "resource.h"
+#include "resource management.h"
 
 #include <algorithm>
 #include <commctrl.h>
@@ -43,7 +44,7 @@
 #include <shellapi.h>
 #include <sstream>
 
-using namespace std;
+using namespace RsrcMgmt;
 
 INT_PTR MapManager::DoModal(HWND parent_wnd)
 {
@@ -72,10 +73,10 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 {
 	// get a list of maps installed by set difference of folder names in "RESOURCE\Worlds"
 	//  and the list of reserved map names
-	set<tstring> map_list;
+	std::set<tstring> map_list;
 	{
 		// get the list of folders in "RESOURCE\Worlds"
-		set<tstring> prm_list;
+		std::set<tstring> prm_list;
 		{
 			// get the installation path
 			tstring install_path;
@@ -100,35 +101,54 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 			}
 		}
 		// get the list of reserved map names
-		set<tstring> reserved_list;
+		std::set<tstring> reserved_list;
 		{
-			istringstream reserved_stream;
-			// load the list of reserved names
+			// add strings from resources
 			{
-				HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_WORLDS_LIST), "Text"));
-				HGLOBAL resource(LoadResource(NULL, resource_info));
-				char *text(ri_cast<char*>(LockResource(resource)));
-				reserved_stream.str(text);
-			}
-			// read the names
-			tstring world;
-			while (reserved_stream)
-			{
-				reserved_stream >> world;
-				if (!world.empty())
-					reserved_list.insert(world);
+				vector<TCHAR> text;
+				const size_t text_alloc(1024); // 1 KB
+				text.resize(text_alloc);
+				// add "Geometry of War" reserved names
+				{
+					if (!UncompressResource(IDR_WORLDS_LIST, ri_cast<BYTE*>(&text[0]), text_alloc))
+					{
+						MacroDisplayError(_T("Resource could not be loaded."));
+						return;
+					}
+					tistringstream text_stream;
+					text_stream.str(&text[0]);
+					std::copy(
+						std::istream_iterator<tstring>(text_stream),
+						std::istream_iterator<tstring>(),
+						std::inserter(reserved_list, reserved_list.begin()));
+				}
+				// add "Emperor's Statement" reserved names
+				{
+					std::fill(text.begin(), text.end(), _T('\0'));
+					if (!UncompressResource(IDR_WORLDS_LIST_2, ri_cast<BYTE*>(&text[0]), text_alloc))
+					{
+						MacroDisplayError(_T("Resource could not be loaded."));
+						return;
+					}
+					tistringstream text_stream;
+					text_stream.str(&text[0]);
+					std::copy(
+						std::istream_iterator<tstring>(text_stream),
+						std::istream_iterator<tstring>(),
+						std::inserter(reserved_list, reserved_list.begin()));
+				}
 			}
 			// add some extra names
 			reserved_list.insert(_T("."));
 			reserved_list.insert(_T(".."));
 		}
 		// get the set difference
-		set_difference(
+		std::set_difference(
 			prm_list.begin(),
 			prm_list.end(),
 			reserved_list.begin(),
 			reserved_list.end(),
-			insert_iterator<set<tstring> >(map_list, map_list.begin()));
+			std::inserter(map_list, map_list.begin()));
 	}
 	// feed the list into the IDC_MAP_LIST list box
 	{
@@ -142,7 +162,7 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 
 void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 {
-	TCHAR path[MAX_PATH]; // placeholder for path manipulations
+	TCHAR path[MAX_PATH]; // buffer for path manipulations
 	// get the index of the map to delete
 	TCHAR *name(NULL);
 	const HWND ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));

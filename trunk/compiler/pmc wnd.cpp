@@ -66,6 +66,11 @@ void PMCWindow::ToggleWaitCursor(bool on)
 	}
 }
 
+void PMCWindow::OnDestroy(Msg<WM_DESTROY> &msg)
+{
+	hwnd_ = NULL;
+}
+
 void PMCWindow::OnMove(Msg<WM_MOVE> &msg)
 {
 	GetWindowRect(hwnd_, &window_rect_);
@@ -88,6 +93,7 @@ void PMCWindow::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
 	{
+		&PMCWindow::OnDestroy,
 		&PMCWindow::OnMove,
 		&PMCWindow::OnSetCursor,
 		&PMCWindow::OnSize

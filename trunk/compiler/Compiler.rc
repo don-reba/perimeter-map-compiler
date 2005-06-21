@@ -70,6 +70,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_CAN
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+IDI_COMPILER            ICON                    "resource/compiler.ico"
 IDI_RED_LIGHT           ICON                    "resource\\red light.ico"
 IDI_SHRUB_ACTIVE        ICON                    "resource/shrub.ico"
 IDI_SHRUB_INACTIVE      ICON                    "resource/shrub2.ico"
@@ -77,7 +78,6 @@ IDI_IM                  ICON                    "resource/details.ico"
 IDI_MP                  ICON                    "resource/preview.ico"
 IDI_SM                  ICON                    "resource/stats.ico"
 IDI_TRIANGLE            ICON                    "resource/triangle.ico"
-IDI_COMPILER            ICON                    "resource/compiler.ico"
 IDI_GREEN_LIGHT         ICON                    "resource\\green light.ico"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -97,6 +97,8 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "&Install Map\tCtrl-I",        ID_FILE_INSTALLSHRUB
         MENUITEM "&Manage Maps\tCtrl-M",        ID_FILE_MANAGEMAPS
+        MENUITEM SEPARATOR
+        MENUITEM "Project &Settings\tCtrl-S",   ID_FILE_PROJECTSETTINGS
         MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt-F4",               IDM_EXIT
     END
@@ -250,38 +252,42 @@ BEGIN
     LTEXT           "0:",IDC_STATIC,7,153,8,8
 END
 
-IDD_PREFERENCES DIALOGEX 0, 0, 173, 154
+IDD_PREFERENCES DIALOGEX 0, 0, 179, 180
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_VISIBLE | 
     WS_CAPTION | WS_SYSMENU
-EXSTYLE WS_EX_TOPMOST
 CAPTION "Preferences"
 FONT 8, "MS Shell Dlg", 400, 0, 0xCC
 BEGIN
     CONTROL         "Speed",IDC_TEXTURE_COLOUR_SPEED,"Button",
-                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,17,36,10
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,17,42,10
     CONTROL         "Quality",IDC_TEXTURE_COLOUR_QUALITY,"Button",
-                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,27,36,10
-    EDITTEXT        IDC_LOD,120,60,36,12,ES_AUTOHSCROLL
-    PUSHBUTTON      "",IDC_ZERO_PLAST_COLOUR_BTN,143,78,13,8,BS_ICON | 
-                    BS_CENTER | BS_VCENTER
-    EDITTEXT        IDC_ZERO_PLAST_OPACITY,120,92,36,12,ES_AUTOHSCROLL | 
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,27,42,10
+    EDITTEXT        IDC_LOD,120,60,42,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_ZERO_PLAST_OPACITY,120,92,42,12,ES_AUTOHSCROLL | 
                     ES_NUMBER
     CONTROL         "",IDC_ZERO_PLAST_OPACITY_SPIN,"msctls_updown32",
                     UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | 
-                    UDS_AUTOBUDDY | UDS_ARROWKEYS,156,92,10,12
-    PUSHBUTTON      "OK",IDOK,7,133,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,61,133,50,14
-    PUSHBUTTON      "Apply",ID_APPLY_NOW,115,133,50,14
+                    UDS_AUTOBUDDY | UDS_ARROWKEYS,162,92,10,12
+    PUSHBUTTON      "OK",IDOK,7,159,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,64,159,50,14
+    PUSHBUTTON      "Apply",ID_APPLY_NOW,122,159,50,14
     LTEXT           "",IDC_ZERO_PLAST_COLOUR,120,78,13,8,SS_SUNKEN
-    GROUPBOX        "Map Preview",IDC_STATIC,7,49,159,77,BS_CENTER
+    GROUPBOX        "Map Preview",IDC_STATIC,7,49,165,100,BS_CENTER
     LTEXT           "Mesh tolerance (0-8)",IDC_STATIC,19,62,89,8
     LTEXT           "Zero-level color",IDC_STATIC,19,78,89,8
     LTEXT           "Zero-level opacity (0-255)",IDC_STATIC,19,94,89,8
-    GROUPBOX        "General",IDC_STATIC,7,7,159,35,BS_CENTER
+    GROUPBOX        "General",IDC_STATIC,7,7,165,35,BS_CENTER
     LTEXT           "Texture color trade-off",IDC_STATIC,19,23,89,8
     LTEXT           "Shadows and lighting",IDC_STATIC,19,110,68,8
     CONTROL         "",IDC_LIGHTING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
                     120,110,16,8
+    CONTROL         "Texture",IDC_DISPLAY_TEXTURE,"Button",
+                    BS_AUTORADIOBUTTON,120,123,42,10
+    CONTROL         "Hardness",IDC_DISPLAY_HARDNESS,"Button",
+                    BS_AUTORADIOBUTTON,120,133,42,10
+    LTEXT           "Display as map texture",IDC_STATIC,19,128,74,8
+    PUSHBUTTON      "",IDC_ZERO_PLAST_COLOUR_BTN,137,78,13,8,BS_ICON | 
+                    BS_CENTER | BS_VCENTER
 END
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 234, 150
@@ -292,7 +298,7 @@ CAPTION "About Perimeter Map Compiler"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,116,129,50,14
-    LTEXT           "Perimeter Map Compiler 1.01\nCopyright (c) 2005, Don Reba\nAll rights reserved.",
+    LTEXT           "Perimeter Map Compiler 1.1 alpha 1\nCopyright (c) 2005, Don Reba\nAll rights reserved.",
                     IDC_STATIC,49,47,177,27
     LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",
                     IDC_STATIC,49,79,177,35
@@ -307,6 +313,26 @@ BEGIN
     LISTBOX         IDC_MAP_LIST,7,7,90,66,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
                     WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Delete",IDC_DELETE_MAP,32,80,40,14
+END
+
+IDD_PROJECT_SETTINGS DIALOGEX 0, 0, 113, 98
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Project Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,7,77,45,14
+    PUSHBUTTON      "Cancel",IDCANCEL,61,77,45,14
+    LTEXT           "Map Name",IDC_STATIC,7,9,34,8
+    EDITTEXT        IDC_MAP_NAME,46,7,60,12,ES_AUTOHSCROLL
+    CONTROL         "Custom Hardness Map",IDC_CUSTOM_HARDNESS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,22,87,10
+    CONTROL         "Custom Zero Layer",IDC_CUSTOM_ZERO_LAYER,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,35,77,10
+    CONTROL         "Custom Surface Texture",IDC_CUSTOM_SURFACE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,48,94,10
+    CONTROL         "Custom Sky Texture",IDC_CUSTOM_SKY,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,61,81,10
 END
 
 
@@ -360,13 +386,13 @@ BEGIN
     IDD_PREFERENCES, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 166
+        RIGHTMARGIN, 172
         VERTGUIDE, 19
         VERTGUIDE, 108
         VERTGUIDE, 120
-        VERTGUIDE, 156
+        VERTGUIDE, 162
         TOPMARGIN, 7
-        BOTTOMMARGIN, 147
+        BOTTOMMARGIN, 173
     END
 
     IDD_ABOUTBOX, DIALOG
@@ -388,6 +414,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 94
     END
+
+    IDD_PROJECT_SETTINGS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 106
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 91
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -398,7 +432,6 @@ END
 //
 
 IDR_WORLD_INI           TEXT                    "resource/world.ini"
-IDR_WORLDS_LIST         TEXT                    "resource/worlds_list.txt"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -408,6 +441,9 @@ IDR_WORLDS_LIST         TEXT                    "resource/worlds_list.txt"
 IDR_SPG                 BZ2                     "resource/spg.bz2"
 IDR_SPH                 BZ2                     "resource/sph.bz2"
 IDR_SURVIVAL_SPG        BZ2                     "resource\\survival_spg.bz2"
+IDR_SPG2                BZ2                     "resource\\spg2.bz2"
+IDR_WORLDS_LIST         BZ2                     "resource\\worlds_list.bz2"
+IDR_WORLDS_LIST_2       BZ2                     "resource\\worlds_list2.bz2"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -417,6 +453,14 @@ IDR_SURVIVAL_SPG        BZ2                     "resource\\survival_spg.bz2"
 IDB_PREVIEW             BITMAP                  "resource\\preview.bmp"
 IDB_STATS               BITMAP                  "resource\\stats.bmp"
 IDB_INFO                BITMAP                  "resource\\details.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// IMG
+//
+
+IDR_UP_TX               IMG                     "resource/img1.bin"
+IDR_SURFACE_TX          IMG                     "resource\\leveledSurfaceTexture.tga"
 
 /////////////////////////////////////////////////////////////////////////////
 //

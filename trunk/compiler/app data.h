@@ -55,9 +55,11 @@ public:
 		ID_ZERO_LAYER_COLOUR,
 		ID_ZERO_LAYER_OPACITY,
 		ID_OPACITY,
+		ID_DISPLAY_TEXTURE,
 		ID_ENABLE_SWAP,
 		ID_FAST_TEXTURE_QUANTIZATION,
 		ID_ENABLE_LIGHTING,
+		ID_PERIMETER_PATH,
 		count_
 	};
 protected:
@@ -81,9 +83,11 @@ protected:
 			_T("colour"),
 			_T("zero layer opacity"),
 			_T("opacity"),
+			_T("display as texture"),
 			_T("enable swap"),
 			_T("fast texture quantization"),
-			_T("enable lighting")
+			_T("enable lighting"),
+			_T("perimeter path")
 		};
 		return keys_table[i];
 	}
@@ -106,28 +110,31 @@ protected:
 			_T("Map Preview Settings"),
 			_T("Map Preview Settings"),
 			_T("Map Preview Settings"),
+			_T("Map Preview Settings"),
 			_T("Project Settings"),
-			_T("Project Settings")
+			_T("Project Settings"),
+			_T("Miscelleneous")
 		};	
 		return sections_table[i];
 	}
-
 	// data
 	MacroSSVar2(ID_RESOLUTION, SIZE, 1024, 768);
-	MacroSSVar4(ID_STAT_WND_RECT, RECT, 51, 220, 189, 300);
+	MacroSSVar4(ID_STAT_WND_RECT, RECT, 245, 25, 383, 105);
 	MacroSSVar (ID_STAT_WND_VISIBLE, bool, true);
-	MacroSSVar4(ID_PREVIEW_WND_RECT, RECT, 210, 21, 1016, 747);
+	MacroSSVar4(ID_PREVIEW_WND_RECT, RECT, 207, 110, 1002, 671);
 	MacroSSVar (ID_PREVIEW_WND_VISIBLE, bool, true);
-	MacroSSVar4(ID_INFO_WND_RECT, RECT, 10, 368, 198, 669);
+	MacroSSVar4(ID_INFO_WND_RECT, RECT, 13, 111, 201, 412);
 	MacroSSVar (ID_INFO_WND_VISIBLE, bool, true);
-	MacroSSVar4(ID_MAIN_WND_RECT, RECT, 60, 21, 186, 197);
+	MacroSSVar4(ID_MAIN_WND_RECT, RECT, 13, 17, 239, 105);
 	MacroSSVar (ID_THRESHOLD, float, 0.3f);
 	MacroSSVar (ID_ZERO_LAYER_COLOUR, COLORREF, 0L);
 	MacroSSVar (ID_ZERO_LAYER_OPACITY, uint, 40u);
 	MacroSSVar (ID_OPACITY, int, 40);
 	MacroSSVar (ID_ENABLE_SWAP, bool, true);
+	MacroSSVar (ID_DISPLAY_TEXTURE, bool, true);
 	MacroSSVar (ID_FAST_TEXTURE_QUANTIZATION, bool, true);
 	MacroSSVar (ID_ENABLE_LIGHTING, bool, true);
+	MacroSSVar (ID_PERIMETER_PATH, tstring, _T("full path"));
 };
 
 typedef StaticSerializer<ApplicationData> SSAppData;

@@ -61,6 +61,7 @@ void FileTracker::AddData(uint id, LPCTSTR file_name, const FILETIME &last_write
 {
 	AutoCriticalSection acs(&tracker_section_);
 	FileDatum datum;
+	datum.active_     = true;
 	datum.file_name_  = file_name;
 	datum.last_write_ = last_write;
 	files_[id] = datum;
@@ -148,10 +149,17 @@ DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
 
 void FileTracker::CheckFiles()
 {
+	bool changed(false);
 	// check which files where changed
 	IdsType ids;
 	for (uint i(0); i != resource_count; ++i)
-		ids[i] = WasUpdated(files_[i], i);
+	{
+		if (files_[i].active_ && WasUpdated(files_[i], i))
+		{
+			changed = true;
+			ids[i]  = true;
+		}
+	}
 	// use the callback
 	(*file_updated_)(ids);
 }
@@ -178,7 +186,8 @@ bool FileTracker::WasUpdated(FileDatum &datum, uint id)
 			NULL);
 		if (INVALID_HANDLE_VALUE == file)
 		{
-			if (ERROR_FILE_NOT_FOUND == GetLastError())
+			DWORD error(GetLastError());
+			if (ERROR_FILE_NOT_FOUND == error)
 				(*file_not_found_)(id, path);
 			else
 				Sleep(retry_interval);

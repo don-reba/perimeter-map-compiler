@@ -11,12 +11,14 @@
 #define IDM_EXIT                        105
 #define IDC_COMPILER                    109
 #define IDR_MAINFRAME                   128
+#define IDR_SPG2                        128
 #define IDD_PROJECT_DLG                 129
 #define IDD_DIALOG1                     131
 #define IDD_STAT_DLG                    131
 #define IDD_PREVIEW_DLG                 132
 #define IDD_INFO_DLG                    134
 #define IDR_WORLD_INI                   135
+#define IDI_COMPILER                    140
 #define IDI_RED_LIGHT                   141
 #define IDI_GREEN_LIGHT                 143
 #define IDI_ICON1                       146
@@ -32,7 +34,6 @@
 #define IDR_SPH                         164
 #define IDD_PREFERENCES                 165
 #define IDI_TRIANGLE                    167
-#define IDI_COMPILER                    170
 #define IDD_ABOUTBOX                    171
 #define IDD_MAP_MANAGER                 173
 #define IDR_TEXT2                       175
@@ -44,6 +45,13 @@
 #define IDB_BITMAP1                     181
 #define IDB_STATS                       181
 #define IDB_INFO                        182
+#define IDR_BZ23                        185
+#define IDR_BZ24                        186
+#define IDR_UP_TX                       192
+#define IDR_SURFACE                     196
+#define IDR_SURFACE_TX                  196
+#define IDR_WORLDS_LIST_2               199
+#define IDD_PROJECT_SETTINGS            200
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_LIGHTING                    1000
@@ -97,6 +105,13 @@
 #define IDC_TEXTURE_COLOUR_QUALITY2     1040
 #define IDC_TEXTURE_COLOUR_SPEED        1040
 #define IDC_TEXTURE_COLOUR_QUALITY      1041
+#define IDC_CUSTOM_HARDNESS             1043
+#define IDC_CUSTOM_ZERO_LAYER           1044
+#define IDC_CUSTOM_SURFACE              1045
+#define IDC_CUSTOM_SKY                  1046
+#define IDC_DISPLAY_TEXTURE             1047
+#define IDC_RADIO2                      1048
+#define IDC_DISPLAY_HARDNESS            1048
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -109,6 +124,7 @@
 #define ID_TOOLS_SAVETHUMBNAIL          32800
 #define ID_PANEL_WND_0                  32801
 #define ID_PANEL_WND_1                  32802
+#define ID_FILE_PROJECTSETTINGS         32802
 #define ID_PANEL_WND_2                  32803
 #define ID_PANEL_WND_3                  32804
 #define ID_PANEL_WND_4                  32805
@@ -119,9 +135,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        185
-#define _APS_NEXT_COMMAND_VALUE         32801
-#define _APS_NEXT_CONTROL_VALUE         1043
+#define _APS_NEXT_RESOURCE_VALUE        201
+#define _APS_NEXT_COMMAND_VALUE         32803
+#define _APS_NEXT_CONTROL_VALUE         1049
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

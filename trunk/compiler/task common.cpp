@@ -35,16 +35,170 @@
 #include "preview wnd.h"
 #include "project data.h"
 #include "resource.h"
+#include "resource management.h"
 #include "task common.h"
 
 #include <fstream>
+#include <sstream>
 #include <Wininet.h>
+
+using namespace RsrcMgmt;
 
 namespace TaskCommon
 {
-	//----------------------------------------
+	//------------------------
+	// Hardness implementation
+	//------------------------
+
+	Hardness::Hardness(SIZE size, HWND &error_hwnd)
+		:ErrorHandler(error_hwnd)
+		,data_(NULL)
+		,size_(size)
+	{}
+
+	Hardness::~Hardness()
+	{
+		delete [] data_;
+	}
+
+	void Hardness::MakeDefault()
+	{
+		_ASSERTE(NULL == data_);
+		const size_t data_size(size_.cx * size_.cy);
+		data_ = new BYTE[data_size];
+		FillMemory(data_, data_size, 0xFF);
+	}
+
+	bool Hardness::Load(LPCTSTR path)
+	{
+		fipImage image;
+		// load the image
+		image.load(path);
+		if (FALSE == image.isValid())
+		{
+			Sleep(512);
+			image.load(path);
+			if (FALSE == image.isValid())
+			{
+				MakeDefault();
+				return true;
+			}
+		}
+		// make sure that dimensions are correct
+		if (image.getWidth() != size_.cx || image.getHeight() != size_.cy)
+		{
+			MacroDisplayError(_T("Hardness map dimensions do not correspond to project settings."));
+			return false;
+		}
+		// convert to grayscale if necessary
+		if (8 != image.getBitsPerPixel())
+		{
+			if (FALSE == image.convertToGrayscale())
+			{
+				MacroDisplayError(_T("Hardness map could not be converted to grayscale."));
+				return false;
+			}
+		}
+		// flip vertically
+		if (FALSE == image.flipVertical())
+			MacroDisplayError(_T("Hardness map bitmap could not be flipped."));
+		// allocate memory
+		const size_t data_size(size_.cx * size_.cy);
+		_ASSERTE(NULL == data_);
+		data_ = new BYTE[data_size];
+		// read in data
+		CopyMemory(data_, image.accessPixels(), data_size);
+		return true;
+	}
+
+	int Hardness::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask)
+	{
+		// pack hardness map
+		int encoded_size;
+		{
+			// create the image data matrix
+			jas_matrix_t *data(jas_matrix_create(size_.cy, size_.cx)); // rows then columns
+			{
+				size_t index(0);
+				for (LONG r(0); r != size_.cy; ++r)
+				{
+					for (LONG c(0); c != size_.cx; ++c)
+					{
+						jas_matrix_set(data, r, c, mask[index] ? 0 : data_[index]);
+						++index;
+					}
+				}
+			}
+			// initialize the image component structure
+			jas_image_cmptparm_t component;
+			component.width  = size_.cx;
+			component.height = size_.cy;
+			component.tlx    = 0;
+			component.tly    = 0;
+			component.hstep  = 1;
+			component.vstep  = 1;
+			component.prec   = 8;
+			component.sgnd   = false;
+			// create the image
+			jas_image_t *image(jas_image_create(1, &component, JAS_CLRSPC_SGRAY));
+			if (0 == image)
+				MacroDisplayError(_T("jas_image_create failed"));
+			// fill the component of the image
+			jas_image_setcmpttype(image, 0, 0);
+			if (0 != jas_image_writecmpt(image, 0, 0, 0, size_.cx, size_.cy, data))
+				MacroDisplayError(_T("jas_imagewritecmpt failed"));
+			// create an output stream
+			size_t buffer_size(size_.cx * size_.cy);
+			jas_stream_t *stream = jas_stream_memopen(ri_cast<char*>(buffer), buffer_size);
+			if (0 == stream)
+				MacroDisplayError(_T("jas_stream_open failure"));
+			// encode and write the image into the stream
+			int format = jas_image_strtofmt("jpc");
+			if (-1 == format)
+				MacroDisplayError(_T("jas_image_strtofmt failed"));
+			if (0 != jas_image_encode(image, stream, format, "mode=real rate=0.1"))
+				MacroDisplayError(_T("jas_image_encode failed"));
+			encoded_size = stream->rwcnt_;
+			// clean up
+			jas_stream_close(stream);
+			jas_image_destroy(image);
+			jas_matrix_destroy(data);
+		}
+		// record xml metadata
+		{
+			char str[16];
+			// compression format
+			node.InsertEndChild(TiXmlElement("compression"))->InsertEndChild(TiXmlText("JPC"));
+			// offset of the compressed data
+			_itot(buffer - initial_offset, str, 10);
+			node.InsertEndChild(TiXmlElement("offset"))->InsertEndChild(TiXmlText(str));
+			// size of the compressed data
+			_itot(encoded_size, str, 10);
+			node.InsertEndChild(TiXmlElement("size"))->InsertEndChild(TiXmlText(str));
+		}
+		return encoded_size;
+	}
+
+	void Hardness::Save(LPCTSTR path)
+	{
+		_ASSERTE(NULL != data_);
+		// initialize the heightmap image
+		fipImage image(
+			FIT_BITMAP,
+			static_cast<WORD>(size_.cx),
+			static_cast<WORD>(size_.cy),
+			8);
+		// fill the image
+		CopyMemory(image.accessPixels(), data_, size_.cx * size_.cy);
+		image.threshold(1);
+		// save the image
+		if (FALSE == image.save(path, BMP_DEFAULT))
+			MacroDisplayError(_T("Hardness map could not be saved."));
+	}
+
+	//-------------------------
 	// Heightmap implementation
-	//----------------------------------------
+	//-------------------------
 
 	Heightmap::Heightmap(SIZE size, HWND &error_hwnd)
 		:ErrorHandler(error_hwnd)
@@ -63,7 +217,7 @@ namespace TaskCommon
 	{
 		const SIZE map_size = { size_.cx - 1, size_.cy - 1 };
 		fipImage image;
-		// load the heightmap image
+		// load the image
 		{
 			const DWORD delay(256);
 			const uint  try_count(32);
@@ -85,7 +239,7 @@ namespace TaskCommon
 		// make sure that dimensions are correct
 		if (image.getWidth() != map_size.cx || image.getHeight() != map_size.cy)
 		{
-			MacroDisplayError(_T("Heightmap dimensions do not correspond to project settigns."));
+			MacroDisplayError(_T("Heightmap dimensions do not correspond to project settings."));
 			return false;
 		}
 		// turn the image to grayscale if necessary
@@ -104,11 +258,6 @@ namespace TaskCommon
 		const size_t data_size(size_.cx * size_.cy);
 		_ASSERTE(NULL == data_);
 		data_ = new BYTE[data_size];
-		if (NULL == data_)
-		{
-			MacroDisplayError(_T("Memory for loading the heightmap could not be allocated."));
-			return false;
-		}
 		// read in data
 		{
 			const BYTE *image_iter(image.accessPixels());
@@ -319,9 +468,9 @@ namespace TaskCommon
 		}
 	}
 
-	//---------------------------------------
+	//------------------------
 	// Lightmap implementation
-	//---------------------------------------
+	//------------------------
 
 	Lightmap::Lightmap(SIZE size, HWND &error_hwnd)
 		:ErrorHandler(error_hwnd)
@@ -341,11 +490,6 @@ namespace TaskCommon
 		const size_t data_size(size_.cx * size_.cy);
 		_ASSERTE(NULL == data_);
 		data_ = new BYTE[data_size];
-		if (NULL == data_)
-		{
-			MacroDisplayError(_T("Memory for loading the heightmap could not be allocated."));
-			return false;
-		}
 		// calculate lighting
 		const BYTE *hi(heightmap.data_); // heightmap iterator
 		BYTE *li(data_); // lightmap iterator
@@ -449,9 +593,9 @@ namespace TaskCommon
 		_stprintf(
 			str,
 			_T("%u %u %u"),
-			(fog_colour_ & 0x000000FF) >> 16,
+			(fog_colour_ & 0x000000FF) >> 0,
 			(fog_colour_ & 0x0000FF00) >> 8,
-			(fog_colour_ & 0x00FF0000) >> 0);
+			(fog_colour_ & 0x00FF0000) >> 16);
 		ReplaceSubstring(world_ini, "%fog_colour%", str);
 		return world_ini;
 	}
@@ -569,7 +713,7 @@ namespace TaskCommon
 		// make sure the dimensions are correct
 		if (image.getWidth() != size_.cx || image.getHeight() != size_.cy)
 		{
-			MacroDisplayError(_T("Texture dimensions do not correspond to project settigns."));
+			MacroDisplayError(_T("Texture dimensions do not correspond to project settings."));
 			return false;
 		}
 		// quantize the image if necessary
@@ -589,11 +733,6 @@ namespace TaskCommon
 		const size_t indices_size(size_.cx * size_.cy);
 		_ASSERTE(NULL == indices_);
 		indices_ = new BYTE[indices_size];
-		if (NULL == indices_)
-		{
-			MacroDisplayError(_T("Memory for loading the texture could not be allocated."));
-			return false;
-		}
 		// extract image data
 		CopyMemory(indices_, image.accessPixels(), indices_size);
 		const size_t palette_size(__min(256, image.getPaletteSize() / 4));
@@ -720,6 +859,52 @@ namespace TaskCommon
 		return dwFileSize;
 	}
 
+	void SaveHardness(
+		LPCTSTR       path,
+		const BYTE   *buffer,
+		SIZE          size,
+		ErrorHandler &error_handler)
+	{
+		_ASSERTE(NULL != buffer);
+		const WORD   width        (static_cast<WORD>(size.cx));
+		const WORD   height       (static_cast<WORD>(size.cy));
+		const WORD   result_width (width / 2);
+		const WORD   result_height(height / 4);
+		const size_t buffer_size  (width * height);
+		// create the byte array corressponding to the resized image
+		// NOTE: much of the following can be done with FreeImage, albeit very slowly
+		vector<bool> bits;
+		bits.resize(result_width * result_height);
+		{
+			const BYTE *i(buffer); // buffer iterator
+			uint b_i(0);           // bits iterator
+			for (uint y(0); y != result_height; ++y)
+			{
+				vector<bool> row; // buffer for disjunction of four consecutive rows
+				row.resize(result_width);
+				// fill the row
+				for (WORD x(0); x != result_width; ++x)
+					row[x] = i[0] != 0 || i[1] != 0, i += 2;
+				for (WORD x(0); x != result_width; ++x)
+					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
+				for (WORD x(0); x != result_width; ++x)
+					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
+				for (WORD x(0); x != result_width; ++x)
+					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
+				// copy the row
+				for (WORD x(0); x != result_width; ++x)
+					bits[b_i++] = row[x];
+			}
+		}
+		// layout the file
+		BYTE *file(new BYTE[buffer_size / 64 + 4]);
+		DWORD magic_number(MAKELONG(result_width / 8, result_height));
+		CopyMemory(file, &magic_number, 4);
+		CopyMemory(file + 4, ri_cast<const BYTE*>(&bits._Myvec[0]), buffer_size / 64); // HACK: implementation-dependant
+		// save
+		SaveMemToFile(path, file, buffer_size / 64 + 4, error_handler);
+	}
+
 	void SaveHeightmap(LPCTSTR path, const BYTE *buffer, SIZE size, ErrorHandler &error_handler)
 	{
 		// initialize the heightmap image
@@ -797,6 +982,7 @@ namespace TaskCommon
 		delete [] image_palette;
 	}
 
+	// v 1.01
 	void SaveSPG(
 		MapInfo      &map_info,
 		LPCTSTR       path,
@@ -804,104 +990,111 @@ namespace TaskCommon
 		const bool    survival,
 		ErrorHandler &error_handler)
 	{
-		const size_t spg_alloc(8388608); // 8 MB should be enough
-		size_t spg_size(spg_alloc);
-		char *spg(new char[spg_size]);
-		char *spg_iter1(spg), *spg_iter2;
-		// make sure the allocation was successful
-		if (NULL == spg)
+		// create a replacement sequence
+		vector<std::pair<tstring, tstring> > seq;
 		{
-			error_handler.MacroDisplayError("Not enough memory.");
-			return;
-		}
-		// load the spg template
-		{
-			BYTE *compressed_buffer;
-			// load the compressed template
-			HRSRC resource_info(FindResource(
-				NULL,
-				MAKEINTRESOURCE(survival ? IDR_SURVIVAL_SPG : IDR_SPG),
-				"BZ2"));
-			HGLOBAL resource(LoadResource(NULL, resource_info));
-			compressed_buffer = ri_cast<BYTE*>(LockResource(resource));
-			// uncompress
-			if (BZ_OK != BZ2_bzBuffToBuffDecompress(
-				spg,
-				&spg_size,
-				ri_cast<char*>(compressed_buffer),
-				SizeofResource(NULL, resource_info),
-				0,
-				0))
+			const size_t pos_range_start(survival ? 0 : 1);
+			const size_t pos_range_end  (survival ? 1 : 5);
+			// folder name
+			seq.push_back(std::make_pair(_T("%folder_name%"), folder_name));
+			// frame and squad positions
+			for (size_t i(pos_range_start); i != pos_range_end; ++i)
 			{
-				error_handler.MacroDisplayError(_T("BZ2_bzBuffToBuffDecompress failed"));
-				delete [] spg;
-				return;
+				{
+					tostringstream stream1, stream2;
+					stream1 << _T("%frame_position_") << i << _T("%");
+					stream2 << map_info.sps_[i].x << _T(" ") << map_info.sps_[i].y << " " << 256;
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+				}
+				{
+					tostringstream stream1, stream2;
+					stream1 << _T("%squad_position_") << i << _T("%");
+					stream2 << map_info.sps_[i].x << _T(" ") << map_info.sps_[i].y;
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+				}
 			}
+			// camera positions
+			for (size_t i(pos_range_start); i != pos_range_end; ++i)
+			{
+				tostringstream stream1, stream2;
+				stream1 << _T("%camera_position_") << i << _T("%");
+				stream2  << map_info.sps_[i].x << " " << map_info.sps_[i].y;
+				seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+			}
+		}
+		vector<TCHAR> spg_string;
+		const size_t spg_alloc(8388608); // 8 MB should be enough
+		spg_string.resize(spg_alloc);
+		// get the spg string from resources
+		if (!UncompressResource(survival ? IDR_SURVIVAL_SPG : IDR_SPG, ri_cast<BYTE*>(&spg_string[0]), spg_alloc))
+		{
+			error_handler.MacroDisplayError(_T("SPG resource could not be loaded."));
+			return;
 		}
 		// create an output stream
 		std::ofstream spg_out(path, std::ios_base::binary | std::ios_base::out);
-		// set map name
+		tstring result;
+		ReplaceSubstringSeq(&spg_string[0], spg_string.size(), seq, result);
+		spg_out << result;
+	}
+
+	// v 1.02 beta
+	void SaveSPG2(
+		MapInfo      &map_info,
+		LPCTSTR       path,
+		LPCTSTR       folder_name,
+		const bool    survival,
+		ErrorHandler &error_handler)
+	{
+		// create a replacement sequence
+		vector<std::pair<tstring, tstring> > seq;
 		{
-			// get map name
-			char target[] = "%folder_name%";
-			spg_iter2 = strstr(spg, target);
-			if (NULL == spg_iter2)
+			const size_t pos_range_start(survival ? 0 : 1);
+			const size_t pos_range_end  (survival ? 1 : 5);
+			// folder name
+			seq.push_back(std::make_pair(_T("%folder_name%"), folder_name));
+			seq.push_back(std::make_pair(_T("%folder_name%"), folder_name));
+			// frame and squad positions
+			for (size_t i(pos_range_start); i != pos_range_end; ++i)
 			{
-				error_handler.MacroDisplayError(_T("Perimeter Map Compiler seems to have been corrupted. Please reinstall."));
-				delete [] spg;
-				return;
+				{
+					tostringstream stream1, stream2;
+					stream1 << _T("%frame_position_") << i << _T("%");
+					stream2 << map_info.sps_[i].x << _T(" ") << map_info.sps_[i].y << " " << 256;
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+				}
+				{
+					tostringstream stream1, stream2;
+					stream1 << _T("%squad_position_") << i << _T("%");
+					stream2 << map_info.sps_[i].x << _T(" ") << map_info.sps_[i].y;
+					seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+				}
 			}
-			spg_out.write(spg_iter1, spg_iter2 - spg_iter1);
-			spg_out << folder_name;
-			spg_iter2 += sizeof(target) - 1;
+			// camera positions
+			for (size_t i(pos_range_start); i != pos_range_end; ++i)
+			{
+				tostringstream stream1, stream2;
+				stream1 << _T("%camera_position_") << i << _T("%");
+				stream2  << map_info.sps_[i].x << " " << map_info.sps_[i].y;
+				seq.push_back(std::make_pair(stream1.str(), stream2.str()));
+			}
 		}
-		// set Frame positions
-		const unsigned int pos_range_start(survival ? 0 : 1);
-		const unsigned int pos_range_end  (survival ? 1 : 5);
-		for (size_t i(pos_range_start); i != pos_range_end; ++i)
+		vector<TCHAR> spg_string;
+		const size_t spg_alloc(8388608); // 8 MB should be enough
+		spg_string.resize(spg_alloc);
+		// get the spg string from resources
+		if (!UncompressResource(survival ? IDR_SURVIVAL_SPG : IDR_SPG2, ri_cast<BYTE*>(&spg_string[0]), spg_alloc))
 		{
-			char target[] = "%frame_position_X%";
-			itoa(i, target + sizeof(target) - 3, 10);
-			spg_iter1 = spg_iter2;
-			spg_iter2 = strstr(spg_iter2, target);
-			if (NULL == spg_iter2)
-			{
-				error_handler.MacroDisplayError(_T("Program seems to have been corrupted. Please reinstall."));
-				delete [] spg;
-				return;
-			}
-			spg_out.write(spg_iter1, spg_iter2 - spg_iter1);
-			if (survival)
-				spg_out << map_info.sps_[0].x << " " << map_info.sps_[0].y << " " << 256;
-			else
-				spg_out << map_info.sps_[i].x << " " << map_info.sps_[i].y << " " << 256;
-			spg_iter2 += sizeof(target) - 1;
+			error_handler.MacroDisplayError(_T("SPG resource could not be loaded."));
+			return;
 		}
-		// set camera positions
-		for (size_t i(pos_range_start); i != pos_range_end; ++i)
-		{
-			char target[] = "%camera_position_X%";
-			itoa(i, target + sizeof(target) - 3, 10);
-			// replace both occurences
-			spg_iter1 = spg_iter2;
-			spg_iter2 = strstr(spg_iter2, target);
-			if (NULL == spg_iter2)
-			{
-				error_handler.MacroDisplayError(_T("Program seems to have been corrupted. Please reinstall."));
-				delete [] spg;
-				return;
-			}
-			spg_out.write(spg_iter1, spg_iter2 - spg_iter1);
-			if (survival)
-				spg_out << map_info.sps_[0].x << " " << map_info.sps_[0].y;
-			else
-				spg_out << map_info.sps_[i].x << " " << map_info.sps_[i].y;
-			spg_iter2 += sizeof(target) - 1;
-		}
-		// output the rest of the data
-		spg_out.write(spg_iter2, spg_size - (spg_iter2 - spg) - 1); // minus one for the terminating zero
-		// clean up
-		delete [] spg;
+		// create an output stream
+		std::ofstream spg_out(path, std::ios_base::binary | std::ios_base::out);
+		tstring result;
+		ReplaceSubstringSeq(&spg_string[0], spg_string.size(), seq, result);
+		spg_out << result;
 	}
 
 	void SaveSPH(
@@ -910,93 +1103,33 @@ namespace TaskCommon
 		const bool survival,
 		ErrorHandler &error_handler)
 	{
-		const size_t sph_alloc(4096); // 4 KB should be enough
-		size_t sph_size(sph_alloc);
-		char *sph(new char[sph_size]);
-		char *sph_iter1(sph), *sph_iter2(sph);
-		// make sure the allocation was successful
-		if (NULL == sph)
+		// create a replacement sequence
+		vector<std::pair<tstring, tstring> > seq;
 		{
-			error_handler.MacroDisplayError("Not enough memory.");
-			return;
+			// folder name
+			seq.push_back(std::make_pair(_T("%folder_name%"), folder_name));
+			// player count
+			seq.push_back(std::make_pair(_T("%player_count%"), survival ? _T("1") : _T("4")));
+			// map path
+			if (survival)
+				seq.push_back(std::make_pair(_T("%folder_name%"), tstring(_T("survival\\\\")) + folder_name));
+			else
+				seq.push_back(std::make_pair(_T("%folder_name%"), folder_name));
 		}
-		// load the sph template
+		vector<TCHAR> sph_string;
+		const size_t sph_alloc(8192); // 8 KB should be enough
+		sph_string.resize(sph_alloc);
+		// get the spg string from resources
+		if (!UncompressResource(IDR_SPH, ri_cast<BYTE*>(&sph_string[0]), sph_alloc))
 		{
-			BYTE *compressed_buffer;
-			// load the compressed template
-			HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_SPH), "BZ2"));
-			HGLOBAL resource(LoadResource(NULL, resource_info));
-			compressed_buffer = ri_cast<BYTE*>(LockResource(resource));
-			// uncompress
-			if (BZ_OK != BZ2_bzBuffToBuffDecompress(
-				sph,
-				&sph_size,
-				ri_cast<char*>(compressed_buffer),
-				SizeofResource(NULL, resource_info),
-				0,
-				0))
-			{
-				error_handler.MacroDisplayError(_T("BZ2_bzBuffToBuffDecompress failed"));
-				delete [] sph;
-				return;
-			}
+			error_handler.MacroDisplayError(_T("SPH resource could not be loaded."));
+			return;
 		}
 		// create an output stream
 		std::ofstream sph_out(path, std::ios_base::binary | std::ios_base::out);
-		// set map name
-		{
-			char target[] = "%folder_name%";
-			sph_iter1 = sph_iter2;
-			sph_iter2 = strstr(sph_iter2, target);
-			if (NULL == sph_iter2)
-			{
-				error_handler.MacroDisplayError(_T("Program seems to have been corrupted. Please reinstall."));
-				delete [] sph;
-				return;
-			}
-			sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
-			sph_out << folder_name;
-			sph_iter2 += sizeof(target) - 1;
-		}
-		// set the number of players
-		{
-			char target[] = "%player_count%";
-			sph_iter1 = sph_iter2;
-			sph_iter2 = strstr(sph_iter2, target);
-			if (NULL == sph_iter2)
-			{
-				error_handler.MacroDisplayError(_T("Program seems to have been corrupted. Please reinstall."));
-				delete [] sph;
-				return;
-			}
-			sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
-			char *player_count(survival ? "1" : "4");
-			sph_out << player_count;
-			sph_iter2 += sizeof(target) - 1;
-		}
-		// set map path
-		{
-			char target[] = "%folder_name%";
-			sph_iter1 = sph_iter2;
-			sph_iter2 = strstr(sph_iter2, target);
-			if (NULL == sph_iter2)
-			{
-				error_handler.MacroDisplayError(_T("Program seems to have been corrupted. Please reinstall."));
-				delete [] sph;
-				return;
-			}
-			sph_out.write(sph_iter1, sph_iter2 - sph_iter1);
-			string map_name;
-			if (survival)
-				map_name = "survival\\\\";
-			map_name += folder_name;
-			sph_out << map_name;
-			sph_iter2 += sizeof(target) - 1;
-		}
-		// output the rest of the data
-		sph_out.write(sph_iter2, sph_size - (sph_iter2 - sph) - 1); // minus one for the terminating zero
-		// clean up
-		delete [] sph;
+		tstring result;
+		ReplaceSubstringSeq(&sph_string[0], sph_string.size(), seq, result);
+		sph_out << result;
 	}
 
 	void SaveTexture(
@@ -1100,8 +1233,16 @@ namespace TaskCommon
 	}
 
 	// create the VMP file and save it
-	void SaveVMP(const Heightmap &heightmap, const Texture &texture, LPCTSTR path, ErrorHandler &error_handler)
+	void SaveVMP(
+		const Hardness  &hardness,
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler)
 	{
+		_ASSERTE(NULL != hardness.data_);
+		_ASSERTE(NULL != heightmap.data_);
+		_ASSERTE(NULL != texture.indices_);
 		// get dimensions of the map
 		SIZE map_size(texture.size_);
 		// allocate memory
@@ -1129,6 +1270,7 @@ namespace TaskCommon
 		}
 		// fill the first layer with zeros
 		{
+//			CopyMemory(vmp_iter, hardness.data_, map_data_size);
 			ZeroMemory(vmp_iter, map_data_size);
 			vmp_iter += map_data_size;
 		}
@@ -1143,7 +1285,7 @@ namespace TaskCommon
 			// set iterators
 					int  *       int_heightmap_iter(int_heightmap);
 					bool *       null_pixels_iter(null_pixels);
-					const BYTE *       heightmap_iter(heightmap.data_);
+					const BYTE * heightmap_iter(heightmap.data_);
 			const BYTE * const heightmap_end(heightmap_iter + heightmap_data_size);
 			// main loop
 			while (heightmap_iter != heightmap_end)
@@ -1364,7 +1506,6 @@ namespace TaskCommon
 		int texture_index(0);
 		int initial_offset(0);
 		// main loop
-		// TODO: can be optimized - profile to see if it is necessary
 		for (uint texture_y(0); texture_y != allocation.y_count_; ++texture_y)
 		{
 			for (uint texture_x(0); texture_x != allocation.x_count_; ++texture_x)
@@ -1372,37 +1513,100 @@ namespace TaskCommon
 				BYTE *texture_iterator(ri_cast<BYTE*>(allocation.bitmaps_[texture_index]));
 				// copy texture data
 				int offset(initial_offset);
-				for (uint y(0); y != allocation.height_; ++y)
+				if (!enable_lighting)
 				{
-					for (uint x(0); x != allocation.width_; ++x)
+					for (uint y(0); y != allocation.height_; ++y)
 					{
-						const COLORREF colour(texture.palette_[texture.indices_[offset]]);
-						if (!enable_lighting)
+						for (uint x(0); x != allocation.width_; ++x)
 						{
-							texture_iterator[3] = 0xFF; // alpha
-							texture_iterator[2] = GetRValue(colour);
-							texture_iterator[1] = GetGValue(colour);
-							texture_iterator[0] = GetBValue(colour);
+							const COLORREF colour(texture.palette_[texture.indices_[offset++]]);
+							*texture_iterator++ = GetBValue(colour);
+							*texture_iterator++ = GetGValue(colour);
+							*texture_iterator++ = GetRValue(colour);
+							*texture_iterator++ = 0xFF; // alpha
 						}
-						else
-						{
-							float f_light(static_cast<float>(lightmap.data_[offset]));
-							f_light = (f_light + 128.0f) / 255.0f;
-							texture_iterator[3] = 0xFF; // alpha
-							texture_iterator[2] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetRValue(colour) * f_light)));
-							texture_iterator[1] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetGValue(colour) * f_light)));
-							texture_iterator[0] = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetBValue(colour) * f_light)));
-						}
-						++offset;
-						texture_iterator += 4;
+						offset += texture.size_.cx - allocation.width_;
 					}
-					offset += texture.size_.cx - allocation.width_;
+				}
+				else
+				{
+					for (uint y(0); y != allocation.height_; ++y)
+					{
+						for (uint x(0); x != allocation.width_; ++x)
+						{
+							const COLORREF colour(texture.palette_[texture.indices_[offset]]);
+							float f_light(static_cast<float>(lightmap.data_[offset++]));
+							f_light = (f_light + 128.0f) / 255.0f;
+							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetBValue(colour) * f_light)));
+							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetGValue(colour) * f_light)));
+							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetRValue(colour) * f_light)));
+							*texture_iterator++ = 0xFF; // alpha
+						}
+						offset += texture.size_.cx - allocation.width_;
+					}
 				}
 				// prepare for the next cycle
 				initial_offset += allocation.width_;
 				++texture_index;
 			}
 			initial_offset += texture.size_.cx * (allocation.height_ - 1);
+		}
+	}
+
+	void CreateTextures(
+		const Hardness    &hardness,
+		TextureAllocation &allocation,
+		const Lightmap    &lightmap,
+		bool               enable_lighting)
+	{
+		int texture_index(0);
+		int initial_offset(0);
+		// main loop
+		for (uint texture_y(0); texture_y != allocation.y_count_; ++texture_y)
+		{
+			for (uint texture_x(0); texture_x != allocation.x_count_; ++texture_x)
+			{
+				BYTE *texture_iterator(ri_cast<BYTE*>(allocation.bitmaps_[texture_index]));
+				// copy texture data
+				int offset(initial_offset);
+				if (!enable_lighting)
+				{
+					for (uint y(0); y != allocation.height_; ++y)
+					{
+						for (uint x(0); x != allocation.width_; ++x)
+						{
+							BYTE val(hardness.data_[offset++]);
+							*texture_iterator++ = val;  // B
+							*texture_iterator++ = val;  // G
+							*texture_iterator++ = val;  // R
+							*texture_iterator++ = 0xFF; // A
+						}
+						offset += hardness.size_.cx - allocation.width_;
+					}
+				}
+				else
+				{
+					for (uint y(0); y != allocation.height_; ++y)
+					{
+						for (uint x(0); x != allocation.width_; ++x)
+						{
+							float f_light(static_cast<float>(lightmap.data_[offset]));
+							f_light = (f_light + 128.0f) / 255.0f;
+							BYTE val(static_cast<BYTE>(__max(0.0f, __min(255.0f, hardness.data_[offset] * f_light))));
+							++offset;
+							*texture_iterator++ = val;  // B
+							*texture_iterator++ = val;  // G
+							*texture_iterator++ = val;  // R
+							*texture_iterator++ = 0xFF; // A
+						}
+						offset += hardness.size_.cx - allocation.width_;
+					}
+				}
+				// prepare for the next cycle
+				initial_offset += allocation.width_;
+				++texture_index;
+			}
+			initial_offset += hardness.size_.cx * (allocation.height_ - 1);
 		}
 	}
 
@@ -1553,6 +1757,38 @@ namespace TaskCommon
 		float proj_dy = v_proj_y + h_proj_y;
 		float distance = h_proj_x * h_proj_x + v_proj_x * v_proj_x + proj_dy * proj_dy;
 		return distance;
+	}
+
+	// replace a sequence of tokens occuring in order in the given string
+	// str is not supposed to be user-supplied
+	void ReplaceSubstringSeq(
+		LPCTSTR                                     str,
+		size_t                                      str_length,
+		const vector<std::pair<tstring, tstring> > &seq,
+		tstring                                    &result)
+	{
+		typedef std::pair<tstring, tstring> SeqType;
+		result.clear();
+		// reserve enough space for the new string
+		{
+			int total_diff(0);
+			foreach (const SeqType &pair, seq)
+				total_diff += static_cast<int>(pair.second.size()) - pair.first.size();
+			_ASSERTE(str_length + total_diff >= 0);
+			result.reserve(str_length + total_diff);
+		}
+		// make the replacements
+		LPCTSTR offset(str);
+		foreach (const SeqType &pair, seq)
+		{
+			LPCTSTR new_offset(_tcsstr(offset, pair.first.c_str()));
+			_ASSERTE(NULL != new_offset); // debug version only check
+			result.append(offset, new_offset - offset);
+			result.append(pair.second);
+			offset = new_offset + pair.first.size();
+		}
+		// append the rest of the data
+		result.append(offset);
 	}
 
 	// convert a heightmap to a mesh in O(n*ln(n))

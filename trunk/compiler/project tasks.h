@@ -78,12 +78,16 @@ enum Resource
 {
 	RS_HEIGHTMAP,
 	RS_TEXTURE,
+	RS_HARDNESS,
+	RS_ZERO_LAYER,
+	RS_SURFACE,
+	RS_SKY,
 	resource_count
 };
 typedef std::bitset<resource_count> IdsType;
 
 //----------------------------------------------------
-// thread-safe data
+// thread-safe task environment
 // synchronization is left up to the user of the tasks
 //----------------------------------------------------
 
@@ -100,9 +104,11 @@ public:
 	bool                fast_quantization_;
 	bool                enable_lighting_;
 	float               mesh_threshold_;
+	bool                display_texture_;
 	TaskCommon::MapInfo map_info_;
 	CRITICAL_SECTION    section_;
 	// cached resources
+	TaskCommon::Hardness  *hardness_;
 	TaskCommon::Heightmap *heightmap_;
 	TaskCommon::Texture   *texture_;
 };
@@ -148,7 +154,8 @@ public:
 		ProjectState project_state,
 		bool         fast_quantization,
 		bool         enable_lighting,
-		float        mesh_threshold);
+		float        mesh_threshold,
+		bool         display_texture);
 	void operator() ();
 private:
 	tstring      map_name_;
@@ -158,6 +165,7 @@ private:
 	bool         fast_quantization_;
 	bool         enable_lighting_;
 	float        mesh_threshold_;
+	bool         display_texture_;
 };
 
 //-----------------------
@@ -191,9 +199,10 @@ class LoadProjectDataTask : public Task, public ErrorHandler
 private:
 	struct OnPanelVisible : PanelWindow::ToggleVisibility
 	{
-		OnPanelVisible(ProjectManager &project_manager);
+		OnPanelVisible(const IdsType &ids, ProjectManager &project_manager);
 		void operator() (bool on);
 	private:
+		IdsType         ids_;
 		ProjectManager &project_manager_;
 	};
 // construction/destruction
@@ -275,18 +284,20 @@ class InstallMapTask : public Task, public ErrorHandler
 {
 // construction/destruction
 public:
-	InstallMapTask(HWND &hwnd);
+	InstallMapTask(HWND &hwnd, tstring &perimeter_path);
 // Task interface
 public:
 	void operator() ();
 // internal functioni
 private:
 	void AppendBTDB(LPCTSTR path, LPCTSTR folder_name);
-	void AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name);
-	void SaveMission(LPCTSTR path, LPCTSTR folder_name, bool survival);
+	void AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name, uint version);
+	void SaveMission (LPCTSTR path, LPCTSTR folder_name, bool survival);
+	void SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool survival);
 // data
 private:
-	HWND hwnd_;
+	HWND    hwnd_;
+	tstring perimeter_path_;
 };
 
 //-----------------------------------
@@ -313,4 +324,17 @@ private:
 	InfoWnd    &info_wnd_;
 	PreviewWnd &preview_wnd_;
 	bool        read_only_;
+};
+
+//----------------------------------
+// creates an optional resource file
+//----------------------------------
+
+class CreateResourceTask : public Task, public ErrorHandler
+{
+public:
+	CreateResourceTask(uint id, HWND error_hwnd);
+	void operator() ();
+private:
+	uint id_;
 };

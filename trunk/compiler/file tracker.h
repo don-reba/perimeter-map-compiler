@@ -50,6 +50,8 @@ public:
 	};
 private:
 	struct FileDatum {
+		FileDatum() : active_(false) {}
+		bool     active_;
 		tstring  file_name_;
 		FILETIME last_write_;
 	};

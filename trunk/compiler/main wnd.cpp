@@ -35,6 +35,7 @@
 #include "main wnd.h"
 #include "map manager.h"
 #include "project create wnd.h"
+#include "project settings wnd.h"
 #include "resource.h"
 
 #include <map>
@@ -340,16 +341,17 @@ void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
 {
 	switch (msg.CtrlId())
 	{
-	case IDM_ABOUT:              OnAbout        (msg); break;
-	case IDM_EXIT:               OnExit         (msg); break;
-	case ID_FILE_INSTALLSHRUB:   OnInstallShrub (msg); break;
-	case ID_FILE_MANAGEMAPS:     OnManageMaps   (msg); break;
-	case ID_FILE_NEWPROJECT:     OnNewProject   (msg); break;
-	case ID_FILE_OPENPROJECT:    OnOpenProject  (msg); break;
-	case ID_FILE_PACKSHRUB:      OnPackShrub    (msg); break;
-	case ID_TOOLS_PREFERENCES:   OnPreferences  (msg); break;
-	case ID_TOOLS_SAVETHUMBNAIL: OnSaveThumbnail(msg); break;
-	case ID_FILE_UNPACKSHRUB:    OnUpackShrub   (msg); break;
+	case IDM_ABOUT:               OnAbout          (msg); break;
+	case IDM_EXIT:                OnExit           (msg); break;
+	case ID_FILE_INSTALLSHRUB:    OnInstallShrub   (msg); break;
+	case ID_FILE_MANAGEMAPS:      OnManageMaps     (msg); break;
+	case ID_FILE_NEWPROJECT:      OnNewProject     (msg); break;
+	case ID_FILE_OPENPROJECT:     OnOpenProject    (msg); break;
+	case ID_FILE_PACKSHRUB:       OnPackShrub      (msg); break;
+	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
+	case ID_FILE_PROJECTSETTINGS: OnProjectSettings(msg); break;
+	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
+	case ID_FILE_UNPACKSHRUB:     OnUpackShrub     (msg); break;
 	}
 	// check for panel button messages
 	for(PanelData *i(panels_); i != panels_ + panel_count; ++i)
@@ -395,27 +397,22 @@ void MainWnd::OnAbout(Msg<WM_COMMAND> &msg)
 {
 	About about;
 	about.DoModal(hwnd_);
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnExit(Msg<WM_COMMAND> &msg)
 {
+	DestroyWindow(hwnd_);
 }
 
 void MainWnd::OnInstallShrub(Msg<WM_COMMAND> &msg)
 {
 	project_manager_.InstallMap();
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnManageMaps(Msg<WM_COMMAND> &msg)
 {
 	MapManager map_manager;
 	map_manager.DoModal(hwnd_);
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnNewProject(Msg<WM_COMMAND> &msg)
@@ -434,10 +431,9 @@ void MainWnd::OnNewProject(Msg<WM_COMMAND> &msg)
 	project_manager_.CreateProject(
 		folder_path.c_str(),
 		create_project_dlg.map_name_.c_str(),
-		create_project_dlg.map_size_);
+		create_project_dlg.map_size_,
+		hwnd_);
 	SetMenuState(MS_PROJECT);
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnOpenProject(Msg<WM_COMMAND> &msg)
@@ -448,30 +444,32 @@ void MainWnd::OnOpenProject(Msg<WM_COMMAND> &msg)
 	if (pmproj_path.empty())
 		return;
 	// open the project
-	project_manager_.OpenProject(pmproj_path.c_str());
+	project_manager_.OpenProject(pmproj_path.c_str(), hwnd_);
 	SetMenuState(MS_PROJECT);
-	msg.result_  = FALSE;
 }
 
 void MainWnd::OnPackShrub(Msg<WM_COMMAND> &msg)
 {
 	project_manager_.PackShrub();
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnPreferences(Msg<WM_COMMAND> &msg)
 {
-	preference_wnd_.Create(hwnd_);
-	msg.result_  = FALSE;
-	msg.handled_ = true;
+	if (NULL == preference_wnd_.hwnd_)
+		preference_wnd_.Create(hwnd_);
+	else
+		SetForegroundWindow(preference_wnd_.hwnd_);
+}
+
+void MainWnd::OnProjectSettings(Msg<WM_COMMAND> &msg)
+{
+	ProjectSettingsWnd project_settings_wnd(project_manager_, *this);
+	project_settings_wnd.DoModal(hwnd_);
 }
 
 void MainWnd::OnSaveThumbnail(Msg<WM_COMMAND> &msg)
 {
 	project_manager_.SaveThumbnail();
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void MainWnd::OnUpackShrub(Msg<WM_COMMAND> &msg)
@@ -484,8 +482,6 @@ void MainWnd::OnUpackShrub(Msg<WM_COMMAND> &msg)
 	// open the project
 	project_manager_.UnpackShrub(shrub_path.c_str());
 	SetMenuState(MS_SHRUB);
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 VOID CALLBACK MainWnd::ToolTipCleanupCallback(HWND hwnd, UINT msg_id, DWORD data, LRESULT result)
@@ -663,16 +659,17 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 	// minimum
 	typedef std::map<uint, bool> ItemsType;
 	ItemsType items;
-	items[IDM_ABOUT]              = true;
-	items[IDM_EXIT]               = true;
-	items[ID_FILE_INSTALLSHRUB]   = false;
-	items[ID_FILE_MANAGEMAPS]     = true;
-	items[ID_FILE_NEWPROJECT]     = true;
-	items[ID_FILE_OPENPROJECT]    = true;
-	items[ID_FILE_PACKSHRUB]      = false;
-	items[ID_TOOLS_PREFERENCES]   = true;
-	items[ID_TOOLS_SAVETHUMBNAIL] = false;
-	items[ID_FILE_UNPACKSHRUB]    = true;
+	items[IDM_ABOUT]               = true;
+	items[IDM_EXIT]                = true;
+	items[ID_FILE_INSTALLSHRUB]    = false;
+	items[ID_FILE_MANAGEMAPS]      = true;
+	items[ID_FILE_NEWPROJECT]      = true;
+	items[ID_FILE_OPENPROJECT]     = true;
+	items[ID_FILE_PACKSHRUB]       = false;
+	items[ID_FILE_PROJECTSETTINGS] = false;
+	items[ID_FILE_UNPACKSHRUB]     = true;
+	items[ID_TOOLS_PREFERENCES]    = true;
+	items[ID_TOOLS_SAVETHUMBNAIL]  = false;
 	// optionally enabled items
 	vector<uint> on_items;
 	switch (state)
@@ -682,6 +679,7 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 	case MS_PROJECT:
 		on_items.push_back(ID_FILE_INSTALLSHRUB);
 		on_items.push_back(ID_FILE_PACKSHRUB);
+		on_items.push_back(ID_FILE_PROJECTSETTINGS);
 		on_items.push_back(ID_TOOLS_SAVETHUMBNAIL);
 		break;
 	case MS_SHRUB:

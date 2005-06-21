@@ -55,6 +55,10 @@ public:
 		ID_SP_2,
 		ID_SP_3,
 		ID_SP_4,
+		ID_CUSTOM_HARDNESS,
+		ID_CUSTOM_ZERO_LAYER,
+		ID_CUSTOM_SURFACE,
+		ID_CUSTOM_SKY,
 		count_
 	};
 protected:
@@ -77,7 +81,11 @@ protected:
 			"starting_position_1",
 			"starting_position_2",
 			"starting_position_3",
-			"starting_position_4"
+			"starting_position_4",
+			"custom hardness map",
+			"custom zero layer",
+			"custom surface texture",
+			"custom sky texture"
 		};
 		return keys_table[i];
 	}
@@ -98,24 +106,32 @@ protected:
 			_T("world ini"),
 			_T("world ini"),
 			_T("world ini"),
-			_T("world ini")
+			_T("world ini"),
+			_T("custom resources"),
+			_T("custom resources"),
+			_T("custom resources"),
+			_T("custom resources")
 		};	
 		return sections_table[i];
 	}
 
 	// data
-	MacroSSVar (ID_MAP_NAME,   tstring,  _T(""));
-	MacroSSVar (ID_POWER_X,    uint,     0);
-	MacroSSVar (ID_POWER_Y,    uint,     0);
-	MacroSSVar (ID_ZERO_LEVEL, uint,     0);
-	MacroSSVar (ID_FOG_START,  uint,     8192);
-	MacroSSVar (ID_FOG_END,    uint,     8192);
-	MacroSSVar (ID_FOG_COLOUR, COLORREF, 0L);
-	MacroSSVar2(ID_SP_0,       POINT,    0, 0);
-	MacroSSVar2(ID_SP_1,       POINT,    0, 0);
-	MacroSSVar2(ID_SP_2,       POINT,    0, 0);
-	MacroSSVar2(ID_SP_3,       POINT,    0, 0);
-	MacroSSVar2(ID_SP_4,       POINT,    0, 0);
+	MacroSSVar (ID_MAP_NAME,          tstring,  _T(""));
+	MacroSSVar (ID_POWER_X,           uint,     0);
+	MacroSSVar (ID_POWER_Y,           uint,     0);
+	MacroSSVar (ID_ZERO_LEVEL,        uint,     0);
+	MacroSSVar (ID_FOG_START,         uint,     8192);
+	MacroSSVar (ID_FOG_END,           uint,     8192);
+	MacroSSVar (ID_FOG_COLOUR,        COLORREF, 0L);
+	MacroSSVar2(ID_SP_0,              POINT,    0, 0);
+	MacroSSVar2(ID_SP_1,              POINT,    0, 0);
+	MacroSSVar2(ID_SP_2,              POINT,    0, 0);
+	MacroSSVar2(ID_SP_3,              POINT,    0, 0);
+	MacroSSVar2(ID_SP_4,              POINT,    0, 0);
+	MacroSSVar (ID_CUSTOM_HARDNESS,   bool, false);
+	MacroSSVar (ID_CUSTOM_ZERO_LAYER, bool, false);
+	MacroSSVar (ID_CUSTOM_SURFACE,    bool, false);
+	MacroSSVar (ID_CUSTOM_SKY,        bool, false);
 };
 
 typedef StaticSerializer<ProjectData> SSProjectData;

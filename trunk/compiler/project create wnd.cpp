@@ -32,9 +32,15 @@
 #include "StdAfx.h"
 
 #include "resource.h"
+#include "resource management.h"
 #include "project create wnd.h"
+#include "task common.h"
 
+#include <algorithm>
+#include <set>
 #include <sstream>
+
+using namespace RsrcMgmt;
 
 //--------------------------------
 // statistics panel implementation
@@ -161,32 +167,50 @@ bool CreateProjectDlg::ExchangeData()
 				MessageBox(hwnd_, _T("The map name contains an invalid character.\nOnly numbers, letters, spaces, dashes, and apostrophies are allowed."), NULL, MB_OK);
 				return false;
 			}
-			// make sure the name does not match one of the reserved namesstring worlds_list;
+			// make sure the name does not match one of the reserved names
 			{
-				tstring worlds_list;
-				// load the list of reserved names
+				std::set<tstring> reserved_names;
+				// add strings
 				{
-					HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_WORLDS_LIST), "Text"));
-					HGLOBAL resource(LoadResource(NULL, resource_info));
-					char *text(ri_cast<char*>(LockResource(resource)));
-					worlds_list = text;
-				}
-				// check if the name occurs in the list
-				std::istringstream worlds_list_stream(worlds_list);
-				string world;
-				bool is_reserved(false);
-				while (worlds_list_stream)
-				{
-					worlds_list_stream >> world;
-					if (0 == _tcsicmp(world.c_str(), name))
+					vector<TCHAR> text;
+					const size_t text_alloc(1024); // 1 KB
+					text.resize(text_alloc);
+					// add "Geometry of War" reserved names
 					{
-						MessageBox(hwnd_, _T("This map name is reserved."), NULL, MB_OK);
-						is_reserved = true;
-						break;
+						if (!UncompressResource(IDR_WORLDS_LIST, ri_cast<BYTE*>(&text[0]), text_alloc))
+						{
+							MacroDisplayError(_T("Resource could not be loaded."));
+							return false;
+						}
+						tistringstream text_stream;
+						text_stream.str(&text[0]);
+						std::copy(
+							std::istream_iterator<tstring>(text_stream),
+							std::istream_iterator<tstring>(),
+							std::inserter(reserved_names, reserved_names.begin()));
+					}
+					// add "Emperor's Statement" reserved names
+					{
+						std::fill(text.begin(), text.end(), _T('\0'));
+						if (!UncompressResource(IDR_WORLDS_LIST_2, ri_cast<BYTE*>(&text[0]), text_alloc))
+						{
+							MacroDisplayError(_T("Resource could not be loaded."));
+							return false;
+						}
+						tistringstream text_stream;
+						text_stream.str(&text[0]);
+						std::copy(
+							std::istream_iterator<tstring>(text_stream),
+							std::istream_iterator<tstring>(),
+							std::inserter(reserved_names, reserved_names.begin()));
 					}
 				}
-				if (is_reserved)
+				// make sure the current name does not match a reserved string
+				if (reserved_names.find(name) != reserved_names.end())
+				{
+					MessageBox(hwnd_, _T("This map name is reserved."), NULL, MB_OK);
 					return false;
+				}
 			}
 		}
 		// save the validated map name

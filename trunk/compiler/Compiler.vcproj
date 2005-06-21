@@ -28,7 +28,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="1"
 				PrecompiledHeaderThrough="stdafx.h"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="FALSE"
@@ -75,8 +75,8 @@
 			WholeProgramOptimization="TRUE">
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				GlobalOptimizations="FALSE"
+				Optimization="2"
+				GlobalOptimizations="TRUE"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
@@ -89,7 +89,7 @@
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="1"
-				RuntimeTypeInfo="TRUE"
+				RuntimeTypeInfo="FALSE"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="stdafx.h"
 				BrowseInformation="1"
@@ -105,8 +105,8 @@
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"
 				SubSystem="2"
-				OptimizeReferences="0"
-				EnableCOMDATFolding="0"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
 				TargetMachine="1"/>
 			<Tool
 				Name="VCMIDLTool"/>
@@ -168,9 +168,6 @@
 				RelativePath=".\pmc wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\preference data.cpp">
-			</File>
-			<File
 				RelativePath=".\preference wnd.cpp">
 			</File>
 			<File
@@ -183,7 +180,13 @@
 				RelativePath=".\project manager.cpp">
 			</File>
 			<File
+				RelativePath=".\project settings wnd.cpp">
+			</File>
+			<File
 				RelativePath=".\project tasks.cpp">
+			</File>
+			<File
+				RelativePath=".\resource management.cpp">
 			</File>
 			<File
 				RelativePath=".\stat wnd.cpp">
@@ -239,9 +242,6 @@
 				RelativePath=".\pmc wnd.h">
 			</File>
 			<File
-				RelativePath=".\preference data.h">
-			</File>
-			<File
 				RelativePath=".\preference wnd.h">
 			</File>
 			<File
@@ -257,7 +257,13 @@
 				RelativePath=".\project manager.h">
 			</File>
 			<File
+				RelativePath=".\project settings wnd.h">
+			</File>
+			<File
 				RelativePath=".\project tasks.h">
+			</File>
+			<File
+				RelativePath=".\resource management.h">
 			</File>
 			<File
 				RelativePath=".\resource.h">
@@ -285,6 +291,9 @@
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+			<File
+				RelativePath=".\resource\bz23.bin">
+			</File>
 			<File
 				RelativePath=".\Compiler.ico">
 			</File>
@@ -319,6 +328,9 @@
 				RelativePath=".\icon2.ico">
 			</File>
 			<File
+				RelativePath=".\resource\img1.bin">
+			</File>
+			<File
 				RelativePath=".\resource\preview window.ico">
 			</File>
 			<File
@@ -331,10 +343,10 @@
 				RelativePath=".\resource\preview.ico">
 			</File>
 			<File
-				RelativePath=".\resource\red light.ico">
+				RelativePath=".\red light.ico">
 			</File>
 			<File
-				RelativePath=".\red light.ico">
+				RelativePath=".\resource\red light.ico">
 			</File>
 			<File
 				RelativePath=".\shrub(grayscale).bmp">
@@ -343,25 +355,25 @@
 				RelativePath=".\shrub(small grayscale).ico">
 			</File>
 			<File
-				RelativePath=".\resource\shrub.ico">
-			</File>
-			<File
 				RelativePath=".\shrub.ico">
 			</File>
 			<File
-				RelativePath=".\resource\shrub2.ico">
+				RelativePath=".\resource\shrub.ico">
 			</File>
 			<File
 				RelativePath=".\shrub2.ico">
 			</File>
 			<File
+				RelativePath=".\resource\shrub2.ico">
+			</File>
+			<File
 				RelativePath=".\small.ico">
 			</File>
 			<File
-				RelativePath=".\resource\stat window.ico">
+				RelativePath=".\stat window.ico">
 			</File>
 			<File
-				RelativePath=".\stat window.ico">
+				RelativePath=".\resource\stat window.ico">
 			</File>
 			<File
 				RelativePath=".\resource\stats.bmp">
@@ -423,6 +435,9 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\resource\leveledSurfaceTexture.tga">
+		</File>
+		<File
 			RelativePath=".\readme.txt">
 		</File>
 		<File
@@ -430,6 +445,9 @@
 		</File>
 		<File
 			RelativePath=".\spg.bz2">
+		</File>
+		<File
+			RelativePath=".\resource\spg2.bz2">
 		</File>
 		<File
 			RelativePath=".\spg_header.txt">
@@ -453,10 +471,16 @@
 			RelativePath=".\Worlds.prm">
 		</File>
 		<File
+			RelativePath=".\resource\worlds_list.bz2">
+		</File>
+		<File
 			RelativePath=".\worlds_list.txt">
 		</File>
 		<File
 			RelativePath=".\resource\worlds_list.txt">
+		</File>
+		<File
+			RelativePath=".\resource\worlds_list2.bz2">
 		</File>
 	</Files>
 	<Globals>

@@ -55,7 +55,9 @@
 typedef std::basic_string<char>    string;
 typedef std::basic_string<wchar_t> wstring;
 typedef std::basic_string<TCHAR>   tstring;
-typedef std::basic_stringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > tstringstream;
+typedef std::basic_stringstream <TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > tstringstream;
+typedef std::basic_istringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > tistringstream;
+typedef std::basic_ostringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<TCHAR> > tostringstream;
 #include <vector>
 using std::vector;
 // third party libraries

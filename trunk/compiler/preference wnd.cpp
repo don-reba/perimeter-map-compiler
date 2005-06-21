@@ -85,8 +85,6 @@ void PreferenceWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	{
 	case IDOK:
 		Apply();
-		DestroyWindow(hwnd_);
-		break;
 	case IDCANCEL:
 		DestroyWindow(hwnd_);
 		break;
@@ -160,6 +158,14 @@ void PreferenceWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	{
 		CheckDlgButton(hwnd_, IDC_LIGHTING, MacroAppData(ID_ENABLE_LIGHTING) ? TRUE : FALSE);
 	}
+	// display
+	{
+		CheckRadioButton(
+			hwnd_,
+			IDC_DISPLAY_TEXTURE,
+			IDC_DISPLAY_HARDNESS,
+			MacroAppData(ID_DISPLAY_TEXTURE) ? IDC_DISPLAY_TEXTURE : IDC_DISPLAY_HARDNESS);
+	}
 	msg.result_  = TRUE;
 	msg.handled_ = true;
 }
@@ -183,6 +189,7 @@ void PreferenceWnd::Apply()
 	uint  opacity(0x28);
 	bool  texture_colour_quality(false);
 	float threshold(3.0f);
+	bool  display_texture(true);
 	// enable_lighting
 	{
 		enable_lighting = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_LIGHTING);
@@ -206,36 +213,63 @@ void PreferenceWnd::Apply()
 		delete [] buffer;
 		threshold = __max(0, __min(8.0f, threshold));
 	}
+	// display texture
+	{
+		display_texture = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_DISPLAY_TEXTURE);
+	}
 	// see which actions will have to be taken, depending on which properties changed
+	bool reload_hardness (false);
 	bool reload_heightmap(false);
 	bool reload_texture  (false);
 	bool update_preview  (false);
+	bool update_project  (false);
 	if (
 		MacroAppData(ID_ZERO_LAYER_COLOUR)  != zero_plast_colour_ ||
 		MacroAppData(ID_ZERO_LAYER_OPACITY) != opacity)
 	{
 		update_preview = true;
 	}
+	if (
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION) != texture_colour_quality ||
+		MacroAppData(ID_ENABLE_LIGHTING)           != enable_lighting        ||
+		MacroAppData(ID_THRESHOLD)                 != threshold              ||
+		MacroAppData(ID_DISPLAY_TEXTURE)           != display_texture)
+	{
+		update_project = true;
+	}
+
 	if (MacroAppData(ID_ENABLE_LIGHTING) != enable_lighting)
 	{
 		reload_heightmap = true;
-		reload_texture   = true;
+		(display_texture ? reload_texture : reload_hardness) = true;
 	}
 	if (MacroAppData(ID_THRESHOLD) != threshold)
 	{
 		reload_heightmap = true;
 	}
+	if (MacroAppData(ID_DISPLAY_TEXTURE) != display_texture)
+	{
+		(display_texture ? reload_texture : reload_hardness) = true;
+		update_preview = true;
+	}
 	// commit settings
-	MacroAppData(ID_ENABLE_LIGHTING)    = enable_lighting;
-	MacroAppData(ID_THRESHOLD)          = threshold;
-	MacroAppData(ID_ZERO_LAYER_COLOUR)  = zero_plast_colour_;
-	MacroAppData(ID_ZERO_LAYER_OPACITY) = opacity;
+	MacroAppData(ID_ENABLE_LIGHTING)           = enable_lighting;
+	MacroAppData(ID_DISPLAY_TEXTURE)           = display_texture;
+	MacroAppData(ID_FAST_TEXTURE_QUANTIZATION) = !texture_colour_quality;
+	MacroAppData(ID_THRESHOLD)                 = threshold;
+	MacroAppData(ID_ZERO_LAYER_COLOUR)         = zero_plast_colour_;
+	MacroAppData(ID_ZERO_LAYER_OPACITY)        = opacity;
 	// take the necessary actions
 	if (update_preview)
 		preview_wnd_.UpdateSettings();
-	if (reload_heightmap || reload_texture)
-	{
+	if (update_project)
 		project_manager_.UpdateSettings();
-		project_manager_.ReloadFiles(reload_heightmap, reload_texture);
+	{
+		IdsType ids;
+		ids[RS_HARDNESS]  = reload_hardness;
+		ids[RS_HEIGHTMAP] = reload_heightmap;
+		ids[RS_TEXTURE]   = reload_texture;
+		if (ids.any())
+			project_manager_.ReloadFiles(ids);
 	}
 }

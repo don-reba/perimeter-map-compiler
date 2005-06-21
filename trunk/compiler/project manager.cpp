@@ -61,6 +61,8 @@ ProjectManager::ProjectManager(
 
 ProjectManager::~ProjectManager()
 {
+	// stop the tracker
+	tracker_.Stop();
 	// shut down the processor thread
 	if (NULL != processor_thread_)
 	{
@@ -85,6 +87,13 @@ ProjectManager::~ProjectManager()
 		delete tasks_.front();
 		tasks_.pop();
 	}
+	// save project data
+	{
+		TCHAR folder_path[MAX_PATH];
+		PathCombine(folder_path, folder_path_.c_str(), MacroProjectData(ID_MAP_NAME).c_str());
+		PathAddExtension(folder_path, _T(".pmproj"));
+		SSProjectData::Save(folder_path);
+	}
 }
 
 bool ProjectManager::Initialize()
@@ -107,9 +116,16 @@ void ProjectManager::Close()
 		return;
 	if (PS_PROJECT == project_state_)
 		tracker_.Stop();
+	// save project data
+	{
+		TCHAR folder_path[MAX_PATH];
+		PathCombine(folder_path, folder_path_.c_str(), MacroProjectData(ID_MAP_NAME).c_str());
+		PathAddExtension(folder_path, _T(".pmproj"));
+		SSProjectData::Save(folder_path);
+	}
 }
 
-void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size)
+void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size, HWND main_hwnd)
 {
 	// create the default project file
 	MacroProjectData(ID_MAP_NAME) = map_name;
@@ -132,16 +148,17 @@ void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE m
 	PathAddExtension(path, _T(".pmproj"));
 	SSProjectData::Save(path);
 	// open the project
-	OpenProject(path, true);
+	OpenProject(path, main_hwnd, true);
 }
 
-void ProjectManager::OpenProject(LPCTSTR project_path, bool new_project)
+void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_project)
 {
 	Close();
 	project_state_ = PS_PROJECT;
 	// load project data
 	SSProjectData::Load(project_path);
 	SSProjectData::Output();
+	SetWindowText(main_hwnd, MacroProjectData(ID_MAP_NAME).c_str());
 	// get the folder path
 	{
 		TCHAR folder_path[MAX_PATH];
@@ -149,11 +166,6 @@ void ProjectManager::OpenProject(LPCTSTR project_path, bool new_project)
 		PathRemoveFileSpec(folder_path);
 		folder_path_ = folder_path;
 	}
-	// create default files
-	if (new_project)
-		AddTask(new CreateDefaultFilesTask(error_hwnd_));
-	// update panels
-	AddTask(new ChangeProjectTask(info_wnd_, preview_wnd_));
 	// enqueue the task of updating project data
 	{
 		LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
@@ -168,12 +180,19 @@ void ProjectManager::OpenProject(LPCTSTR project_path, bool new_project)
 			project_state_,
 			MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 			MacroAppData(ID_ENABLE_LIGHTING),
-			MacroAppData(ID_THRESHOLD)));
+			MacroAppData(ID_THRESHOLD),
+			MacroAppData(ID_DISPLAY_TEXTURE)));
 	}
+	// create default files
+	if (new_project)
+		AddTask(new CreateDefaultFilesTask(error_hwnd_));
+	// update panels
+	AddTask(new ChangeProjectTask(info_wnd_, preview_wnd_));
 	// initialize the tracker, setting the last write time
 	//  in a way that would schedule the files for immediate update
 	FILETIME null_last_write;
 	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
+	tracker_.AddData(RS_HARDNESS,  _T("hardness.bmp"),  null_last_write);
 	tracker_.AddData(RS_TEXTURE,   _T("texture.bmp"),   null_last_write);
 	tracker_.AddData(RS_HEIGHTMAP, _T("heightmap.bmp"), null_last_write);
 	tracker_.Start(folder_path_.c_str(), &file_updated_);
@@ -359,7 +378,8 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 			project_state_,
 			MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 			MacroAppData(ID_ENABLE_LIGHTING),
-			MacroAppData(ID_THRESHOLD)));
+			MacroAppData(ID_THRESHOLD),
+			MacroAppData(ID_DISPLAY_TEXTURE)));
 	}
 	// enqueue the task of unpacking the rest of the data
 	AddTask(new UnpackShrubTask(
@@ -376,7 +396,7 @@ void ProjectManager::InstallMap()
 {
 	if (PS_PROJECT == project_state_)
 		AddTask(new CacheProjectDataTask(error_hwnd_));
-	AddTask(new InstallMapTask(error_hwnd_));
+	AddTask(new InstallMapTask(error_hwnd_, MacroAppData(ID_PERIMETER_PATH)));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
 }
@@ -390,21 +410,22 @@ void ProjectManager::SaveThumbnail()
 		AddTask(new FreeProjectDataTask());
 }
 
-void ProjectManager::ReloadFiles(bool reload_heightmap, bool reload_texture)
+void ProjectManager::ReloadFiles(const IdsType &ids)
 {
-	if (project_state_ != PS_PROJECT || !reload_heightmap && !reload_texture)
+	if (project_state_ != PS_PROJECT || ids.none())
 		return;
-	IdsType ids;
-	ids[RS_HEIGHTMAP] = reload_heightmap;
-	ids[RS_TEXTURE]   = reload_texture;
-	LoadProjectDataTask *task(new LoadProjectDataTask(
+	AddTask(new LoadProjectDataTask(
 		ids,
 		info_wnd_,
 		preview_wnd_,
 		stat_wnd_,
 		*this,
 		error_hwnd_));
-	AddTask(task);
+}
+
+void ProjectManager::CreateResouce(uint id)
+{
+	AddTask(new CreateResourceTask(id, error_hwnd_));
 }
 
 void ProjectManager::UpdateSettings()
@@ -420,7 +441,8 @@ void ProjectManager::UpdateSettings()
 		project_state_,
 		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 		MacroAppData(ID_ENABLE_LIGHTING),
-		MacroAppData(ID_THRESHOLD)));
+		MacroAppData(ID_THRESHOLD),
+		MacroAppData(ID_DISPLAY_TEXTURE)));
 }
 
 DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
@@ -477,8 +499,8 @@ void ProjectManager::AddTask(Task *task)
 	_RPT0(_CRT_WARN, "\n");
 	{
 		AutoCriticalSection acs(&processor_section_);
-		(*tasks_left_)(tasks_.size());
 		tasks_.push(task);
+		(*tasks_left_)(tasks_.size());
 	}
 	ResumeThread(processor_thread_);
 }

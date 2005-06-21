@@ -235,6 +235,8 @@ void InfoWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	// set fog distance values
 	SetDlgItemInt(hwnd_, IDC_FOG_START, 0u, FALSE);
 	SetDlgItemInt(hwnd_, IDC_FOG_END,   0u, FALSE);
+	// set colour button icon
+	Button_SetIcon(GetDlgItem(hwnd_, IDC_FOG_COLOUR_BTN), IDI_TRIANGLE);
 	// disable all controls
 	EnableControls(false);
 	// wrap up

@@ -31,7 +31,11 @@
 
 #pragma once
 
+#include <utility>
+
 class ErrorHandler;
+struct TextureAllocation;
+struct SimpleVertex;
 
 //----------------------------------------------------------------------------------
 // some functions used by the Tasks, but also useful to others
@@ -40,12 +44,24 @@ class ErrorHandler;
 namespace TaskCommon
 {
 // types
+	struct Hardness : public ErrorHandler
+	{
+		Hardness(SIZE size, HWND &error_hwnd);
+		~Hardness();
+		void MakeDefault();
+		bool Load(LPCTSTR path);
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask);
+		void Save(LPCTSTR path);
+		void Unpack(TiXmlNode *node, BYTE *buffer);
+		BYTE *data_;
+		SIZE size_;
+	};
 	struct Heightmap : public ErrorHandler
 	{
 		Heightmap(SIZE size, HWND &error_hwnd);
 		~Heightmap();
 		bool Load(LPCTSTR path);
-		int Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
 		void Unpack(TiXmlNode *node, BYTE *buffer);
 		BYTE *data_;
 		SIZE size_;
@@ -121,6 +137,11 @@ namespace TaskCommon
 	void DefaultTexture(BYTE *buffer, COLORREF palette[256], SIZE size);
 // file IO
 	DWORD LoadFile(const LPCTSTR name, BYTE *&pBuffer, ErrorHandler &error_handler);
+	void  SaveHardness(
+		LPCTSTR       path,
+		const BYTE   *bufffer,
+		SIZE          size,
+		ErrorHandler &error_handler);
 	void  SaveHeightmap(
 		LPCTSTR path,
 		const BYTE *buffer,
@@ -128,13 +149,19 @@ namespace TaskCommon
 		ErrorHandler &error_handler);
 	bool  SaveMemToFile(LPCTSTR path, const BYTE *buffer, DWORD size, ErrorHandler &error_handler);
 	void  SavePalette(Texture &texture, LPCTSTR path, ErrorHandler &error_handler);
-	void SaveSPG(
+	void  SaveSPG(
 		MapInfo      &map_info,
 		LPCTSTR       path,
 		LPCTSTR       folder_name,
 		const bool    survival,
 		ErrorHandler &error_handler);
-	void SaveSPH(
+	void  SaveSPG2(
+		MapInfo      &map_info,
+		LPCTSTR       path,
+		LPCTSTR       folder_name,
+		const bool    survival,
+		ErrorHandler &error_handler);
+	void  SaveSPH(
 		LPCTSTR path,
 		LPCTSTR folder_name,
 		const bool survival,
@@ -152,7 +179,12 @@ namespace TaskCommon
 		LPCTSTR          path,
 		SIZE             size,
 		ErrorHandler    &error_handler);
-	void  SaveVMP(const Heightmap &heightmap, const Texture &texture, LPCTSTR path, ErrorHandler &error_handler);
+	void  SaveVMP(
+		const Hardness  &hardness,
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler);
 // "incredible math" (Lithium Flower)
 	COLORREF AverageColour(const Texture &texture, const Heightmap &heightmap);
 	uint     AverageHeight(const Heightmap &heightmap);
@@ -162,7 +194,17 @@ namespace TaskCommon
 		TextureAllocation &allocation,
 		const Lightmap    &lightmap,
 		bool               enable_lighting);
+	void     CreateTextures(
+		const Hardness    &hardness,
+		TextureAllocation &allocation,
+		const Lightmap    &lightmap,
+		bool               enable_lighting);
 	float    Flatness(int h1, int h2, int v1, int v2, int c, int r);
+	void     ReplaceSubstringSeq(
+		LPCTSTR                                     str,
+		size_t                                      str_length,
+		const vector<std::pair<tstring, tstring> > &seq,
+		tstring                                    &result);
 	void     StackBlur(int *pix, int w, int h, int radius);
 	void     Triangulate(Heightmap &heightmap, vector<SimpleVertex> &vertices, float mesh_threshold);
 // other

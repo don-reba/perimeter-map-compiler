@@ -49,6 +49,7 @@ public:
 	virtual void ToggleWaitCursor(bool on);
 // message handlers
 protected:
+	void OnDestroy  (Msg<WM_DESTROY>   &msg);
 	void OnMove     (Msg<WM_MOVE>      &msg);
 	void OnSetCursor(Msg<WM_SETCURSOR> &msg);
 	void OnSize     (Msg<WM_SIZE>      &msg);

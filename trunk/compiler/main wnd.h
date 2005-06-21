@@ -128,16 +128,17 @@ private:
 	void OnCreate    (Msg<WM_CREATE>          &msg);
 	void OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg);
 	// command
-	void OnAbout        (Msg<WM_COMMAND> &msg);
-	void OnExit         (Msg<WM_COMMAND> &msg);
-	void OnInstallShrub (Msg<WM_COMMAND> &msg);
-	void OnManageMaps   (Msg<WM_COMMAND> &msg);
-	void OnNewProject   (Msg<WM_COMMAND> &msg);
-	void OnOpenProject  (Msg<WM_COMMAND> &msg);
-	void OnPackShrub    (Msg<WM_COMMAND> &msg);
-	void OnPreferences  (Msg<WM_COMMAND> &msg);
-	void OnSaveThumbnail(Msg<WM_COMMAND> &msg);
-	void OnUpackShrub   (Msg<WM_COMMAND> &msg);
+	void OnAbout          (Msg<WM_COMMAND> &msg);
+	void OnExit           (Msg<WM_COMMAND> &msg);
+	void OnInstallShrub   (Msg<WM_COMMAND> &msg);
+	void OnManageMaps     (Msg<WM_COMMAND> &msg);
+	void OnNewProject     (Msg<WM_COMMAND> &msg);
+	void OnOpenProject    (Msg<WM_COMMAND> &msg);
+	void OnPackShrub      (Msg<WM_COMMAND> &msg);
+	void OnPreferences    (Msg<WM_COMMAND> &msg);
+	void OnProjectSettings(Msg<WM_COMMAND> &msg);
+	void OnSaveThumbnail  (Msg<WM_COMMAND> &msg);
+	void OnUpackShrub     (Msg<WM_COMMAND> &msg);
 // internal function
 protected:
 	virtual void ProcessMessage(WndMsg &msg);
