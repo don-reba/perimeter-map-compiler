@@ -617,7 +617,26 @@ void PreviewWnd::OnStateChanged(Msg<WM_USR_STATE_CHANGED> &msg)
 	case ProjectData::ID_ZERO_LEVEL:
 		{
 			zero_level_ = static_cast<FLOAT>(MacroProjectData(ID_ZERO_LEVEL));
-		};
+		} break;
+	case ProjectData::ID_FOG_START:
+		{
+			fog_start_ = static_cast<FLOAT>(MacroProjectData(ID_FOG_START));
+			device_->SetRenderState(D3DRS_FOGSTART, *ri_cast<DWORD*>(&fog_start_));
+		} break;
+	case ProjectData::ID_FOG_END:
+		{
+			fog_start_ = static_cast<FLOAT>(MacroProjectData(ID_FOG_END));
+			device_->SetRenderState(D3DRS_FOGEND, *ri_cast<DWORD*>(&fog_end_));
+		} break;
+	case ProjectData::ID_FOG_COLOUR:
+		{
+			fog_colour_ = D3DCOLOR_ARGB(
+				0,
+				GetRValue(MacroProjectData(ID_FOG_COLOUR)),
+				GetGValue(MacroProjectData(ID_FOG_COLOUR)),
+				GetBValue(MacroProjectData(ID_FOG_COLOUR)));
+			device_->SetRenderState(D3DRS_FOGCOLOR, fog_colour_);
+		} break;
 	}
 	MakeProjectiveMatrix();
 	MakeViewMatrix();
@@ -905,8 +924,8 @@ void PreviewWnd::UpdateSettings()
 		GetRValue(MacroAppData(ID_ZERO_LAYER_COLOUR)),
 		GetGValue(MacroAppData(ID_ZERO_LAYER_COLOUR)),
 		GetBValue(MacroAppData(ID_ZERO_LAYER_COLOUR)));
-	InvalidateRect(hwnd_, NULL, FALSE);
-	UpdateWindow(hwnd_);
+	BuildZeroLayerVB();
+	Render();
 }
 
 void PreviewWnd::PushWorldMatrix(const D3DXMATRIX &matrix)
@@ -1013,7 +1032,7 @@ void PreviewWnd::Render()
 					device_->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
 					// set zero layer height
 					D3DXMATRIX zl_height_matrix;
-					D3DXMatrixTranslation(&zl_height_matrix, 0, 0, zero_level_ * world_stretch_);
+					D3DXMatrixTranslation(&zl_height_matrix, 0, 0, (zero_level_ + 0.5f) * world_stretch_);
 					StackedMatrix stacked_zlr_height_matrix(*this, zl_height_matrix);
 					// render
 					device_->SetFVF(ColouredVertex::FVF);

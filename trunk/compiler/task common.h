@@ -44,15 +44,20 @@ struct SimpleVertex;
 namespace TaskCommon
 {
 // types
+	struct Hardness;
+	struct Heightmap;
+	struct MapInfo;
+	struct ZeroLayer;
+
 	struct Hardness : public ErrorHandler
 	{
 		Hardness(SIZE size, HWND &error_hwnd);
 		~Hardness();
-		void MakeDefault();
 		bool Load(LPCTSTR path);
+		void MakeDefault();
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask);
 		void Save(LPCTSTR path);
-		void Unpack(TiXmlNode *node, BYTE *buffer);
+		void Unpack(TiXmlNode *node, BYTE *buffer, const vector<bool> &mask);
 		BYTE *data_;
 		SIZE size_;
 	};
@@ -60,9 +65,9 @@ namespace TaskCommon
 	{
 		Heightmap(SIZE size, HWND &error_hwnd);
 		~Heightmap();
-		bool Load(LPCTSTR path);
+		bool Load(LPCTSTR path, const ZeroLayer *zero_layer, uint zero_level);
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
-		void Unpack(TiXmlNode *node, BYTE *buffer);
+		void Unpack(TiXmlNode *node, BYTE *buffer, vector<bool> &mask);
 		BYTE *data_;
 		SIZE size_;
 	};
@@ -77,10 +82,12 @@ namespace TaskCommon
 	struct MapInfo
 	{
 	public:
-		void    Load();
+		static MapInfo LoadFromGlobal(); // for use from the interface thread only
+	public:
 		tstring GenerateWorldIni();
 		void    GetRawData(BYTE **data, size_t *size);
 		void    Pack(TiXmlNode &node);
+		void    Unpack(TiXmlNode &node);
 	private:
 		void    ReplaceSubstring(tstring &str, const tstring &target, const tstring &replacement);
 		tstring GenerateStartPosName(int index, bool x) const;
@@ -93,7 +100,23 @@ namespace TaskCommon
 		uint     fog_end_;
 		COLORREF fog_colour_;
 		POINT    sps_[5];
+		bool     custom_hardness_;
+		bool     custom_sky_;
+		bool     custom_surface_;
+		bool     custom_zero_layer_;
 	};
+	/*struct Surface : public ErrorHandler
+	{
+		Surface(HWND &error_hwnd);
+		~Surface();
+		bool Load(LPCTSTR path);
+		void MakeDefault();
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const;
+		void Unpack(TiXmlNode *node, BYTE *buffer);
+		BYTE     *indices_;
+		COLORREF  palette_[256];
+		static const SIZE size_;
+	};*/
 	struct Texture : public ErrorHandler
 	{
 		Texture(SIZE size, HWND &error_hwnd);
@@ -104,6 +127,17 @@ namespace TaskCommon
 		BYTE     *indices_;
 		COLORREF  palette_[256];
 		SIZE      size_;
+	};
+	struct ZeroLayer : public ErrorHandler
+	{
+		ZeroLayer(SIZE size, HWND &error_hwnd);
+		bool Load(LPCTSTR path);
+		void MakeDefault();
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset);
+		void Save(LPCTSTR path);
+		void Unpack(TiXmlNode *node, BYTE *buffer);
+		vector<bool> data_;
+		SIZE size_;
 	};
 	// triangulation element
 	struct TE
@@ -180,9 +214,9 @@ namespace TaskCommon
 		SIZE             size,
 		ErrorHandler    &error_handler);
 	void  SaveVMP(
-		const Hardness  &hardness,
 		const Heightmap &heightmap,
 		const Texture   &texture,
+		const ZeroLayer &zero_layer,
 		LPCTSTR          path,
 		ErrorHandler    &error_handler);
 // "incredible math" (Lithium Flower)
@@ -199,15 +233,69 @@ namespace TaskCommon
 		TextureAllocation &allocation,
 		const Lightmap    &lightmap,
 		bool               enable_lighting);
+	void     CreateTextures(
+		const ZeroLayer   &zero_layer,
+		TextureAllocation &allocation,
+		const Lightmap    &lightmap,
+		bool               enable_lighting);
 	float    Flatness(int h1, int h2, int v1, int v2, int c, int r);
 	void     ReplaceSubstringSeq(
 		LPCTSTR                                     str,
 		size_t                                      str_length,
 		const vector<std::pair<tstring, tstring> > &seq,
 		tstring                                    &result);
-	void     StackBlur(int *pix, int w, int h, int radius);
 	void     Triangulate(Heightmap &heightmap, vector<SimpleVertex> &vertices, float mesh_threshold);
 // other
 	bool GetInstallPath(tstring &install_path, ErrorHandler &error_handler);
 	bool RegisterMap(LPCTSTR map_name, DWORD checksum, ErrorHandler &error_handler);
+}
+
+//-------------------------
+// template implementations
+//-------------------------
+
+namespace TaskCommon
+{
+	// fast 5x5 Gaussian blur by Frederick M. Waltz and John W. V. Miller
+	// http://www-personal.engin.umd.umich.edu/~jwvm/ece581/21_GBlur.pdf
+	// does not blur the 3-pixel border around the image
+	// TODO: calculate how large the state variables get
+	// TODO: write a metaprogram to create blurs with arbitrary matrices
+	template <typename T>
+	void GaussianBlur(T *pix, SIZE size)
+	{
+		T sr0, sr1, sr2, sr3;
+		vector<T> sc0(size.cx);
+		vector<T> sc1(size.cx);
+		vector<T> sc2(size.cx);
+		vector<T> sc3(size.cx);
+		for (LONG i = 0; i != size.cx; ++i)
+			sc3[i] = sc2[i] = sc1[i] = sc0[i] = 0;
+		for (LONG y = 0; y != size.cy; ++y)
+		{
+			sr3 = sr2 = sr1 = sr0 = 0;
+			for (LONG x = 0; x != size.cx; ++x)
+			{
+				T tmp1 = *pix;
+				T tmp2 = sr0 + tmp1;
+				sr0 = tmp1;
+				tmp1 = sr1 + tmp2;
+				sr1 = tmp2;
+				tmp2 = sr2 + tmp1;
+				sr2 = tmp1;
+				tmp1 = sr3 + tmp2;
+				sr3 = tmp2;
+				tmp2 = sc0[x] + tmp1;
+				sc0[x] = tmp1;
+				tmp1 = sc1[x] + tmp2;
+				sc1[x] = tmp2;
+				tmp2 = sc2[x] + tmp1;
+				sc2[x] = tmp1;
+				if (x > 3 && y > 3)
+					pix[-size.cx * 2 - 2] = (128 + sc3[x] + tmp2) / 256;
+				sc3[x] = tmp2;
+				++pix;
+			}
+		}
+	}
 }

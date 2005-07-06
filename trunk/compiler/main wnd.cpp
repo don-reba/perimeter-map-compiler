@@ -42,6 +42,7 @@
 #include <shlobj.h>
 #include <sstream>
 #include <windowsx.h>
+
 //-----------------------
 // MainWnd implementation
 //-----------------------
@@ -207,7 +208,7 @@ bool MainWnd::Create(POINT position)
 	state_shrub_icon_ = CreateWindow(
 		_T("STATIC"),
 		NULL,
-		WS_CHILD | SS_ICON | WS_VISIBLE,
+		WS_CHILD | SS_ICON,
 		MainWndMetrics::frame,
 		MainWndMetrics::frame,
 		MainWndMetrics::state.cx,
@@ -232,7 +233,7 @@ bool MainWnd::Create(POINT position)
 	state_project_icon_ = CreateWindow(
 		_T("STATIC"),
 		NULL,
-		WS_CHILD | SS_ICON,
+		WS_CHILD | SS_ICON | WS_VISIBLE,
 		MainWndMetrics::frame,
 		MainWndMetrics::frame,
 		MainWndMetrics::state.cx,
@@ -309,6 +310,34 @@ bool MainWnd::Create(POINT position)
 	return true;
 }
 
+void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
+{
+	EnableWindow(info_wnd_.hwnd_,       msg.wprm_);
+	EnableWindow(preference_wnd_.hwnd_, msg.wprm_);
+	EnableWindow(preview_wnd_.hwnd_,    msg.wprm_);
+	EnableWindow(stat_wnd_.hwnd_,       msg.wprm_);
+}
+
+void MainWnd::OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg)
+{
+	if (0 == msg.TaskCount())
+	{
+		ToggleWaitCursor(false);
+		ToggleBusyIcon(false, NULL);
+	}
+	else
+	{
+		typedef std::basic_stringstream<TCHAR> tstringstream;
+		tstringstream message;
+		message << msg.TaskCount() << _T(" task");
+		if (msg.TaskCount() > 1)
+			message << _T("s");
+		message << _T(" left");
+		ToggleWaitCursor(true);
+		ToggleBusyIcon(true, message.str().c_str());
+	}
+}
+
 void MainWnd::ToggleBusyIcon(bool busy, LPCTSTR message)
 {
 	if (busy)
@@ -324,17 +353,52 @@ void MainWnd::ToggleBusyIcon(bool busy, LPCTSTR message)
 	}
 }
 
+void MainWnd::ToggleStateIcon(MainWnd::MenuState state)
+{
+	if (MS_SHRUB == state)
+	{
+		ShowWindowAsync(state_shrub_icon_,  SW_SHOW);
+		ShowWindowAsync(state_project_icon_, SW_HIDE);
+	}
+	else
+	{
+		ShowWindowAsync(state_project_icon_,  SW_SHOW);
+		ShowWindowAsync(state_shrub_icon_, SW_HIDE);
+	}
+}
+
 void MainWnd::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
 	{
+		&MainWnd::OnResourceNotFound,
 		&MainWnd::OnCommand,
 		&MainWnd::OnCreate,
 		&MainWnd::OnDestroy,
+		&MainWnd::OnEnabled,
 		&MainWnd::OnToggleBusy
 	};
 		if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
+}
+
+void MainWnd::OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg)
+{
+	// display a warning message
+	tostringstream message;
+	message << _T("Could not find the file ");
+	switch (msg.Id())
+	{
+	case RS_HARDNESS:   message << _T("hardness.bmp");   break;
+	case RS_ZERO_LAYER: message << _T("zero layer.bmp"); break;
+	case RS_SURFACE:    message << _T("surface.bmp");    break;
+	case RS_SKY:        message << _T("sky.bmp");        break;
+	default: DebugBreak();
+	}
+	message << _T(".\nProject settings will be set to not use it.");
+	MessageBox(hwnd_, message.str().c_str(), _T("Warning"), MB_OK | MB_ICONWARNING);
+	// alert the project manager
+	project_manager_.OnResourceNotFound(msg.Id());
 }
 
 void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
@@ -348,10 +412,10 @@ void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	case ID_FILE_NEWPROJECT:      OnNewProject     (msg); break;
 	case ID_FILE_OPENPROJECT:     OnOpenProject    (msg); break;
 	case ID_FILE_PACKSHRUB:       OnPackShrub      (msg); break;
-	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
 	case ID_FILE_PROJECTSETTINGS: OnProjectSettings(msg); break;
-	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
 	case ID_FILE_UNPACKSHRUB:     OnUpackShrub     (msg); break;
+	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
+	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
 	}
 	// check for panel button messages
 	for(PanelData *i(panels_); i != panels_ + panel_count; ++i)
@@ -434,6 +498,7 @@ void MainWnd::OnNewProject(Msg<WM_COMMAND> &msg)
 		create_project_dlg.map_size_,
 		hwnd_);
 	SetMenuState(MS_PROJECT);
+	ToggleStateIcon(MS_PROJECT);
 }
 
 void MainWnd::OnOpenProject(Msg<WM_COMMAND> &msg)
@@ -446,6 +511,7 @@ void MainWnd::OnOpenProject(Msg<WM_COMMAND> &msg)
 	// open the project
 	project_manager_.OpenProject(pmproj_path.c_str(), hwnd_);
 	SetMenuState(MS_PROJECT);
+	ToggleStateIcon(MS_PROJECT);
 }
 
 void MainWnd::OnPackShrub(Msg<WM_COMMAND> &msg)
@@ -482,6 +548,7 @@ void MainWnd::OnUpackShrub(Msg<WM_COMMAND> &msg)
 	// open the project
 	project_manager_.UnpackShrub(shrub_path.c_str());
 	SetMenuState(MS_SHRUB);
+	ToggleStateIcon(MS_SHRUB);
 }
 
 VOID CALLBACK MainWnd::ToolTipCleanupCallback(HWND hwnd, UINT msg_id, DWORD data, LRESULT result)
@@ -694,26 +761,6 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 	HMENU menu(GetMenu(hwnd_));
 	foreach (ItemsType::value_type &item, items)
 		EnableMenuItem(menu, item.first, item.second ? MF_ENABLED : MF_GRAYED);
-}
-
-void MainWnd::OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg)
-{
-	if (0 == msg.TaskCount())
-	{
-		ToggleWaitCursor(false);
-		ToggleBusyIcon(false, NULL);
-	}
-	else
-	{
-		typedef std::basic_stringstream<TCHAR> tstringstream;
-		tstringstream message;
-		message << msg.TaskCount() << _T(" task");
-		if (msg.TaskCount() > 1)
-			message << _T("s");
-		message << _T(" left");
-		ToggleWaitCursor(true);
-		ToggleBusyIcon(true, message.str().c_str());
-	}
 }
 
 //----------------------------------------------

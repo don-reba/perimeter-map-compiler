@@ -195,6 +195,7 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 				DeleteObject(fog_colour_);
 				fog_colour_ = CreateSolidBrush(MacroProjectData(ID_FOG_COLOUR));
 				InvalidateRect(GetDlgItem(hwnd_, IDC_FOG_COLOUR), NULL, true);
+				preview_wnd_.ProjectDataChanged(ProjectData::ID_FOG_COLOUR);
 			}
 		} break;
 	}

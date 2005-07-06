@@ -98,7 +98,7 @@ BEGIN
         MENUITEM "&Install Map\tCtrl-I",        ID_FILE_INSTALLSHRUB
         MENUITEM "&Manage Maps\tCtrl-M",        ID_FILE_MANAGEMAPS
         MENUITEM SEPARATOR
-        MENUITEM "Project &Settings\tCtrl-S",   ID_FILE_PROJECTSETTINGS
+        MENUITEM "Project &Settings",           ID_FILE_PROJECTSETTINGS
         MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt-F4",               IDM_EXIT
     END
@@ -252,42 +252,44 @@ BEGIN
     LTEXT           "0:",IDC_STATIC,7,153,8,8
 END
 
-IDD_PREFERENCES DIALOGEX 0, 0, 179, 180
+IDD_PREFERENCES DIALOGEX 0, 0, 184, 185
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_VISIBLE | 
     WS_CAPTION | WS_SYSMENU
 CAPTION "Preferences"
 FONT 8, "MS Shell Dlg", 400, 0, 0xCC
 BEGIN
     CONTROL         "Speed",IDC_TEXTURE_COLOUR_SPEED,"Button",
-                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,17,42,10
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,120,17,47,10
     CONTROL         "Quality",IDC_TEXTURE_COLOUR_QUALITY,"Button",
-                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,27,42,10
-    EDITTEXT        IDC_LOD,120,60,42,12,ES_AUTOHSCROLL
-    EDITTEXT        IDC_ZERO_PLAST_OPACITY,120,92,42,12,ES_AUTOHSCROLL | 
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,27,47,10
+    EDITTEXT        IDC_LOD,120,60,47,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_ZERO_PLAST_OPACITY,120,92,47,12,ES_AUTOHSCROLL | 
                     ES_NUMBER
     CONTROL         "",IDC_ZERO_PLAST_OPACITY_SPIN,"msctls_updown32",
                     UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | 
-                    UDS_AUTOBUDDY | UDS_ARROWKEYS,162,92,10,12
-    PUSHBUTTON      "OK",IDOK,7,159,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,64,159,50,14
-    PUSHBUTTON      "Apply",ID_APPLY_NOW,122,159,50,14
+                    UDS_AUTOBUDDY | UDS_ARROWKEYS,167,92,6,12
+    PUSHBUTTON      "OK",IDOK,7,164,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,66,164,50,14
+    PUSHBUTTON      "Apply",ID_APPLY_NOW,127,164,50,14
     LTEXT           "",IDC_ZERO_PLAST_COLOUR,120,78,13,8,SS_SUNKEN
-    GROUPBOX        "Map Preview",IDC_STATIC,7,49,165,100,BS_CENTER
+    GROUPBOX        "Map Preview",IDC_STATIC,7,49,170,108,BS_CENTER
     LTEXT           "Mesh tolerance (0-8)",IDC_STATIC,19,62,89,8
     LTEXT           "Zero-level color",IDC_STATIC,19,78,89,8
     LTEXT           "Zero-level opacity (0-255)",IDC_STATIC,19,94,89,8
-    GROUPBOX        "General",IDC_STATIC,7,7,165,35,BS_CENTER
+    GROUPBOX        "General",IDC_STATIC,7,7,170,35,BS_CENTER
     LTEXT           "Texture color trade-off",IDC_STATIC,19,23,89,8
     LTEXT           "Shadows and lighting",IDC_STATIC,19,110,68,8
     CONTROL         "",IDC_LIGHTING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
                     120,110,16,8
-    CONTROL         "Texture",IDC_DISPLAY_TEXTURE,"Button",
-                    BS_AUTORADIOBUTTON,120,123,42,10
-    CONTROL         "Hardness",IDC_DISPLAY_HARDNESS,"Button",
-                    BS_AUTORADIOBUTTON,120,133,42,10
-    LTEXT           "Display as map texture",IDC_STATIC,19,128,74,8
+    LTEXT           "Display as map texture",IDC_STATIC,19,134,74,8
     PUSHBUTTON      "",IDC_ZERO_PLAST_COLOUR_BTN,137,78,13,8,BS_ICON | 
                     BS_CENTER | BS_VCENTER
+    CONTROL         "Texture",IDC_DISPLAY_TEXTURE,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,120,123,47,10
+    CONTROL         "Hardness",IDC_DISPLAY_HARDNESS,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,133,47,10
+    CONTROL         "Zero Layer",IDC_DISPLAY_ZERO_LAYER,"Button",
+                    BS_AUTORADIOBUTTON | WS_TABSTOP,120,143,47,10
 END
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 234, 150
@@ -298,26 +300,26 @@ CAPTION "About Perimeter Map Compiler"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,116,129,50,14
-    LTEXT           "Perimeter Map Compiler 1.1 alpha 1\nCopyright (c) 2005, Don Reba\nAll rights reserved.",
+    LTEXT           "Perimeter Map Compiler 1.1 beta 2\nCopyright (c) 2005, Don Reba\nAll rights reserved.",
                     IDC_STATIC,49,47,177,27
     LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",
                     IDC_STATIC,49,79,177,35
 END
 
-IDD_MAP_MANAGER DIALOGEX 0, 0, 104, 101
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
-    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+IDD_MAP_MANAGER DIALOGEX 0, 0, 104, 102
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Manage Maps"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     LISTBOX         IDC_MAP_LIST,7,7,90,66,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
                     WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON      "Delete",IDC_DELETE_MAP,32,80,40,14
+    PUSHBUTTON      "Delete",IDC_DELETE_MAP,32,81,40,14
 END
 
 IDD_PROJECT_SETTINGS DIALOGEX 0, 0, 113, 98
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
 CAPTION "Project Settings"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -330,9 +332,9 @@ BEGIN
     CONTROL         "Custom Zero Layer",IDC_CUSTOM_ZERO_LAYER,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,35,77,10
     CONTROL         "Custom Surface Texture",IDC_CUSTOM_SURFACE,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,7,48,94,10
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,7,48,94,10
     CONTROL         "Custom Sky Texture",IDC_CUSTOM_SKY,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,7,61,81,10
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,7,61,81,10
 END
 
 
@@ -386,13 +388,13 @@ BEGIN
     IDD_PREFERENCES, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 172
+        RIGHTMARGIN, 177
         VERTGUIDE, 19
         VERTGUIDE, 108
         VERTGUIDE, 120
-        VERTGUIDE, 162
+        VERTGUIDE, 167
         TOPMARGIN, 7
-        BOTTOMMARGIN, 173
+        BOTTOMMARGIN, 178
     END
 
     IDD_ABOUTBOX, DIALOG
@@ -412,7 +414,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 97
         TOPMARGIN, 7
-        BOTTOMMARGIN, 94
+        BOTTOMMARGIN, 95
     END
 
     IDD_PROJECT_SETTINGS, DIALOG

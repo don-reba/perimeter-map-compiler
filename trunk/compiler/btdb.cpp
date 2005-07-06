@@ -175,7 +175,10 @@ Btdb::BtdbEntry::BtdbEntry()
 
 bool Btdb::BtdbEntry::operator == (const char *title) const
 {
-	return 0 == strcmp(title_, title_);
+	const size_t title_size(strlen(title) + 1);
+	return
+		title_size == title_size_ && 
+		0 == memcmp(title, title_, title_size);
 }
 
 bool Btdb::BtdbEntry::operator == (const Btdb::BtdbEntry &entry) const

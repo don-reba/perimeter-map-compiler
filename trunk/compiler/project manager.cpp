@@ -54,7 +54,7 @@ ProjectManager::ProjectManager(
 	,stat_wnd_        (stat_wnd)
 	,tracker_         (main_wnd.hwnd_, file_updated_, file_not_found_)
 	,file_updated_    (*this)
-	,file_not_found_  (Task::task_data_)
+	,file_not_found_  (main_wnd.hwnd_)
 {
 	InitializeCriticalSection(&processor_section_);
 }
@@ -88,6 +88,7 @@ ProjectManager::~ProjectManager()
 		tasks_.pop();
 	}
 	// save project data
+	if (PS_PROJECT == project_state_)
 	{
 		TCHAR folder_path[MAX_PATH];
 		PathCombine(folder_path, folder_path_.c_str(), MacroProjectData(ID_MAP_NAME).c_str());
@@ -107,6 +108,8 @@ bool ProjectManager::Initialize()
 		MacroDisplayError(_T("Background processing thread could not be created."));
 		return false;
 	}
+	if (!SetThreadPriority(processor_thread_, THREAD_PRIORITY_BELOW_NORMAL))
+		_RPT0(_CRT_WARN, "SetThreadPriority failed\n");
 	return true;
 }
 
@@ -116,17 +119,28 @@ void ProjectManager::Close()
 		return;
 	if (PS_PROJECT == project_state_)
 		tracker_.Stop();
+	if (PS_SHRUB == project_state_)
+		AddTask(new FreeProjectDataTask());
 	// save project data
+	if (PS_PROJECT == project_state_)
 	{
 		TCHAR folder_path[MAX_PATH];
 		PathCombine(folder_path, folder_path_.c_str(), MacroProjectData(ID_MAP_NAME).c_str());
 		PathAddExtension(folder_path, _T(".pmproj"));
 		SSProjectData::Save(folder_path);
 	}
+	// set defaults
+	MacroProjectData(ID_CUSTOM_HARDNESS)   = false;
+	MacroProjectData(ID_CUSTOM_SKY)        = false;
+	MacroProjectData(ID_CUSTOM_SURFACE)    = false;
+	MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
+	// change project state indicator
+	project_state_ = PS_INACTIVE;
 }
 
 void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE map_size, HWND main_hwnd)
 {
+	Close();
 	// create the default project file
 	MacroProjectData(ID_MAP_NAME) = map_name;
 	MacroProjectData(ID_POWER_X)  = log2(map_size.cx);
@@ -141,6 +155,10 @@ void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE m
 	MacroProjectData(ID_SP_3).y   = map_size.cy - 1 - MacroProjectData(ID_SP_1).y;
 	MacroProjectData(ID_SP_4).x   = MacroProjectData(ID_SP_1).x;
 	MacroProjectData(ID_SP_4).y   = MacroProjectData(ID_SP_3).y;
+	MacroProjectData(ID_CUSTOM_HARDNESS)   = false;
+	MacroProjectData(ID_CUSTOM_SKY)        = false;
+	MacroProjectData(ID_CUSTOM_SURFACE)    = false;
+	MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
 	TCHAR path[MAX_PATH];
 	_tcscpy(path, folder_path);
 	PathAddBackslash(path);
@@ -181,7 +199,10 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 			MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 			MacroAppData(ID_ENABLE_LIGHTING),
 			MacroAppData(ID_THRESHOLD),
-			MacroAppData(ID_DISPLAY_TEXTURE)));
+			MacroAppData(ID_DISPLAY_HARDNESS),
+			MacroAppData(ID_DISPLAY_TEXTURE),
+			MacroAppData(ID_DISPLAY_ZERO_LAYER),
+			TaskCommon::MapInfo::LoadFromGlobal()));
 	}
 	// create default files
 	if (new_project)
@@ -192,17 +213,29 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	//  in a way that would schedule the files for immediate update
 	FILETIME null_last_write;
 	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
-	tracker_.AddData(RS_HARDNESS,  _T("hardness.bmp"),  null_last_write);
-	tracker_.AddData(RS_TEXTURE,   _T("texture.bmp"),   null_last_write);
-	tracker_.AddData(RS_HEIGHTMAP, _T("heightmap.bmp"), null_last_write);
+	tracker_.SetDatum(RS_HEIGHTMAP, _T("heightmap.bmp"), null_last_write);
+	tracker_.SetDatum(RS_TEXTURE,   _T("texture.bmp"),   null_last_write);
+	if (MacroProjectData(ID_CUSTOM_HARDNESS))
+		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
+	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
+		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero layer.bmp"), null_last_write);
+	if (MacroProjectData(ID_CUSTOM_SURFACE))
+		tracker_.SetDatum(RS_SURFACE, _T("surface.bmp"), null_last_write);
+	if (MacroProjectData(ID_CUSTOM_SKY))
+		tracker_.SetDatum(RS_SKY, _T("sky.bmp"), null_last_write);
 	tracker_.Start(folder_path_.c_str(), &file_updated_);
 }
 
 void ProjectManager::PackShrub()
 {
 	if (PS_PROJECT == project_state_)
-		AddTask(new CacheProjectDataTask(error_hwnd_));
-	AddTask(new PackShrubTask(error_hwnd_));
+		AddTask(new LoadProjectDataTask(error_hwnd_));
+	AddTask(new PackShrubTask(
+		MacroProjectData(ID_CUSTOM_HARDNESS),
+		MacroProjectData(ID_CUSTOM_SKY),
+		MacroProjectData(ID_CUSTOM_SURFACE),
+		MacroProjectData(ID_CUSTOM_ZERO_LAYER),
+		error_hwnd_));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
 }
@@ -217,7 +250,8 @@ void ProjectManager::PackShrub()
 
 void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 {
-	// TODO: move this into a task
+	Close();
+	// TODO: move the following into a task
 	// get the folder path
 	{
 		TCHAR folder_path[MAX_PATH];
@@ -301,14 +335,27 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 	TiXmlElement *content_node(doc->FirstChildElement("content"));
 	if (NULL == content_node)
 	{
-		MacroDisplayError("the shrub has an unfamiliar format");
+		MacroDisplayError("The shrub has an unfamiliar format.");
 		delete [] buffer;
 		return;
 	}
 	// set project state
 	project_state_ = PS_SHRUB;
-	// read data from XML
+	// read custom resource use information
 	TiXmlNode *text_node;
+	text_node = content_node->FirstChildElement("hardness");
+	if (NULL != text_node)
+		MacroProjectData(ID_CUSTOM_HARDNESS) = true;
+	text_node = content_node->FirstChildElement("zero_layer");
+	if (NULL != text_node)
+		MacroProjectData(ID_CUSTOM_ZERO_LAYER) = true;
+	text_node = content_node->FirstChildElement("sky_texture");
+	if (NULL != text_node)
+		MacroProjectData(ID_CUSTOM_SKY) = true;
+	text_node = content_node->FirstChildElement("surface_texture");
+	if (NULL != text_node)
+		MacroProjectData(ID_CUSTOM_SURFACE) = true;
+	// read in map information
 	TiXmlHandle node_handle(content_node->FirstChildElement("map_info"));
 	// map name
 	text_node = node_handle.FirstChildElement("map_name").FirstChild().Text();
@@ -316,7 +363,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 		MacroProjectData(ID_MAP_NAME) = text_node->Value();
 	else
 	{
-		MacroDisplayError(_T("unfamiliar shrub format"));
+		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
 		return;
 	}
@@ -326,7 +373,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 		MacroProjectData(ID_POWER_X) = atoi(text_node->Value());
 	else
 	{
-		MacroDisplayError(_T("unfamiliar shrub format"));
+		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
 		return;
 	}
@@ -336,7 +383,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 		MacroProjectData(ID_POWER_Y) = atoi(text_node->Value());
 	else
 	{
-		MacroDisplayError(_T("unfamiliar shrub format"));
+		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
 		return;
 	}
@@ -379,12 +426,22 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 			MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 			MacroAppData(ID_ENABLE_LIGHTING),
 			MacroAppData(ID_THRESHOLD),
-			MacroAppData(ID_DISPLAY_TEXTURE)));
+			MacroAppData(ID_DISPLAY_HARDNESS),
+			MacroAppData(ID_DISPLAY_TEXTURE),
+			MacroAppData(ID_DISPLAY_ZERO_LAYER),
+			TaskCommon::MapInfo::LoadFromGlobal()));
 	}
 	// enqueue the task of unpacking the rest of the data
 	AddTask(new UnpackShrubTask(
 		doc,
 		buffer + xml_string_size,
+		buffer,
+		info_wnd_,
+		preview_wnd_,
+		stat_wnd_,
+		*this,
+		error_hwnd_));
+	AddTask(new UpdatePanelsTask(
 		info_wnd_,
 		preview_wnd_,
 		stat_wnd_,
@@ -392,10 +449,25 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path)
 		error_hwnd_));
 }
 
+void ProjectManager::OnResourceNotFound(Resource id)
+{
+	switch (id)
+	{
+	case RS_HARDNESS:
+		tracker_.EnableDatum(id, false);
+		MacroProjectData(ID_CUSTOM_HARDNESS) = false;
+		break;
+	case RS_ZERO_LAYER:
+		tracker_.EnableDatum(id, false);
+		MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
+	// TODO: complete
+	}
+}
+
 void ProjectManager::InstallMap()
 {
 	if (PS_PROJECT == project_state_)
-		AddTask(new CacheProjectDataTask(error_hwnd_));
+		AddTask(new LoadProjectDataTask(error_hwnd_));
 	AddTask(new InstallMapTask(error_hwnd_, MacroAppData(ID_PERIMETER_PATH)));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
@@ -403,8 +475,11 @@ void ProjectManager::InstallMap()
 
 void ProjectManager::SaveThumbnail()
 {
+	IdsType ids(resource_count);
+	ids[RS_HEIGHTMAP] = true;
+	ids[RS_TEXTURE]   = true;
 	if (PS_PROJECT == project_state_)
-		AddTask(new CacheProjectDataTask(error_hwnd_));
+		AddTask(new LoadProjectDataTask(ids, error_hwnd_));
 	AddTask(new SaveThumbTask(error_hwnd_));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
@@ -412,20 +487,70 @@ void ProjectManager::SaveThumbnail()
 
 void ProjectManager::ReloadFiles(const IdsType &ids)
 {
-	if (project_state_ != PS_PROJECT || ids.none())
+	if (ids.none())
 		return;
-	AddTask(new LoadProjectDataTask(
-		ids,
+	if (project_state_ == PS_PROJECT)
+		AddTask(new LoadProjectDataTask(ids, error_hwnd_));
+	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
+	SIZE map_size = {
+		exp2(MacroProjectData(ID_POWER_X)),
+		exp2(MacroProjectData(ID_POWER_Y))
+	};
+	AddTask(new UpdateDataTask(
+		map_name,
+		folder_path_.c_str(),
+		map_size,
+		project_state_,
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
+		MacroAppData(ID_ENABLE_LIGHTING),
+		MacroAppData(ID_THRESHOLD),
+		MacroAppData(ID_DISPLAY_HARDNESS),
+		MacroAppData(ID_DISPLAY_TEXTURE),
+		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		TaskCommon::MapInfo::LoadFromGlobal()));
+	AddTask(new UpdatePanelsTask(
 		info_wnd_,
 		preview_wnd_,
 		stat_wnd_,
 		*this,
 		error_hwnd_));
+	if (project_state_ == PS_PROJECT)
+		AddTask(new FreeProjectDataTask());
 }
 
-void ProjectManager::CreateResouce(uint id)
+void ProjectManager::CreateResouce(Resource id)
 {
+	FILETIME null_last_write;
+	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
+	switch (id)
+	{
+	case RS_HARDNESS:
+		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
+		break;
+	case RS_ZERO_LAYER:
+		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero_layer.bmp"), null_last_write);
+		break;
+	// TODO: complete
+	}
 	AddTask(new CreateResourceTask(id, error_hwnd_));
+	IdsType ids;
+	ids[id] = true;
+	SIZE map_size = {
+		exp2(MacroProjectData(ID_POWER_X)),
+		exp2(MacroProjectData(ID_POWER_Y))
+	};
+	AddTask(new UpdateDataTask(
+		MacroProjectData(ID_MAP_NAME).c_str(),
+		folder_path_.c_str(),
+		map_size,
+		project_state_,
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
+		MacroAppData(ID_ENABLE_LIGHTING),
+		MacroAppData(ID_THRESHOLD),
+		MacroAppData(ID_DISPLAY_HARDNESS),
+		MacroAppData(ID_DISPLAY_TEXTURE),
+		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		TaskCommon::MapInfo::LoadFromGlobal()));
 }
 
 void ProjectManager::UpdateSettings()
@@ -442,7 +567,10 @@ void ProjectManager::UpdateSettings()
 		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
 		MacroAppData(ID_ENABLE_LIGHTING),
 		MacroAppData(ID_THRESHOLD),
-		MacroAppData(ID_DISPLAY_TEXTURE)));
+		MacroAppData(ID_DISPLAY_HARDNESS),
+		MacroAppData(ID_DISPLAY_TEXTURE),
+		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		TaskCommon::MapInfo::LoadFromGlobal()));
 }
 
 DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
@@ -509,12 +637,14 @@ void ProjectManager::AddTask(Task *task)
 // ProjectManager::FileNotFound implementation
 //--------------------------------------------
 
-ProjectManager::FileNotFound::FileNotFound(TaskData &task_data)
-	:task_data_(task_data)
+ProjectManager::FileNotFound::FileNotFound(HWND &main_hwnd)
+	:main_hwnd_(main_hwnd)
 {}
 
-void ProjectManager::FileNotFound::operator() (uint id, LPCTSTR path)
-{}
+void ProjectManager::FileNotFound::operator() (Resource id, LPCTSTR path)
+{
+	PostResourceNotFound(main_hwnd_, id);
+}
 
 //-------------------------------------------
 // ProjectManager::FileUpdated implementation
@@ -526,11 +656,12 @@ ProjectManager::FileUpdated::FileUpdated(ProjectManager &project_manager)
 
 void ProjectManager::FileUpdated::operator() (const IdsType &ids)
 {
-	project_manager_.AddTask(new LoadProjectDataTask(
-		ids,
+	project_manager_.AddTask(new LoadProjectDataTask(project_manager_.error_hwnd_));
+	project_manager_.AddTask(new UpdatePanelsTask(
 		project_manager_.info_wnd_,
 		project_manager_.preview_wnd_,
 		project_manager_.stat_wnd_,
 		project_manager_,
 		project_manager_.error_hwnd_));
+	project_manager_.AddTask(new FreeProjectDataTask());
 }

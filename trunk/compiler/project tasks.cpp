@@ -96,63 +96,43 @@ void CreateDefaultFilesTask::operator() ()
 //--------------------------------------------------
 
 UpdateDataTask::UpdateDataTask(
-	LPCTSTR      map_name,
-	LPCTSTR      project_folder,
-	SIZE         map_size,
-	ProjectState project_state,
-	bool         fast_quantization,
-	bool         enable_lighting,
-	float        mesh_threshold,
-	bool        display_texture)
-	:map_name_         (map_name)
-	,project_folder_   (project_folder)
-	,map_size_         (map_size)
-	,project_state_    (project_state)
-	,fast_quantization_(fast_quantization)
-	,enable_lighting_  (enable_lighting)
-	,mesh_threshold_   (mesh_threshold)
-	,display_texture_  (display_texture)
+	LPCTSTR        map_name,
+	LPCTSTR        project_folder,
+	SIZE           map_size,
+	ProjectState   project_state,
+	bool           fast_quantization,
+	bool           enable_lighting,
+	float          mesh_threshold,
+	bool           display_hardness,
+	bool           display_texture,
+	bool           display_zero_layer,
+	const MapInfo &map_info)
+	:map_name_          (map_name)
+	,project_folder_    (project_folder)
+	,map_size_          (map_size)
+	,project_state_     (project_state)
+	,fast_quantization_ (fast_quantization)
+	,enable_lighting_   (enable_lighting)
+	,mesh_threshold_    (mesh_threshold)
+	,display_hardness_  (display_hardness)
+	,display_texture_   (display_texture)
+	,display_zero_layer_(display_zero_layer)
+	,map_info_          (map_info)
 {}
 
 void UpdateDataTask::operator() ()
 {
-	task_data_.map_name_          = map_name_;
-	task_data_.project_folder_    = project_folder_;
-	task_data_.map_size_          = map_size_;
-	task_data_.project_state_     = project_state_;
-	task_data_.fast_quantization_ = fast_quantization_;
-	task_data_.enable_lighting_   = enable_lighting_;
-	task_data_.mesh_threshold_    = mesh_threshold_;
-	task_data_.display_texture_   = display_texture_;
-	task_data_.map_info_.Load();
-}
-
-//-----------------------------------
-// CacheProjectDataTask implemenation
-//-----------------------------------
-
-CacheProjectDataTask::CacheProjectDataTask(HWND &error_hwnd)
-	:ErrorHandler(error_hwnd)
-{}
-
-void CacheProjectDataTask::operator() ()
-{
-	_ASSERTE(NULL == task_data_.hardness_);
-	_ASSERTE(NULL == task_data_.heightmap_);
-	_ASSERTE(NULL == task_data_.texture_);
-	task_data_.hardness_  = new Hardness (task_data_.map_size_, error_hwnd_);
-	task_data_.heightmap_ = new Heightmap(task_data_.map_size_, error_hwnd_);
-	task_data_.texture_   = new Texture  (task_data_.map_size_, error_hwnd_);
-	TCHAR path[MAX_PATH];
-	task_data_.hardness_->Load(PathCombine(
-		path, task_data_.project_folder_.c_str(),
-		_T("hardness.bmp")));
-	task_data_.heightmap_->Load(PathCombine(
-		path, task_data_.project_folder_.c_str(),
-		_T("heightmap.bmp")));
-	task_data_.texture_->Load(
-		PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp")),
-		task_data_.fast_quantization_);
+	task_data_.map_name_           = map_name_;
+	task_data_.project_folder_     = project_folder_;
+	task_data_.map_size_           = map_size_;
+	task_data_.project_state_      = project_state_;
+	task_data_.fast_quantization_  = fast_quantization_;
+	task_data_.enable_lighting_    = enable_lighting_;
+	task_data_.mesh_threshold_     = mesh_threshold_;
+	task_data_.display_hardness_   = display_hardness_;
+	task_data_.display_texture_    = display_texture_;
+	task_data_.display_zero_layer_ = display_zero_layer_;
+	task_data_.map_info_           = map_info_;
 }
 
 //-----------------------------------
@@ -161,155 +141,205 @@ void CacheProjectDataTask::operator() ()
 
 void FreeProjectDataTask::operator() ()
 {
-	_ASSERTE(NULL != task_data_.hardness_);
-	_ASSERTE(NULL != task_data_.heightmap_);
-	_ASSERTE(NULL != task_data_.texture_);
 	delete task_data_.hardness_;
 	delete task_data_.heightmap_;
 	delete task_data_.texture_;
-	task_data_.hardness_  = NULL;
-	task_data_.heightmap_ = NULL;
-	task_data_.texture_   = NULL;
+	delete task_data_.zero_layer_;
+	task_data_.hardness_   = NULL;
+	task_data_.heightmap_  = NULL;
+	task_data_.texture_    = NULL;
+	task_data_.zero_layer_ = NULL;
 }
 
 //-----------------------------------
 // LoadProjectDataTask implementation
 //-----------------------------------
 
-LoadProjectDataTask::LoadProjectDataTask(
-	const IdsType  &ids,
+LoadProjectDataTask::LoadProjectDataTask(const IdsType  &ids, HWND &error_hwnd)
+	:ErrorHandler(error_hwnd)
+	,ids_        (ids)
+{}
+
+LoadProjectDataTask::LoadProjectDataTask(HWND &error_hwnd)
+	:ErrorHandler(error_hwnd)
+{
+	ids_.set();
+}
+
+void LoadProjectDataTask::operator() ()
+{
+	// preconditions
+	_ASSERTE(NULL == task_data_.hardness_);
+	_ASSERTE(NULL == task_data_.heightmap_);
+	_ASSERTE(NULL == task_data_.texture_);
+	_ASSERTE(NULL == task_data_.zero_layer_);
+	// allocate data
+	task_data_.hardness_   = new Hardness (task_data_.map_size_, error_hwnd_);
+	task_data_.heightmap_  = new Heightmap(task_data_.map_size_, error_hwnd_);
+	task_data_.texture_    = new Texture  (task_data_.map_size_, error_hwnd_);
+	task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
+	// locals
+	TCHAR path[MAX_PATH];
+	// load
+	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
+	if (ids_[RS_HARDNESS])
+		task_data_.hardness_->Load(PathCombine(path, folder_path, _T("hardness.bmp")));
+	if (ids_[RS_ZERO_LAYER])
+		task_data_.zero_layer_->Load(PathCombine(path, folder_path, _T("zero layer.bmp")));
+	if (ids_[RS_HEIGHTMAP])
+		task_data_.heightmap_->Load(
+			PathCombine(path, folder_path, _T("heightmap.bmp")),
+			ids_[RS_ZERO_LAYER] ? task_data_.zero_layer_ : NULL,
+			task_data_.map_info_.zero_level_);
+	if (ids_[RS_TEXTURE])
+		task_data_.texture_->Load(
+			PathCombine(path, folder_path, _T("texture.bmp")),
+			task_data_.fast_quantization_);
+}
+
+//--------------------------------
+// UpdatePanelsTask implementation
+//--------------------------------
+
+UpdatePanelsTask::UpdatePanelsTask(
 	InfoWnd        &info_wnd,
 	PreviewWnd     &preview_wnd,
 	StatWnd        &stat_wnd,
 	ProjectManager &project_manager,
 	HWND           &error_hwnd)
 	:ErrorHandler    (error_hwnd)
-	,ids_            (ids)
 	,info_wnd_       (info_wnd)
 	,preview_wnd_    (preview_wnd)
-	,project_manager_(project_manager)
 	,stat_wnd_       (stat_wnd)
+	,project_manager_(project_manager)
 {}
 
-void LoadProjectDataTask::operator() ()
+void UpdatePanelsTask::operator() ()
 {
-	_ASSERTE(resource_count == ids_.size());
-	TCHAR path[MAX_PATH];
-	Hardness  hardness (task_data_.map_size_, error_hwnd_);
-	Heightmap heightmap(task_data_.map_size_, error_hwnd_);
-	Lightmap  lightmap (task_data_.map_size_, error_hwnd_);
-	Texture   texture  (task_data_.map_size_, error_hwnd_);
+	// what should be loaded
+	IdsType ids(resource_count);
+	ids[RS_HARDNESS]   = (NULL != task_data_.hardness_);
+	ids[RS_HEIGHTMAP]  = (NULL != task_data_.heightmap_);
+	ids[RS_TEXTURE]    = (NULL != task_data_.texture_);
+	ids[RS_ZERO_LAYER] = (NULL != task_data_.zero_layer_);
+	if (ids.none())
+		return;
+	// initialize resources
+	Hardness  &hardness   (*task_data_.hardness_);
+	Heightmap &heightmap  (*task_data_.heightmap_);
+	Lightmap   lightmap   (task_data_.map_size_, error_hwnd_);
+	Texture   &texture    (*task_data_.texture_);
+	ZeroLayer &zero_layer (*task_data_.zero_layer_);
+	if (task_data_.enable_lighting_)
+		lightmap.Create(heightmap);
+	// which panels should be updated
 	bool preview_wnd_visible(preview_wnd_.IsVisible());
 	bool stat_wnd_visible   (stat_wnd_.IsVisible());
-	// load data
-	bool load_hardness;
-	bool load_heightmap;
-	bool load_lightmap;
-	bool load_texture;
+	// stat wnd
+	if (stat_wnd_visible)
 	{
-		// set dependencies
-		load_hardness = ids_[RS_HARDNESS];
-		load_texture = ids_[RS_TEXTURE];
-		load_lightmap =
-			preview_wnd_visible && (
-				 task_data_.display_texture_ && load_texture ||
-				!task_data_.display_texture_ && load_hardness);
-		load_heightmap = ids_[RS_HEIGHTMAP] || load_lightmap || stat_wnd_visible && ids_[RS_TEXTURE];
-		// load
-		if (load_hardness)
-			hardness.Load(PathCombine(path, task_data_.project_folder_.c_str(), _T("hardness.bmp")));
-		if (load_heightmap)
-			heightmap.Load(PathCombine(path, task_data_.project_folder_.c_str(), _T("heightmap.bmp")));
-		if (load_lightmap)
-			lightmap.Create(heightmap);
-		if (load_texture)
-			texture.Load(
-				PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp")),
-				task_data_.fast_quantization_);
+		if (ids[RS_HEIGHTMAP])
+			stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
+		if (ids[RS_TEXTURE])
+			stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
 	}
-	// update windows
+	else
+		stat_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
+	// preview wnd
+	if (preview_wnd_visible)
 	{
-		// stat wnd
-		if (stat_wnd_visible)
+		// update the heightmap
+		if (ids[RS_HEIGHTMAP])
 		{
-			if (load_heightmap)
-				stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
-			if (load_texture)
-				stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
+			vector<SimpleVertex> vertices;
+			Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
+			SendSetTerrain(preview_wnd_.hwnd_, vertices);
 		}
-		else
-			stat_wnd_.SetVisibilityNotification(new OnPanelVisible(ids_, project_manager_));
-		// preview wnd
-		if (preview_wnd_visible)
+		// update the texture
+		if (task_data_.display_texture_)
 		{
-			// update the heightmap
-			if (ids_[RS_HEIGHTMAP])
+			if (ids[RS_TEXTURE])
 			{
-				vector<SimpleVertex> vertices;
-				Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
-				SendSetTerrain(preview_wnd_.hwnd_, vertices);
-			}
-			// update the texture
-			if (task_data_.display_texture_)
-			{
-				if (load_texture)
+				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
+				if (NULL != allocation)
 				{
-					TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-					if (NULL != allocation)
-					{
-						CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
-						SendTextureCommit(preview_wnd_.hwnd_);
-						delete allocation;
-					}
-				}
-			}
-			else
-			{
-				if (load_hardness)
-				{
-					TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-					if (NULL != allocation)
-					{
-						CreateTextures(hardness, *allocation, lightmap, task_data_.enable_lighting_);
-						SendTextureCommit(preview_wnd_.hwnd_);
-						delete allocation;
-					}
+					CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
+					SendTextureCommit(preview_wnd_.hwnd_);
+					delete allocation;
 				}
 			}
 		}
-		else
-			preview_wnd_.SetVisibilityNotification(new OnPanelVisible(ids_, project_manager_));
+		else if (task_data_.display_hardness_)
+		{
+			if (ids[RS_HARDNESS])
+			{
+				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
+				if (NULL != allocation)
+				{
+					CreateTextures(hardness, *allocation, lightmap, task_data_.enable_lighting_);
+					SendTextureCommit(preview_wnd_.hwnd_);
+					delete allocation;
+				}
+			}
+		}
+		else if (task_data_.display_zero_layer_)
+		{
+			if (ids[RS_ZERO_LAYER])
+			{
+				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
+				if (NULL != allocation)
+				{
+					CreateTextures(zero_layer, *allocation, lightmap, task_data_.enable_lighting_);
+					SendTextureCommit(preview_wnd_.hwnd_);
+					delete allocation;
+				}
+			}
+		}
 	}
+	else
+		preview_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
 }
 
-//--------------------------------------------------
-// LoadProjectDataTask::OnPanelVisible implemenation
-//--------------------------------------------------
+//-----------------------------------------------
+// UpdatePanelsTask::OnPanelVisible implemenation
+//-----------------------------------------------
 
-LoadProjectDataTask::OnPanelVisible::OnPanelVisible(const IdsType &ids, ProjectManager &project_manager)
-	:ids_(ids)
-	,project_manager_(project_manager)
+UpdatePanelsTask::OnPanelVisible::OnPanelVisible(ProjectManager &project_manager)
+	:project_manager_(project_manager)
 {}
 
-void LoadProjectDataTask::OnPanelVisible::operator ()(bool on)
+void UpdatePanelsTask::OnPanelVisible::operator ()(bool on)
 {
-	project_manager_.ReloadFiles(ids_);
+	IdsType ids;
+	ids.set();
+	project_manager_.ReloadFiles(ids);
 }
 
 //-----------------------------
 // PackShrubTask implementation
 //-----------------------------
 
-PackShrubTask::PackShrubTask(HWND &error_hwnd)
+PackShrubTask::PackShrubTask(
+	bool custom_hardness,
+	bool custom_sky,
+	bool custom_surface,
+	bool custom_zero_layer,
+	HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
+	,custom_hardness_  (custom_hardness)
+	,custom_sky_       (custom_sky)
+	,custom_surface_   (custom_surface)
+	,custom_zero_layer_(custom_zero_layer)
 {}
 
 void PackShrubTask::operator() ()
 {
 	_ASSERTE(NULL != task_data_.heightmap_);
 	_ASSERTE(NULL != task_data_.texture_);
-	Heightmap &heightmap(*task_data_.heightmap_);
-	Texture   &texture  (*task_data_.texture_);
+	Hardness  &hardness  (*task_data_.hardness_);
+	Heightmap &heightmap (*task_data_.heightmap_);
+	Texture   &texture   (*task_data_.texture_);
+	ZeroLayer &zero_layer(*task_data_.zero_layer_);
 	// calculate the checksum and register the map
 	{
 		DWORD   checksum(0);
@@ -326,6 +356,21 @@ void PackShrubTask::operator() ()
 		data = ri_cast<BYTE*>(texture.palette_);
 		size = 768;
 		checksum = CalculateChecksum(data, size, checksum);
+		// hardness
+		if (custom_hardness_)
+		{
+			data = hardness.data_;
+			size = hardness.size_.cx * hardness.size_.cy;
+			checksum = CalculateChecksum(data, size, checksum);
+		}
+		// zero layer
+		if (custom_zero_layer_)
+		{
+			_ASSERTE(0 == zero_layer.data_.size() % 8);
+			data = ri_cast<BYTE*>(&zero_layer.data_._Myvec[0]);
+			size = zero_layer.data_.size() / 8;
+			checksum = CalculateChecksum(data, size, checksum);
+		}
 		// map info
 		task_data_.map_info_.GetRawData(&data, &size);
 		checksum = CalculateChecksum(data, size, checksum);
@@ -340,11 +385,18 @@ void PackShrubTask::operator() ()
 	// allocate a buffer for the data
 	size_t buffer_size;
 	{
-		const size_t heightmap_size(task_data_.map_size_.cx * task_data_.map_size_.cy);
-		const size_t mask_size     (task_data_.map_size_.cx * task_data_.map_size_.cy / 8);
-		const size_t texture_size  (task_data_.map_size_.cx * task_data_.map_size_.cy);
-		const size_t palette_size  (256);
+		const size_t map_factor     (task_data_.map_size_.cx * task_data_.map_size_.cy);
+		const size_t hardness_size  ((task_data_.map_size_.cx + 1) * (task_data_.map_size_.cy + 1));
+		const size_t heightmap_size (map_factor);
+		const size_t mask_size      (map_factor / 8);
+		const size_t palette_size   (256);
+		const size_t texture_size   (map_factor);
+		const size_t zero_layer_size(map_factor / 8);
 		buffer_size = heightmap_size + mask_size + texture_size + palette_size;
+		if (custom_hardness_)
+			buffer_size += hardness_size;
+		if (custom_zero_layer_)
+			buffer_size += zero_layer_size;
 	}
 	BYTE *buffer(new BYTE[buffer_size]);
 	// add heightmap, texture and map information
@@ -362,6 +414,17 @@ void PackShrubTask::operator() ()
 			buffer_iter,
 			buffer,
 			mask);
+		if (custom_hardness_)
+			buffer_iter += hardness.Pack(
+				*content_node->InsertEndChild(TiXmlElement("hardness")),
+				buffer_iter,
+				buffer,
+				mask);
+		if (custom_zero_layer_)
+			buffer_iter += zero_layer.Pack(
+				*content_node->InsertEndChild(TiXmlElement("zero_layer")),
+				buffer_iter,
+				buffer);
 		// calculate how much of the buffer was used
 		buffer_size = static_cast<size_t>(buffer_iter - buffer);
 	}
@@ -422,7 +485,7 @@ void PackShrubTask::operator() ()
 		error_hwnd_,
 		_T("The map has been successfully packed, and saved to the project folder."),
 		_T("Success"),
-		MB_ICONINFORMATION | MB_OK);
+		MB_ICONINFORMATION | MB_OK); // HACK: error handle used for messaging
 }
 
 //------------------------------
@@ -432,6 +495,7 @@ void PackShrubTask::operator() ()
 UnpackShrubTask::UnpackShrubTask(
 		TiXmlDocument  *document,
 		BYTE           *buffer,
+		BYTE           *initial_offset,
 		InfoWnd        &info_wnd,
 		PreviewWnd     &preview_wnd,
 		StatWnd        &stat_wnd,
@@ -439,6 +503,7 @@ UnpackShrubTask::UnpackShrubTask(
 		HWND           &error_hwnd)
 	:ErrorHandler(error_hwnd)
 	,buffer_         (buffer)
+	,initial_offset_ (initial_offset)
 	,document_       (document)
 	,info_wnd_       (info_wnd)
 	,preview_wnd_    (preview_wnd)
@@ -449,6 +514,7 @@ UnpackShrubTask::UnpackShrubTask(
 UnpackShrubTask::~UnpackShrubTask()
 {
 	delete document_;
+	delete [] initial_offset_;
 }
 
 void UnpackShrubTask::operator() ()
@@ -456,47 +522,45 @@ void UnpackShrubTask::operator() ()
 	TiXmlElement *content_node(document_->FirstChildElement("content"));
 	if (NULL == content_node)
 		return;
+	// unpack map info
+	task_data_.map_info_.Unpack(*content_node->FirstChildElement("map_info"));
 	// unpack the heightmap
-	_ASSERTE(NULL == task_data_.heightmap_);
-	task_data_.heightmap_ = new Heightmap(task_data_.map_size_, error_hwnd_);
-	Heightmap &heightmap(*task_data_.heightmap_);
-	heightmap.Unpack(content_node->FirstChildElement("heightmap"), buffer_);
+	vector<bool> mask;
+	{
+		_ASSERTE(NULL == task_data_.heightmap_);
+		task_data_.heightmap_ = new Heightmap(task_data_.map_size_, error_hwnd_);
+		Heightmap &heightmap(*task_data_.heightmap_);
+		heightmap.Unpack(content_node->FirstChildElement("heightmap"), buffer_, mask);
+	}
 	// unpack the texture
-	_ASSERTE(NULL == task_data_.texture_);
-	task_data_.texture_ = new Texture(task_data_.map_size_, error_hwnd_);
-	Texture &texture(*task_data_.texture_);
-	texture.Unpack(content_node->FirstChildElement("texture"), buffer_);
-	// stat wnd
-	if (stat_wnd_.IsVisible())
 	{
-		stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
-		stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
+		_ASSERTE(NULL == task_data_.texture_);
+		task_data_.texture_ = new Texture(task_data_.map_size_, error_hwnd_);
+		Texture &texture(*task_data_.texture_);
+		texture.Unpack(content_node->FirstChildElement("texture"), buffer_);
 	}
-	else
-		stat_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
-	// preview wnd
-	if (preview_wnd_.IsVisible())
+	// unpack the hardness map
 	{
-		Lightmap lightmap(task_data_.map_size_, error_hwnd_);
-		if (task_data_.enable_lighting_)
-			lightmap.Create(heightmap);
+		_ASSERTE(NULL == task_data_.hardness_);
+		TiXmlElement *node(content_node->FirstChildElement("hardness"));
+		if (NULL != node)
 		{
-			TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-			if (NULL != allocation)
-			{
-				CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
-				SendTextureCommit(preview_wnd_.hwnd_);
-				delete allocation;
-			}
-		}
-		{
-			vector<SimpleVertex> vertices;
-			Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
-			SendSetTerrain(preview_wnd_.hwnd_, vertices);
+			task_data_.hardness_ = new Hardness(task_data_.map_size_, error_hwnd_);
+			Hardness &hardness(*task_data_.hardness_);
+			hardness.Unpack(node, buffer_, mask);
 		}
 	}
-	else
-		preview_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
+	// unpack the zero layer
+	{
+		_ASSERTE(NULL == task_data_.zero_layer_);
+		TiXmlElement *node(content_node->FirstChildElement("zero_layer"));
+		if (NULL != node)
+		{
+			task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
+			ZeroLayer &zero_layer(*task_data_.zero_layer_);
+			zero_layer.Unpack(node, buffer_);
+		}
+	}
 }
 
 //----------------------------------------------
@@ -528,12 +592,13 @@ InstallMapTask::InstallMapTask(HWND &hwnd, tstring &perimeter_path)
 
 void InstallMapTask::operator() ()
 {
-	_ASSERTE(task_data_.hardness_  != NULL);
-	_ASSERTE(task_data_.heightmap_ != NULL);
-	_ASSERTE(task_data_.texture_   != NULL);
-	Hardness  &hardness (*task_data_.hardness_);
-	Heightmap &heightmap(*task_data_.heightmap_);
-	Texture   &texture  (*task_data_.texture_);
+	_ASSERTE(task_data_.hardness_   != NULL);
+	_ASSERTE(task_data_.heightmap_  != NULL);
+	_ASSERTE(task_data_.texture_    != NULL);
+	_ASSERTE(task_data_.zero_layer_ != NULL);
+	Heightmap &heightmap (*task_data_.heightmap_);
+	Texture   &texture   (*task_data_.texture_);
+	ZeroLayer &zero_layer(*task_data_.zero_layer_);
 	TCHAR      str        [MAX_PATH];
 	TCHAR      folder_path[MAX_PATH];
 	tstring    install_path;
@@ -586,7 +651,7 @@ void InstallMapTask::operator() ()
 				if (PS_SHRUB == task_data_.project_state_ && IDCANCEL == MessageBox(
 					hwnd_,
 					_T("Map with this name already exists. Continuing will overwrite its contents."),
-					_T("Installation Error"),
+					_T("Warning"),
 					MB_ICONWARNING | MB_OKCANCEL))
 					return;
 			} break;
@@ -611,7 +676,7 @@ void InstallMapTask::operator() ()
 	}
 	// create and save output.vmp
 	PathCombine(str, folder_path, _T("output.vmp"));
-	SaveVMP(hardness, heightmap, texture, str, *this);
+	SaveVMP(heightmap, texture, zero_layer, str, *this);
 	// create and save inDam.act
 	PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(texture, str, *this);
@@ -656,8 +721,11 @@ void InstallMapTask::operator() ()
 	PathCombine(str, folder_path, _T("leveledSurfaceTexture.tga"));
 	SaveImageFromResource(IDR_SURFACE_TX, str, *this);
 	// create and save hardness.bin
-	PathCombine(str, folder_path, _T("hardness.bin"));
-	SaveHardness(str, task_data_.hardness_->data_, task_data_.map_size_, *this);
+	if (NULL != task_data_.hardness_)
+	{
+		PathCombine(str, folder_path, _T("hardness.bin"));
+		SaveHardness(str, task_data_.hardness_->data_, task_data_.map_size_, *this);
+	}
 	// generate mission files
 	switch (version)
 	{
@@ -895,10 +963,11 @@ CreateResourceTask::CreateResourceTask(uint id, HWND error_hwnd)
 void CreateResourceTask::operator() ()
 {
 	TCHAR path[MAX_PATH];
+	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
 	switch (id_)
 	{
 	case RS_HARDNESS:
-		PathCombine(path, task_data_.project_folder_.c_str(), _T("hardness.bmp"));
+		PathCombine(path, folder_path, _T("hardness.bmp"));
 		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
 		{
 			Hardness hardness(task_data_.map_size_, error_hwnd_);
@@ -906,5 +975,14 @@ void CreateResourceTask::operator() ()
 			hardness.Save(path);
 		}
 		break;
+	case RS_ZERO_LAYER:
+		PathCombine(path, folder_path, _T("zero layer.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		{
+			ZeroLayer zero_layer(task_data_.map_size_, error_hwnd_);
+			zero_layer.MakeDefault();
+			zero_layer.Save(path);
+		}
+	// TODO: complete
 	}
 }

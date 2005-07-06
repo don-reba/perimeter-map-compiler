@@ -40,8 +40,10 @@ public:
 // message handlers
 private:
 	// window
-	void OnCommand    (Msg<WM_COMMAND>    &msg);
-	void OnInitDialog (Msg<WM_INITDIALOG> &msg);
+	void OnCommand      (Msg<WM_COMMAND>       &msg);
+	void OnGetMinMaxInfo(Msg<WM_GETMINMAXINFO> &msg);
+	void OnInitDialog   (Msg<WM_INITDIALOG>    &msg);
+	void OnSize         (Msg<WM_SIZE>          &msg);
 	// command
 	void OnDeleteMap(Msg<WM_COMMAND> &msg);
 // internal function
@@ -49,4 +51,9 @@ protected:
 	void ProcessMessage(WndMsg &msg);
 private:
 	bool GetInstallPath(string &install_path);
+	void ScreenToClient(HWND hwnd, RECT *rect);
+// data
+	RECT map_list_border_;
+	SIZE min_size_;
+	LONG delete_btn_offset_;
 };

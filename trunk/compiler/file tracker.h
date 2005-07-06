@@ -46,7 +46,7 @@ public:
 		virtual void operator() (const IdsType &ids) = 0;
 	};
 	struct FileNotFound {
-		virtual void operator() (uint id, LPCTSTR path) = 0;
+		virtual void operator() (Resource id, LPCTSTR path) = 0;
 	};
 private:
 	struct FileDatum {
@@ -61,14 +61,15 @@ public:
 	~FileTracker();
 //interface
 public:
-	void AddData(uint id, LPCTSTR file_name, const FILETIME &last_write);
+	void SetDatum(Resource id, LPCTSTR file_name, const FILETIME &last_write);
+	void EnableDatum(Resource id, bool enable);
 	bool Start(LPCTSTR folder_path, FileUpdated *file_updated);
 	void Stop();
 // internal function
 private:
 	static DWORD WINAPI TrackerThread(LPVOID parameter);
 	void CheckFiles();
-	bool WasUpdated(FileDatum &datum, uint id);
+	bool WasUpdated(FileDatum &datum, Resource id);
 // data
 private:
 	typedef FileDatum FileData[resource_count];

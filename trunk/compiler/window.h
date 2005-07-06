@@ -268,6 +268,15 @@ template <> struct Msg<WM_CTLCOLORSCROLLBAR> : Msg<WM_CTLCOLOR> { Msg(WndMsg &ms
 template <> struct Msg<WM_CTLCOLORSTATIC>    : Msg<WM_CTLCOLOR> { Msg(WndMsg &msg) : Msg<WM_CTLCOLOR>(msg) {} };
 
 template <>
+struct Msg<WM_ENABLE> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	bool IsEnabled() const {
+		return FALSE != wprm_;
+	}
+};
+
+template <>
 struct Msg<WM_ERASEBKGND> : Msg_
 {
 	Msg(WndMsg &msg) : Msg_(msg) {}
@@ -280,6 +289,15 @@ template <>
 struct Msg<WM_EXITSIZEMOVE> : Msg_
 {
 	Msg(WndMsg &msg) : Msg_(msg) {}
+};
+
+template <>
+struct Msg<WM_GETMINMAXINFO> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	MINMAXINFO* MinMaxInfo() const {
+		return ri_cast<MINMAXINFO*>(lprm_);
+	}
 };
 
 template <>
@@ -448,6 +466,18 @@ struct Msg<WM_SIZE> : Msg_
 };
 
 template <>
+struct Msg<WM_SIZING> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	UINT Edge() const {
+		return wprm_;
+	}
+	RECT* Rect() const {
+		return ri_cast<RECT*>(lprm_);
+	}
+};
+
+template <>
 struct Msg<WM_SHOWWINDOW> : Msg_
 {
 	Msg(WndMsg &msg) : Msg_(msg) {}
@@ -456,5 +486,14 @@ struct Msg<WM_SHOWWINDOW> : Msg_
 	}
 	UINT Status() const {
 		return lprm_;
+	}
+};
+
+template <>
+struct Msg<WM_WINDOWPOSCHANGING> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	WINDOWPOS* WindowPos() const {
+		return ri_cast<WINDOWPOS*>(lprm_);
 	}
 };

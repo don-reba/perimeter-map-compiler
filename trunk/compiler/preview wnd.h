@@ -64,11 +64,14 @@ struct TextureAllocation
 // some custom messages
 //---------------------
 
-const uint WM_USR_STATE_CHANGED   (WM_APP + 0);
-const uint WM_USR_PROJECT_CHANGED (WM_APP + 1);
-const uint WM_USR_SET_TERRAIN     (WM_APP + 2);
-const uint WM_USR_TEXTURE_ALLOCATE(WM_APP + 3);
-const uint WM_USR_TEXTURE_COMMIT  (WM_APP + 4);
+enum
+{
+	WM_USR_STATE_CHANGED = WM_APP,
+	WM_USR_PROJECT_CHANGED,
+	WM_USR_SET_TERRAIN,
+	WM_USR_TEXTURE_ALLOCATE,
+	WM_USR_TEXTURE_COMMIT
+};
 
 inline void SendSetTerrain(HWND hwnd, vector<SimpleVertex> &vertices) {
 	SendMessage(hwnd, WM_USR_SET_TERRAIN, ri_cast<WPARAM>(&vertices), 0L);

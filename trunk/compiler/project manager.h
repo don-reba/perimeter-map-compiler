@@ -43,8 +43,10 @@
 class MainWnd;
 
 //-------------------------------------------------------
-// project manager definition
+// ProjectManager definition
 // this class does most of the work, in a separate thread
+// the class is not thread-safe;
+//  it can only be used within the main thread
 //-------------------------------------------------------
 class ProjectManager : ErrorHandler
 {
@@ -59,10 +61,10 @@ private:
 	class FileNotFound : public FileTracker::FileNotFound
 	{
 	public:
-		FileNotFound(TaskData &task_data);
-		void operator() (uint id, LPCTSTR path);
+		FileNotFound(HWND &main_hwnd);
+		void operator() (Resource id, LPCTSTR path);
 	private:
-		TaskData &task_data_;
+		HWND &main_hwnd_;
 	};
 	struct FileUpdated : FileTracker::FileUpdated
 	{
@@ -93,13 +95,14 @@ public:
 	// shrub management
 	void PackShrub();
 	void UnpackShrub(LPCTSTR shrub_path);
+	void OnResourceNotFound(Resource id);
 	// map management
 	void InstallMap();
 	// miscellaneous
 	void SaveThumbnail();
 	// data management
 	void ReloadFiles(const IdsType &ids);
-	void CreateResouce(uint id);
+	void CreateResouce(Resource id);
 	// settings
 	void UpdateSettings();
 // internal function

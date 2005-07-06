@@ -274,7 +274,8 @@ private:
 	}
 	static void PSave(LPCTSTR section, LPCTSTR key, LPCTSTR value, LPCTSTR file_name)
 	{
-		WritePrivateProfileString(section, key, value, file_name);
+		if (_T('\0') != *value)
+			WritePrivateProfileString(section, key, value, file_name);
 	}
 	// recursively work on the data
 	// TODO: add arbitrary predicate/binding support

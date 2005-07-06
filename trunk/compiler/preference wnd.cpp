@@ -160,11 +160,13 @@ void PreferenceWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	}
 	// display
 	{
-		CheckRadioButton(
-			hwnd_,
-			IDC_DISPLAY_TEXTURE,
-			IDC_DISPLAY_HARDNESS,
-			MacroAppData(ID_DISPLAY_TEXTURE) ? IDC_DISPLAY_TEXTURE : IDC_DISPLAY_HARDNESS);
+		const uint active_id(
+			MacroAppData(ID_DISPLAY_TEXTURE)
+				?IDC_DISPLAY_TEXTURE
+				:MacroAppData(ID_DISPLAY_HARDNESS)
+					?IDC_DISPLAY_HARDNESS
+					:IDC_DISPLAY_ZERO_LAYER);
+		CheckRadioButton(hwnd_, IDC_DISPLAY_TEXTURE, IDC_DISPLAY_ZERO_LAYER, active_id);
 	}
 	msg.result_  = TRUE;
 	msg.handled_ = true;
@@ -185,11 +187,13 @@ void PreferenceWnd::ProcessMessage(WndMsg &msg)
 void PreferenceWnd::Apply()
 {
 	// get control info
-	bool  enable_lighting(true);
-	uint  opacity(0x28);
+	bool  enable_lighting       (true);
+	uint  opacity               (0x28);
 	bool  texture_colour_quality(false);
-	float threshold(3.0f);
-	bool  display_texture(true);
+	float threshold             (3.0f);
+	bool  display_hardness      (true);
+	bool  display_texture       (true);
+	bool  display_zero_layer    (true);
 	// enable_lighting
 	{
 		enable_lighting = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_LIGHTING);
@@ -215,14 +219,17 @@ void PreferenceWnd::Apply()
 	}
 	// display texture
 	{
-		display_texture = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_DISPLAY_TEXTURE);
+		display_hardness   = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_DISPLAY_HARDNESS);
+		display_texture    = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_DISPLAY_TEXTURE);
+		display_zero_layer = BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_DISPLAY_ZERO_LAYER);
 	}
 	// see which actions will have to be taken, depending on which properties changed
-	bool reload_hardness (false);
-	bool reload_heightmap(false);
-	bool reload_texture  (false);
-	bool update_preview  (false);
-	bool update_project  (false);
+	bool reload_hardness  (false);
+	bool reload_heightmap (false);
+	bool reload_texture   (false);
+	bool reload_zero_layer(false);
+	bool update_preview   (false);
+	bool update_project   (false);
 	if (
 		MacroAppData(ID_ZERO_LAYER_COLOUR)  != zero_plast_colour_ ||
 		MacroAppData(ID_ZERO_LAYER_OPACITY) != opacity)
@@ -230,10 +237,12 @@ void PreferenceWnd::Apply()
 		update_preview = true;
 	}
 	if (
-		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION) != texture_colour_quality ||
-		MacroAppData(ID_ENABLE_LIGHTING)           != enable_lighting        ||
-		MacroAppData(ID_THRESHOLD)                 != threshold              ||
-		MacroAppData(ID_DISPLAY_TEXTURE)           != display_texture)
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION) != !texture_colour_quality ||
+		MacroAppData(ID_ENABLE_LIGHTING)           != enable_lighting         ||
+		MacroAppData(ID_THRESHOLD)                 != threshold               ||
+		MacroAppData(ID_DISPLAY_HARDNESS)          != display_hardness        ||
+		MacroAppData(ID_DISPLAY_TEXTURE)           != display_texture         ||
+		MacroAppData(ID_DISPLAY_ZERO_LAYER)        != display_zero_layer)
 	{
 		update_project = true;
 	}
@@ -241,20 +250,33 @@ void PreferenceWnd::Apply()
 	if (MacroAppData(ID_ENABLE_LIGHTING) != enable_lighting)
 	{
 		reload_heightmap = true;
-		(display_texture ? reload_texture : reload_hardness) = true;
+		(display_texture
+			?reload_texture
+			:display_hardness
+				?reload_hardness
+				:reload_zero_layer) = true;
 	}
 	if (MacroAppData(ID_THRESHOLD) != threshold)
 	{
 		reload_heightmap = true;
 	}
-	if (MacroAppData(ID_DISPLAY_TEXTURE) != display_texture)
+	if (
+		MacroAppData(ID_DISPLAY_HARDNESS)   != display_hardness ||
+		MacroAppData(ID_DISPLAY_TEXTURE)    != display_texture  ||
+		MacroAppData(ID_DISPLAY_ZERO_LAYER) != display_zero_layer)
 	{
-		(display_texture ? reload_texture : reload_hardness) = true;
+		(display_texture
+			?reload_texture
+			:display_hardness
+				?reload_hardness
+				:reload_zero_layer) = true;
 		update_preview = true;
 	}
 	// commit settings
 	MacroAppData(ID_ENABLE_LIGHTING)           = enable_lighting;
+	MacroAppData(ID_DISPLAY_HARDNESS)          = display_hardness;
 	MacroAppData(ID_DISPLAY_TEXTURE)           = display_texture;
+	MacroAppData(ID_DISPLAY_ZERO_LAYER)        = display_zero_layer;
 	MacroAppData(ID_FAST_TEXTURE_QUANTIZATION) = !texture_colour_quality;
 	MacroAppData(ID_THRESHOLD)                 = threshold;
 	MacroAppData(ID_ZERO_LAYER_COLOUR)         = zero_plast_colour_;
@@ -263,13 +285,10 @@ void PreferenceWnd::Apply()
 	if (update_preview)
 		preview_wnd_.UpdateSettings();
 	if (update_project)
-		project_manager_.UpdateSettings();
 	{
+		project_manager_.UpdateSettings();
 		IdsType ids;
-		ids[RS_HARDNESS]  = reload_hardness;
-		ids[RS_HEIGHTMAP] = reload_heightmap;
-		ids[RS_TEXTURE]   = reload_texture;
-		if (ids.any())
-			project_manager_.ReloadFiles(ids);
+		ids.set();
+		project_manager_.ReloadFiles(ids);
 	}
 }

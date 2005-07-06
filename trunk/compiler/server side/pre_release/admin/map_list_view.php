@@ -7,14 +7,6 @@
 			body {
 				text-align: center
 			}
-			form {
-				margin: 0px;
-				padding: 0px
-			}
-			form p {
-				margin: 0px;
-				padding: 0px
-			}
 			td {
 				padding: 2px 6px
 			}
@@ -36,30 +28,11 @@
 		</style>
 	</head>
 		<body>
+			<form enctype="multipart/form-data" action="map_erase.php" method="post">
+				<p>delete map number <input type="text" name="map_index" size="2" /> <input type="submit" value=">" /></p>
+			</form>
 			<table cellspacing="0" cellpadding="0">
-				<tr>
-					<td>
-						<form enctype="multipart/form-data" action="map_erase.php" method="post">
-							<p>delete map number <input type="text" name="map_index" size="2" /> <input type="submit" value=">" /></p>
-						</form>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<form enctype="multipart/form-data" action="map_add.php" method="post">
-							<p>add map titled <input type="text" name="map_name" size="12" /> <input type="submit" value=">" /></p>
-						</form>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<hr />
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<table cellspacing="0" cellpadding="0">
-							<col class="column1"><col class="column2"><col class="column3">
+				<col class="column1"><col class="column2"><col class="column3">
 <?
 
 // definitions
@@ -80,7 +53,6 @@ else
 	{
 		$map_name = $map['name'];
 		$map_checksum = strtoupper($map['checksum']);
-		echo "\t\t\t\t\t\t\t";
 		if ($map_index % 2 == 0)
 			echo "<tr class=\"even\"><td>{$map_index}.</td><td>{$map_name}</td><td>{$map_checksum}</td></tr>\n";
 		else
@@ -90,9 +62,6 @@ else
 }
 
 ?>
-					</table>
-				</td>
-			</tr>
 		</table>
 	</body>
 </html>

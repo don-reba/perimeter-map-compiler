@@ -42,6 +42,7 @@ FileTracker::FileTracker(HWND &hwnd, FileUpdated &file_updated, FileNotFound &fi
 	,file_updated_  (&file_updated)
 	,file_not_found_(&file_not_found)
 	,is_valid_      (true)
+	,tracker_thread_(NULL)
 {
 	InitializeCriticalSection(&tracker_section_); // really, if this fails, likely nothing else will work
 	stop_tracking_event_ = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -57,7 +58,7 @@ FileTracker::~FileTracker()
 	DeleteCriticalSection(&tracker_section_);
 }
 
-void FileTracker::AddData(uint id, LPCTSTR file_name, const FILETIME &last_write)
+void FileTracker::SetDatum(Resource id, LPCTSTR file_name, const FILETIME &last_write)
 {
 	AutoCriticalSection acs(&tracker_section_);
 	FileDatum datum;
@@ -65,6 +66,12 @@ void FileTracker::AddData(uint id, LPCTSTR file_name, const FILETIME &last_write
 	datum.file_name_  = file_name;
 	datum.last_write_ = last_write;
 	files_[id] = datum;
+}
+
+void FileTracker::EnableDatum(Resource id, bool enable)
+{
+	AutoCriticalSection acs(&tracker_section_);
+	files_[id].active_ = enable;
 }
 
 bool FileTracker::Start(LPCTSTR folder_path, FileTracker::FileUpdated *file_updated)
@@ -106,6 +113,9 @@ void FileTracker::Stop()
 		}
 	}
 	CloseHandle(tracker_thread_);
+	// reset all resources
+	for (uint i(0); i != resource_count; ++i)
+		files_[i].active_ = false;
 }
 
 DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
@@ -118,7 +128,7 @@ DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
 		FindFirstChangeNotification(
 			obj->folder_path_.c_str(),
 			FALSE,
-			FILE_NOTIFY_CHANGE_LAST_WRITE),
+			FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME),
 		obj->stop_tracking_event_
 	};
 	if (INVALID_HANDLE_VALUE == handles[0])
@@ -154,17 +164,18 @@ void FileTracker::CheckFiles()
 	IdsType ids;
 	for (uint i(0); i != resource_count; ++i)
 	{
-		if (files_[i].active_ && WasUpdated(files_[i], i))
+		if (files_[i].active_ && WasUpdated(files_[i], static_cast<Resource>(i)))
 		{
 			changed = true;
 			ids[i]  = true;
 		}
 	}
 	// use the callback
-	(*file_updated_)(ids);
+	if (ids.any())
+		(*file_updated_)(ids);
 }
 
-bool FileTracker::WasUpdated(FileDatum &datum, uint id)
+bool FileTracker::WasUpdated(FileDatum &datum, Resource id)
 {
 	// create the full path to the file
 	TCHAR path[MAX_PATH];
@@ -188,7 +199,10 @@ bool FileTracker::WasUpdated(FileDatum &datum, uint id)
 		{
 			DWORD error(GetLastError());
 			if (ERROR_FILE_NOT_FOUND == error)
+			{
 				(*file_not_found_)(id, path);
+				return false;
+			}
 			else
 				Sleep(retry_interval);
 		}

@@ -44,10 +44,18 @@ class StatWnd;
 // some custom messages
 //---------------------
 
-const uint WM_USR_TOGGLE_BUSY (WM_APP + 32);
+enum
+{
+	WM_USR_TOGGLE_BUSY = WM_APP + 32,
+	WM_USR_RESOURCE_NOT_FOUND
+};
 
 inline void PostToggleBusy(HWND hwnd, uint task_count) {
 	PostMessage(hwnd, WM_USR_TOGGLE_BUSY, task_count, 0L);
+}
+
+inline void PostResourceNotFound(HWND hwnd, Resource id) {
+	PostMessage(hwnd, WM_USR_RESOURCE_NOT_FOUND, id, 0L);
 }
 
 template <>
@@ -58,6 +66,16 @@ struct Msg<WM_USR_TOGGLE_BUSY> : Msg_
 		return wprm_;
 	}
 };
+
+template <>
+struct Msg<WM_USR_RESOURCE_NOT_FOUND> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	Resource Id() const {
+		return static_cast<Resource>(wprm_);
+	}
+};
+
 
 //-----------------------------------
 // main application window definition
@@ -123,10 +141,12 @@ public:
 // message handlers
 private:
 	// window
-	void OnDestroy   (Msg<WM_DESTROY>         &msg);
-	void OnCommand   (Msg<WM_COMMAND>         &msg);
-	void OnCreate    (Msg<WM_CREATE>          &msg);
-	void OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg);
+	void OnCommand         (Msg<WM_COMMAND>                &msg);
+	void OnCreate          (Msg<WM_CREATE>                 &msg);
+	void OnDestroy         (Msg<WM_DESTROY>                &msg);
+	void OnEnabled         (Msg<WM_ENABLE>                 &msg);
+	void OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg);
+	void OnToggleBusy      (Msg<WM_USR_TOGGLE_BUSY>        &msg);
 	// command
 	void OnAbout          (Msg<WM_COMMAND> &msg);
 	void OnExit           (Msg<WM_COMMAND> &msg);
@@ -153,6 +173,7 @@ private:
 	tstring GetFolderPathDlg(LPCTSTR title);
 	void    SetMenuState(MenuState state);
 	void    ToggleBusyIcon(bool busy, LPCTSTR message);
+	void    ToggleStateIcon(MenuState state);
 //data
 private:
 	HWND            busy_on_icon_;

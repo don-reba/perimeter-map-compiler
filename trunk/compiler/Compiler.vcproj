@@ -21,7 +21,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				InlineFunctionExpansion="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE"
 				GeneratePreprocessedFile="0"
 				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
@@ -72,7 +72,7 @@
 			IntermediateDirectory="Release"
 			ConfigurationType="1"
 			CharacterSet="2"
-			WholeProgramOptimization="TRUE">
+			WholeProgramOptimization="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
@@ -83,7 +83,7 @@
 				OmitFramePointers="FALSE"
 				OptimizeForProcessor="3"
 				OptimizeForWindowsApplication="TRUE"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE"
 				StringPooling="TRUE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
@@ -95,7 +95,7 @@
 				BrowseInformation="1"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
-				DebugInformationFormat="1"/>
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool

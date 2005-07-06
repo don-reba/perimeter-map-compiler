@@ -97,12 +97,9 @@
 #define IDC_SP0_X_SPIN                  1031
 #define IDC_SP0_Y                       1032
 #define IDC_SP0_Y_SPIN                  1033
-#define IDC_BUTTON2                     1034
-#define IDC_FOG_COLOR_BTN               1034
 #define IDC_FOG_COLOUR_BTN              1034
 #define IDC_ZERO_PLAST_COLOUR           1035
 #define IDC_MAP_LIST                    1037
-#define IDC_TEXTURE_COLOUR_QUALITY2     1040
 #define IDC_TEXTURE_COLOUR_SPEED        1040
 #define IDC_TEXTURE_COLOUR_QUALITY      1041
 #define IDC_CUSTOM_HARDNESS             1043
@@ -110,13 +107,14 @@
 #define IDC_CUSTOM_SURFACE              1045
 #define IDC_CUSTOM_SKY                  1046
 #define IDC_DISPLAY_TEXTURE             1047
-#define IDC_RADIO2                      1048
 #define IDC_DISPLAY_HARDNESS            1048
+#define IDC_DISPLAY_ZERO_LAYER          1049
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
 #define ID_FILE_UNPACKSHRUB             32775
 #define ID_FILE_INSTALLSHRUB            32776
+#define ID_FILE_PROJECTSETTINGS         32777
 #define ID_Menu                         32778
 #define ID_FILE_NEWPROJECT              32780
 #define ID_FILE_MANAGEMAPS              32792
@@ -124,7 +122,6 @@
 #define ID_TOOLS_SAVETHUMBNAIL          32800
 #define ID_PANEL_WND_0                  32801
 #define ID_PANEL_WND_1                  32802
-#define ID_FILE_PROJECTSETTINGS         32802
 #define ID_PANEL_WND_2                  32803
 #define ID_PANEL_WND_3                  32804
 #define ID_PANEL_WND_4                  32805

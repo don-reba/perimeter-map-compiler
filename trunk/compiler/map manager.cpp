@@ -31,10 +31,12 @@
 
 #include "StdAfx.h"
 
+#include "app data.h"
 #include "btdb.h"
 #include "map manager.h"
 #include "resource.h"
 #include "resource management.h"
+#include "task common.h"
 
 #include <algorithm>
 #include <commctrl.h>
@@ -69,8 +71,40 @@ void MapManager::OnCommand(Msg<WM_COMMAND> &msg)
 	}
 }
 
+void MapManager::OnGetMinMaxInfo(Msg<WM_GETMINMAXINFO> &msg)
+{
+	msg.MinMaxInfo()->ptMinTrackSize.x = min_size_.cx;
+	msg.MinMaxInfo()->ptMinTrackSize.y = min_size_.cy;
+	msg.result_  = FALSE;
+	msg.handled_ = true;
+}
+
 void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 {
+	// gather layout data
+	{
+		RECT  rect;
+		SIZE  client;
+		// minimum (current) size
+		GetWindowRect(hwnd_, &rect);
+		min_size_.cx = rect.right  - rect.left;
+		min_size_.cy = rect.bottom - rect.top;
+		// client area size (minimum size)
+		GetClientRect(hwnd_, &rect);
+		client.cx = rect.right  - rect.left;
+		client.cy = rect.bottom - rect.top;
+		// map list
+		GetWindowRect(GetDlgItem(hwnd_, IDC_MAP_LIST), &rect);
+		ScreenToClient(hwnd_, &rect);
+		map_list_border_.left   = rect.left;
+		map_list_border_.top    = rect.top;
+		map_list_border_.right  = rect.right  - rect.left - client.cx;
+		map_list_border_.bottom = rect.bottom - rect.top  - client.cy;
+		// "delete" button
+		GetWindowRect(GetDlgItem(hwnd_, IDC_DELETE_MAP), &rect);
+		ScreenToClient(hwnd_, &rect);
+		delete_btn_offset_ = rect.top - client.cy;
+	}
 	// get a list of maps installed by set difference of folder names in "RESOURCE\Worlds"
 	//  and the list of reserved map names
 	std::set<tstring> map_list;
@@ -160,24 +194,53 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	msg.handled_ = true;
 }
 
+void MapManager::OnSize(Msg<WM_SIZE> &msg)
+{
+	// stretch the map list
+	MoveWindow(
+		GetDlgItem(hwnd_, IDC_MAP_LIST),
+		map_list_border_.left,
+		map_list_border_.top,
+		map_list_border_.right  + msg.Size().cx,
+		map_list_border_.bottom + msg.Size().cy,
+		TRUE);
+	// horizontally center the delete button
+	{
+		RECT rect;
+		HWND btn(GetDlgItem(hwnd_, IDC_DELETE_MAP));
+		GetWindowRect(btn, &rect);
+		ScreenToClient(hwnd_, &rect);
+		MoveWindow(
+			btn,
+			(msg.Size().cx - (rect.right - rect.left)) / 2,
+			delete_btn_offset_ + msg.Size().cy,
+			rect.right  - rect.left,
+			rect.bottom - rect.top,
+			TRUE);
+	}
+	msg.handled_ = true;
+	msg.result_  = FALSE;
+}
+
 void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 {
 	TCHAR path[MAX_PATH]; // buffer for path manipulations
 	// get the index of the map to delete
-	TCHAR *name(NULL);
 	const HWND ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));
 	const int sel_index(ListBox_GetCurSel(ctrl));
 	if (LB_ERR == sel_index)
 		return;
-	name = new TCHAR[ListBox_GetTextLen(ctrl, sel_index) + 1];
-	ListBox_GetText(ctrl, sel_index, name);
+	// get the name
+	tstring name;
+	{
+		vector<TCHAR> name_temp;
+		name_temp.resize(ListBox_GetTextLen(ctrl, sel_index) + 1);
+		ListBox_GetText(ctrl, sel_index, &name[0]);
+	}
 	// get installation path
 	tstring install_path;
 	if (!GetInstallPath(install_path))
-	{
-		delete [] name;
 		return;
-	}
 	// create a list of files to delete
 	TCHAR *files_list;
 	{
@@ -185,69 +248,69 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 		// define paths
 		// map folder
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Worlds"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		// battle
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".dat"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".gmp"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".spg"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".sph"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		// survival
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".dat"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".gmp"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".spg"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".sph"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		// multiplayer
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".dat"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".gmp"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".spg"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
 		PathCombine(path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(path, path, name);
+		PathCombine(path, path, name.c_str());
 		PathAddExtension(path, _T(".sph"));
 		if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(path))
 			files.push_back(path);
@@ -271,11 +334,10 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 	fos.hwnd   = hwnd_;
 	fos.wFunc  = FO_DELETE;
 	fos.pFrom  = files_list;
-	fos.fFlags = FOF_ALLOWUNDO | FOF_NOERRORUI;
+	fos.fFlags = FOF_NOERRORUI;
 	if (0 != SHFileOperation(&fos) || TRUE == fos.fAnyOperationsAborted)
 	{
 		delete [] files_list;
-		delete [] name;
 		return;
 	}
 	delete [] files_list;
@@ -286,8 +348,7 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 		Btdb btdb(PathCombine(path, install_path.c_str(), _T("RESOURCE\\LocData\\Russian\\Text\\Texts.btdb")));
 		btdb.RemoveMapEntry(name);
 	}
-	// clean up
-	delete [] name;
+	// wrap up
 	msg.result_  = FALSE;
 	msg.handled_ = true;
 }
@@ -297,106 +358,53 @@ void MapManager::ProcessMessage(WndMsg &msg)
 	static Handler mmp[] =
 	{
 		&MapManager::OnCommand,
-		&MapManager::OnInitDialog
+		&MapManager::OnGetMinMaxInfo,
+		&MapManager::OnInitDialog,
+		&MapManager::OnSize
 	};
 	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
 }
 
-bool MapManager::GetInstallPath(tstring &install_path)
+bool MapManager::GetInstallPath(string &install_path)
 {
-	// check the registry for necessary information
-	HKEY perimeter_key;
-	// open perimeter's registry key
-	if (ERROR_SUCCESS != RegOpenKeyEx(
-		HKEY_LOCAL_MACHINE,
-		_T("SOFTWARE\\Codemasters\\Perimeter"),
-		0,
-		KEY_READ,
-		&perimeter_key))
+	TCHAR path[MAX_PATH];
+	DWORD attributes(GetFileAttributes(MacroAppData(ID_PERIMETER_PATH).c_str()));
+	if (INVALID_FILE_ATTRIBUTES == attributes)
 	{
-		MacroDisplayError(_T("Please make sure you have Perimeter installed."));
-		return false;
+		return TaskCommon::GetInstallPath(install_path, *this);
 	}
-	// verify Perimeter version
+	else
 	{
-		DWORD version;
-		DWORD version_length;
-		DWORD version_type;
-		if (ERROR_SUCCESS != RegQueryValueEx(
-			perimeter_key,
-			_T("Version"),
-			NULL,
-			&version_type,
-			NULL,
-			&version_length))
+		if (MacroAppData(ID_PERIMETER_PATH).size() >= MAX_PATH)
 		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("RegQueryValueEx failed"));
+			MacroDisplayError(_T("The installation path is too long."));
 			return false;
 		}
-		if (version_length != 4 || version_type != REG_DWORD)
+		if (0 == (FILE_ATTRIBUTE_DIRECTORY | attributes))
 		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("Wrong Version type."));
-			return false;
+			_tcscpy(path, MacroAppData(ID_PERIMETER_PATH).c_str());
+			PathRemoveFileSpec(path);
+			install_path = path;
 		}
-		if (ERROR_SUCCESS != RegQueryValueEx(
-			perimeter_key,
-			_T("Version"),
-			NULL,
-			NULL,
-			ri_cast<BYTE*>(&version),
-			&version_length))
-		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("RegQueryValueEx failed"));
-			return false;
-		}
-		if (version != 101)
-		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("Incompatible Perimeter version. Please make sure you have version 1.01."));
-			return false;
-		}
+		else
+			install_path = MacroAppData(ID_PERIMETER_PATH);
 	}
-	// get path to Perimeter's installation folder
-	{
-		DWORD install_path_type;
-		DWORD install_path_length;
-		if (ERROR_SUCCESS != RegQueryValueEx(
-			perimeter_key,
-			_T("Install_Path"),
-			NULL,
-			&install_path_type,
-			NULL,
-			&install_path_length))
-		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("RegQueryValueEx failed"));
-			return false;
-		}
-		if (REG_SZ != install_path_type)
-		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("Wrong Install_Path type."));
-			return false;
-		}
-		TCHAR install_path_temp[MAX_PATH];
-		if (ERROR_SUCCESS != RegQueryValueEx(
-			perimeter_key,
-			_T("Install_Path"),
-			NULL,
-			NULL,
-			ri_cast<BYTE*>(install_path_temp),
-			&install_path_length))
-		{
-			RegCloseKey(perimeter_key);
-			MacroDisplayError(_T("RegQueryValueEx failed"));
-			return false;
-		}
-		install_path = install_path_temp;
-	}
-	RegCloseKey(perimeter_key);
 	return true;
+}
+
+void MapManager::ScreenToClient(HWND hwnd, RECT *rect)
+{
+	POINT corner;
+	RECT &rect_ref(*rect);
+	corner.x = rect_ref.left;
+	corner.y = rect_ref.top;
+	::ScreenToClient(hwnd, &corner);
+	rect_ref.left = corner.x;
+	rect_ref.top  = corner.y;
+	corner.x = rect_ref.right;
+	corner.y = rect_ref.bottom;
+	::ScreenToClient(hwnd, &corner);
+	rect_ref.right  = corner.x;
+	rect_ref.bottom = corner.y;
 }

@@ -55,7 +55,9 @@ public:
 		ID_ZERO_LAYER_COLOUR,
 		ID_ZERO_LAYER_OPACITY,
 		ID_OPACITY,
+		ID_DISPLAY_HARDNESS,
 		ID_DISPLAY_TEXTURE,
+		ID_DISPLAY_ZERO_LAYER,
 		ID_ENABLE_SWAP,
 		ID_FAST_TEXTURE_QUANTIZATION,
 		ID_ENABLE_LIGHTING,
@@ -83,7 +85,9 @@ protected:
 			_T("colour"),
 			_T("zero layer opacity"),
 			_T("opacity"),
-			_T("display as texture"),
+			_T("display heightmap"),
+			_T("display texture"),
+			_T("display zero layer"),
 			_T("enable swap"),
 			_T("fast texture quantization"),
 			_T("enable lighting"),
@@ -111,6 +115,8 @@ protected:
 			_T("Map Preview Settings"),
 			_T("Map Preview Settings"),
 			_T("Map Preview Settings"),
+			_T("Map Preview Settings"),
+			_T("Map Preview Settings"),
 			_T("Project Settings"),
 			_T("Project Settings"),
 			_T("Miscelleneous")
@@ -126,15 +132,17 @@ protected:
 	MacroSSVar4(ID_INFO_WND_RECT, RECT, 13, 111, 201, 412);
 	MacroSSVar (ID_INFO_WND_VISIBLE, bool, true);
 	MacroSSVar4(ID_MAIN_WND_RECT, RECT, 13, 17, 239, 105);
-	MacroSSVar (ID_THRESHOLD, float, 0.3f);
+	MacroSSVar (ID_THRESHOLD, float, 3.0f);
 	MacroSSVar (ID_ZERO_LAYER_COLOUR, COLORREF, 0L);
 	MacroSSVar (ID_ZERO_LAYER_OPACITY, uint, 40u);
 	MacroSSVar (ID_OPACITY, int, 40);
 	MacroSSVar (ID_ENABLE_SWAP, bool, true);
-	MacroSSVar (ID_DISPLAY_TEXTURE, bool, true);
+	MacroSSVar (ID_DISPLAY_HARDNESS,   bool, false);
+	MacroSSVar (ID_DISPLAY_TEXTURE,    bool, true);
+	MacroSSVar (ID_DISPLAY_ZERO_LAYER, bool, false);
 	MacroSSVar (ID_FAST_TEXTURE_QUANTIZATION, bool, true);
 	MacroSSVar (ID_ENABLE_LIGHTING, bool, true);
-	MacroSSVar (ID_PERIMETER_PATH, tstring, _T("full path"));
+	MacroSSVar (ID_PERIMETER_PATH, tstring, _T(""));
 };
 
 typedef StaticSerializer<ApplicationData> SSAppData;
