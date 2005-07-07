@@ -323,8 +323,9 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 		TCHAR *files_i(files_list);
 		for (size_t i(0); i != files.size(); ++i)
 		{
-			CopyMemory(files_i, files[i].c_str(), (files[i].size() + 1) * sizeof(TCHAR));
-			files_i += files[i].size() + 1;
+			const size_t string_length(files[i].size() + 1);
+			CopyMemory(files_i, files[i].c_str(), string_length * sizeof(TCHAR));
+			files_i += string_length;
 		}
 		*files_i = _T('\0');
 	}
@@ -346,7 +347,7 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 	// remove the Texts.btdb entry
 	{
 		Btdb btdb(PathCombine(path, install_path.c_str(), _T("RESOURCE\\LocData\\Russian\\Text\\Texts.btdb")));
-		btdb.RemoveMapEntry(name);
+		btdb.RemoveMapEntry(name.c_str()); // WARN: not UNICODE safe
 	}
 	// wrap up
 	msg.result_  = FALSE;

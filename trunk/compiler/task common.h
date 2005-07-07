@@ -105,7 +105,7 @@ namespace TaskCommon
 		bool     custom_surface_;
 		bool     custom_zero_layer_;
 	};
-	/*struct Surface : public ErrorHandler
+	struct Surface : public ErrorHandler
 	{
 		Surface(HWND &error_hwnd);
 		~Surface();
@@ -116,7 +116,7 @@ namespace TaskCommon
 		BYTE     *indices_;
 		COLORREF  palette_[256];
 		static const SIZE size_;
-	};*/
+	};
 	struct Texture : public ErrorHandler
 	{
 		Texture(SIZE size, HWND &error_hwnd);
@@ -216,7 +216,7 @@ namespace TaskCommon
 	void  SaveVMP(
 		const Heightmap &heightmap,
 		const Texture   &texture,
-		const ZeroLayer &zero_layer,
+		const ZeroLayer *zero_layer,
 		LPCTSTR          path,
 		ErrorHandler    &error_handler);
 // "incredible math" (Lithium Flower)

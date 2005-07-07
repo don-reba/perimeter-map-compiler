@@ -592,13 +592,10 @@ InstallMapTask::InstallMapTask(HWND &hwnd, tstring &perimeter_path)
 
 void InstallMapTask::operator() ()
 {
-	_ASSERTE(task_data_.hardness_   != NULL);
 	_ASSERTE(task_data_.heightmap_  != NULL);
 	_ASSERTE(task_data_.texture_    != NULL);
-	_ASSERTE(task_data_.zero_layer_ != NULL);
 	Heightmap &heightmap (*task_data_.heightmap_);
 	Texture   &texture   (*task_data_.texture_);
-	ZeroLayer &zero_layer(*task_data_.zero_layer_);
 	TCHAR      str        [MAX_PATH];
 	TCHAR      folder_path[MAX_PATH];
 	tstring    install_path;
@@ -676,7 +673,7 @@ void InstallMapTask::operator() ()
 	}
 	// create and save output.vmp
 	PathCombine(str, folder_path, _T("output.vmp"));
-	SaveVMP(heightmap, texture, zero_layer, str, *this);
+	SaveVMP(heightmap, texture, task_data_.zero_layer_, str, *this);
 	// create and save inDam.act
 	PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(texture, str, *this);
@@ -754,12 +751,6 @@ void InstallMapTask::operator() ()
 	default:
 		DebugBreak();
 	}
-	// reassure the user
-	/*MessageBox(
-		hwnd_,
-		_T("Installation has been completed successfully."),
-		_T("Success"),
-		MB_ICONINFORMATION | MB_OK);*/
 }
 
 // set the appropriate entry of Texts.btdb to the name of the map

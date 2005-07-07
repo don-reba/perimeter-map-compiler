@@ -17,3 +17,9 @@ bzip2.exe -z -f -9 worlds_list
 
 copy worlds_list2.txt worlds_list2
 bzip2.exe -z -f -9 worlds_list2
+
+TgaToRaw.exe leveledSurfaceTexture.tga leveledSurfaceTexture
+bzip2.exe -z -f -9 leveledSurfaceTexture
+
+TgaToRaw.exe up.tga up
+bzip2.exe -z -f -9 up

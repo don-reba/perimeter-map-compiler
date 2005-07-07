@@ -108,8 +108,15 @@ bool ProjectManager::Initialize()
 		MacroDisplayError(_T("Background processing thread could not be created."));
 		return false;
 	}
+#ifdef _DEBUG
 	if (!SetThreadPriority(processor_thread_, THREAD_PRIORITY_BELOW_NORMAL))
-		_RPT0(_CRT_WARN, "SetThreadPriority failed\n");
+	{
+		MacroDisplayError(_T("SetThreadPriority failed\n"));
+		return false;
+	}
+#else
+	SetThreadPriority(processor_thread_, THREAD_PRIORITY_BELOW_NORMAL);
+#endif
 	return true;
 }
 

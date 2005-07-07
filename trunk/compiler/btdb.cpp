@@ -106,14 +106,16 @@ void Btdb::AddMapEntry(const string &title, const string &content)
 	AddEntry(entry);
 }
 
-void Btdb::RemoveMapEntry(const string &title)
+void Btdb::RemoveMapEntry(const char *title)
 {
 	const char * const title_prefix("MapNames.");
 	const size_t title_prefix_size(strlen(title_prefix));
-	char *char_title(new char[title_prefix_size + title.size() + 1]);
-	strcpy(char_title, title_prefix);
-	strcpy(char_title + title_prefix_size, title.c_str());
-	RemoveEntry(char_title);
+	const size_t title_size       (strlen(title));
+	char *full_title(new char[title_prefix_size + title_size + 1]);
+	strcpy(full_title, title_prefix);
+	strcpy(full_title + title_prefix_size, title);
+	RemoveEntry(full_title);
+	delete [] full_title;
 }
 
 void Btdb::AddEntry(const BtdbEntry &entry)

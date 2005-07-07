@@ -848,122 +848,122 @@ namespace TaskCommon
 	// Surface implementation
 	//-----------------------
 
-	//const SIZE Surface::size_ = { 0x200, 0x200 };
+	const SIZE Surface::size_ = { 0x200, 0x200 };
 
-	//Surface::Surface(HWND &error_hwnd)
-	//	:ErrorHandler(error_hwnd)
-	//	,indices_    (NULL)
-	//{}
+	Surface::Surface(HWND &error_hwnd)
+		:ErrorHandler(error_hwnd)
+		,indices_    (NULL)
+	{}
 
-	//Surface::~Surface()
-	//{
-	//	delete [] indices_;
-	//}
+	Surface::~Surface()
+	{
+		delete [] indices_;
+	}
 
-	//bool Surface::Load(LPCTSTR path)
-	//{
-	//	fipImage image;
-	//	// load the surface image
-	//	{
-	//		const DWORD delay(256);
-	//		const uint  try_count(32);
-	//		uint        try_num(0);
-	//		for (; try_num != try_count; ++try_num)
-	//		{
-	//			image.load(path);
-	//			if (TRUE == image.isValid())
-	//				break;
-	//			else
-	//				Sleep(delay);
-	//		}
-	//		if (try_count == try_num)
-	//		{
-	//			MacroDisplayError(_T("Surface texture could not be loaded."));
-	//			return false;
-	//		}
-	//	}
-	//	// make sure the dimensions are correct
-	//	if (image.getWidth() != size_.cx || image.getHeight() != size_.cy)
-	//	{
-	//		MacroDisplayError(_T("The surface texture dimensions are incorrect.\nThe correct dimensions are 512x512."));
-	//		return false;
-	//	}
-	//	// quantize the image if necessary
-	//	if (FIC_PALETTE != image.getColorType())
-	//	{
-	//		FREE_IMAGE_QUANTIZE mode(FIQ_NNQUANT);
-	//		if (FALSE == image.colorQuantize(mode))
-	//		{
-	//			MacroDisplayError(_T("Surface could not be quantized."));
-	//			return false;
-	//		}
-	//	}
-	//	// flip the image vertically
-	//	if (FALSE == image.flipVertical())
-	//		MacroDisplayError(_T("Surface bitmap could not be flipped."));
-	//	// allocate new memory for the Surface
-	//	const size_t indices_size(size_.cx * size_.cy);
-	//	_ASSERTE(NULL == indices_);
-	//	indices_ = new BYTE[indices_size];
-	//	// extract image data
-	//	CopyMemory(indices_, image.accessPixels(), indices_size);
-	//	const size_t palette_size(__min(256, image.getPaletteSize() / 4));
-	//	RGBQUAD *palette(image.getPalette());
-	//	for (size_t i(0); i != palette_size; ++i)
-	//		palette_[i] = RGB(palette[i].rgbRed, palette[i].rgbGreen, palette[i].rgbBlue);
-	//	return true;
-	//}
+	bool Surface::Load(LPCTSTR path)
+	{
+		fipImage image;
+		// load the surface image
+		{
+			const DWORD delay(256);
+			const uint  try_count(32);
+			uint        try_num(0);
+			for (; try_num != try_count; ++try_num)
+			{
+				image.load(path);
+				if (TRUE == image.isValid())
+					break;
+				else
+					Sleep(delay);
+			}
+			if (try_count == try_num)
+			{
+				MacroDisplayError(_T("Surface texture could not be loaded."));
+				return false;
+			}
+		}
+		// make sure the dimensions are correct
+		if (image.getWidth() != size_.cx || image.getHeight() != size_.cy)
+		{
+			MacroDisplayError(_T("The surface texture dimensions are incorrect.\nThe correct dimensions are 512x512."));
+			return false;
+		}
+		// quantize the image if necessary
+		if (FIC_PALETTE != image.getColorType())
+		{
+			FREE_IMAGE_QUANTIZE mode(FIQ_NNQUANT);
+			if (FALSE == image.colorQuantize(mode))
+			{
+				MacroDisplayError(_T("Surface could not be quantized."));
+				return false;
+			}
+		}
+		// flip the image vertically
+		if (FALSE == image.flipVertical())
+			MacroDisplayError(_T("Surface bitmap could not be flipped."));
+		// allocate new memory for the Surface
+		const size_t indices_size(size_.cx * size_.cy);
+		_ASSERTE(NULL == indices_);
+		indices_ = new BYTE[indices_size];
+		// extract image data
+		CopyMemory(indices_, image.accessPixels(), indices_size);
+		const size_t palette_size(__min(256, image.getPaletteSize() / 4));
+		RGBQUAD *palette(image.getPalette());
+		for (size_t i(0); i != palette_size; ++i)
+			palette_[i] = RGB(palette[i].rgbRed, palette[i].rgbGreen, palette[i].rgbBlue);
+		return true;
+	}
 
-	//void Surface::MakeDefault()
-	//{
-	//}
+	void Surface::MakeDefault()
+	{
+	}
 
-	//int Surface::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const
-	//{
-	//	// pack the surface texture and the palette
-	//	const int surface_size(size_.cx * size_.cy);
-	//	const int palette_size(256 * sizeof(COLORREF));
-	//	CopyMemory(buffer, indices_, surface_size);
-	//	CopyMemory(buffer + surface_size, palette_, palette_size);
-	//	// write XML metadata
-	//	{
-	//		char str[16];
-	//		// offset of compressed Surface data
-	//		_itot(buffer - initial_offset, str, 10);
-	//		node.InsertEndChild(TiXmlElement("offset"))->InsertEndChild(TiXmlText(str));
-	//	}
-	//	return surface_size + palette_size;
-	//}
+	int Surface::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const
+	{
+		// pack the surface texture and the palette
+		const int surface_size(size_.cx * size_.cy);
+		const int palette_size(256 * sizeof(COLORREF));
+		CopyMemory(buffer, indices_, surface_size);
+		CopyMemory(buffer + surface_size, palette_, palette_size);
+		// write XML metadata
+		{
+			char str[16];
+			// offset of compressed Surface data
+			_itot(buffer - initial_offset, str, 10);
+			node.InsertEndChild(TiXmlElement("offset"))->InsertEndChild(TiXmlText(str));
+		}
+		return surface_size + palette_size;
+	}
 
-	//void Surface::Unpack(TiXmlNode *node, BYTE *buffer)
-	//{
-	//	// allocate memory for the Surface
-	//	const size_t indices_size(size_.cx * size_.cy);
-	//	const size_t palette_size(256 * sizeof(COLORREF));
-	//	_ASSERTE(NULL == indices_);
-	//	indices_ = new BYTE[indices_size];
-	//	// read in XML metadata
-	//	BYTE *surface_buffer;
-	//	BYTE *palette_buffer;
-	//	{
-	//		// find data
-	//		TiXmlHandle node_handle(node);
-	//		TiXmlText *offset_node (node_handle.FirstChildElement("offset").FirstChild().Text());
-	//		if (
-	//			NULL == offset_node)
-	//		{
-	//			_RPT0(_CRT_WARN, "loading default Surface\n");
-	//			MakeDefault();
-	//			return;
-	//		}
-	//		// parse the data
-	//		surface_buffer = buffer + atoi(offset_node->Value());
-	//		palette_buffer = surface_buffer + indices_size;
-	//	}
-	//	CopyMemory(palette_, palette_buffer, palette_size);
-	//	CopyMemory(indices_, surface_buffer, indices_size); // WARN: possible buffer overflow
-	//	return;
-	//}
+	void Surface::Unpack(TiXmlNode *node, BYTE *buffer)
+	{
+		// allocate memory for the Surface
+		const size_t indices_size(size_.cx * size_.cy);
+		const size_t palette_size(256 * sizeof(COLORREF));
+		_ASSERTE(NULL == indices_);
+		indices_ = new BYTE[indices_size];
+		// read in XML metadata
+		BYTE *surface_buffer;
+		BYTE *palette_buffer;
+		{
+			// find data
+			TiXmlHandle node_handle(node);
+			TiXmlText *offset_node (node_handle.FirstChildElement("offset").FirstChild().Text());
+			if (
+				NULL == offset_node)
+			{
+				_RPT0(_CRT_WARN, "loading default Surface\n");
+				MakeDefault();
+				return;
+			}
+			// parse the data
+			surface_buffer = buffer + atoi(offset_node->Value());
+			palette_buffer = surface_buffer + indices_size;
+		}
+		CopyMemory(palette_, palette_buffer, palette_size);
+		CopyMemory(indices_, surface_buffer, indices_size); // WARN: possible buffer overflow
+		return;
+	}
 
 	//-----------------------
 	// Texture implementation
@@ -1667,7 +1667,7 @@ namespace TaskCommon
 	void SaveVMP(
 		const Heightmap &heightmap,
 		const Texture   &texture,
-		const ZeroLayer &zero_layer,
+		const ZeroLayer *zero_layer,
 		LPCTSTR          path,
 		ErrorHandler    &error_handler)
 	{
@@ -1747,18 +1747,30 @@ namespace TaskCommon
 		}
 		delete [] null_pixels;
 		// fill the third layer with the least significant bits of the heightmap extrapolation
+		if (NULL != zero_layer)
 		{
+			const ZeroLayer &zero_layer_ref(*zero_layer);
 			int *int_heightmap_iter(int_heightmap);
 			size_t index(0);
 			for (LONG r(0); r != map_size.cy; ++r)
 			{
 				for (LONG c(0); c != map_size.cx; ++c)
 				{
-					*vmp_iter = zero_layer.data_[index] ? (BYTE)(*int_heightmap_iter & 0x1F) : 0x80;
+					*vmp_iter = zero_layer_ref.data_[index] ? (BYTE)(*int_heightmap_iter & 0x1F) : 0x80;
 					++vmp_iter;
 					++int_heightmap_iter;
 					++index;
 				}
+				++int_heightmap_iter;
+			}
+		}
+		else
+		{
+			int *int_heightmap_iter(int_heightmap);
+			for (LONG r(0); r != map_size.cy; ++r)
+			{
+				for (LONG c(0); c != map_size.cx; ++c)
+					*vmp_iter++ = (BYTE)(*int_heightmap_iter++ & 0x1F);
 				++int_heightmap_iter;
 			}
 		}

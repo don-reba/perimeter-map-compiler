@@ -56,7 +56,7 @@ public:
 	~Btdb();
 // interface
 	void AddMapEntry(const string &title, const string &content);
-	void RemoveMapEntry(const string &title);
+	void RemoveMapEntry(const char *title);
 	void Flush();
 private:
 // utilities
