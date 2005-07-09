@@ -50,10 +50,15 @@ private:
 protected:
 	void ProcessMessage(WndMsg &msg);
 private:
-	bool GetInstallPath(string &install_path);
-	void ScreenToClient(HWND hwnd, RECT *rect);
+	static void FilesInDir(LPCTSTR dir, vector<tstring> &files, size_t depth = 0);
+	static void ScreenToClient(HWND hwnd, RECT *rect);
+private:
+	void    GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool recurse = true);
+	bool    GetInstallPath(string &install_path);
+	tstring GetMapFilesSize(LPCTSTR map_name);
 // data
-	RECT map_list_border_;
-	SIZE min_size_;
-	LONG delete_btn_offset_;
+	tstring install_path_;
+	RECT    map_list_border_;
+	SIZE    min_size_;
+	LONG    delete_btn_offset_;
 };

@@ -112,6 +112,8 @@ public:
 	// cached resources
 	TaskCommon::Hardness  *hardness_;
 	TaskCommon::Heightmap *heightmap_;
+	TaskCommon::Sky       *sky_;
+	TaskCommon::Surface   *surface_;
 	TaskCommon::Texture   *texture_;
 	TaskCommon::ZeroLayer *zero_layer_;
 };
@@ -227,6 +229,30 @@ public:
 	void operator() ();
 private:
 	IdsType ids_;
+};
+
+//----------------------------------------
+// notifies that a project has been opened
+//----------------------------------------
+class NotifyProjectOpenTask : public Task
+{
+public:
+	NotifyProjectOpenTask(HWND main_hwnd);
+	void operator() ();
+private:
+	HWND main_hwnd_;
+};
+
+//------------------------------------------
+// notifies that a project has been unpacked
+//------------------------------------------
+class NotifyProjectUnpackedTask : public Task
+{
+public:
+	NotifyProjectUnpackedTask(HWND main_hwnd);
+	void operator() ();
+private:
+	HWND main_hwnd_;
 };
 
 //--------------

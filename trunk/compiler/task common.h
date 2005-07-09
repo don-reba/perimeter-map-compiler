@@ -105,6 +105,18 @@ namespace TaskCommon
 		bool     custom_surface_;
 		bool     custom_zero_layer_;
 	};
+	struct Sky : public ErrorHandler
+	{
+		Sky(HWND &error_hwnd);
+		~Sky();
+		bool Load(LPCTSTR path);
+		void MakeDefault();
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const;
+		void Save(LPCTSTR path);
+		void Unpack(TiXmlNode *node, BYTE *buffer);
+		COLORREF *pixels_;
+		static const SIZE size_;
+	};
 	struct Surface : public ErrorHandler
 	{
 		Surface(HWND &error_hwnd);
@@ -112,9 +124,10 @@ namespace TaskCommon
 		bool Load(LPCTSTR path);
 		void MakeDefault();
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const;
+		void Save(LPCTSTR path);
 		void Unpack(TiXmlNode *node, BYTE *buffer);
 		BYTE     *indices_;
-		COLORREF  palette_[256];
+		COLORREF  palette_[0x100];
 		static const SIZE size_;
 	};
 	struct Texture : public ErrorHandler
@@ -125,7 +138,7 @@ namespace TaskCommon
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask) const;
 		void Unpack(TiXmlNode *node, BYTE *buffer);
 		BYTE     *indices_;
-		COLORREF  palette_[256];
+		COLORREF  palette_[0x100];
 		SIZE      size_;
 	};
 	struct ZeroLayer : public ErrorHandler

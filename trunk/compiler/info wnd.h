@@ -41,9 +41,14 @@ class PreviewWnd;
 
 class InfoWnd : public PanelWindow
 {
+// nested classes
+public:
+	struct ZeroLevelChanged {
+		virtual void operator() () = 0;
+	};
 // construction/destruction
 public:
-	InfoWnd(PreviewWnd &preview_wnd);
+	InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed);
 // interface
 public:
 	bool Create(HWND parent_wnd, const RECT &window_rect, bool enabled = true);
@@ -53,6 +58,7 @@ private:
 	void OnColorStatic(Msg<WM_CTLCOLORSTATIC> &msg);
 	void OnCommand    (Msg<WM_COMMAND>        &msg);
 	void OnInitDialog (Msg<WM_INITDIALOG>     &msg);
+	void OnTimer      (Msg<WM_TIMER>          &msg);
 // internal function
 protected:
 	void ProcessMessage(WndMsg &msg);
@@ -64,4 +70,6 @@ private:
 	HBRUSH      fog_colour_;
 	COLORREF    custom_colours_[16];
 	PreviewWnd &preview_wnd_;
+	uint        zero_level_changes_ignored_;
+	ZeroLevelChanged *zero_level_changed_;
 };

@@ -845,10 +845,149 @@ namespace TaskCommon
 	}
 
 	//-----------------------
+	// Sky implementation
+	//-----------------------
+
+	const SIZE Sky::size_ = { 0x200, 0x200 };
+
+	Sky::Sky(HWND &error_hwnd)
+		:ErrorHandler(error_hwnd)
+		,pixels_    (NULL)
+	{}
+
+	Sky::~Sky()
+	{
+		delete [] pixels_;
+	}
+
+	bool Sky::Load(LPCTSTR path)
+	{
+		fipImage image;
+		// load the image
+		image.load(path);
+		if (FALSE == image.isValid())
+		{
+			Sleep(512);
+			image.load(path);
+			if (FALSE == image.isValid())
+			{
+				MakeDefault();
+				return true;
+			}
+		}
+		// make sure the dimensions are correct
+		if (image.getWidth() != size_.cx || image.getHeight() != size_.cy)
+		{
+			MacroDisplayError(_T("The sky texture dimensions are incorrect.\nThe correct dimensions are 512x512."));
+			return false;
+		}
+		// quantize the image if necessary
+		if (24 != image.getBitsPerPixel())
+		{
+			if (FALSE == image.convertTo24Bits())
+			{
+				MacroDisplayError(_T("Sky could not be converted to 24-bit."));
+				return false;
+			}
+		}
+		// flip the image vertically
+		if (FALSE == image.flipVertical())
+			MacroDisplayError(_T("Sky bitmap could not be flipped."));
+		// allocate new memory for the Sky
+		const size_t pixels_size(size_.cx * size_.cy);
+		_ASSERTE(NULL == pixels_);
+		pixels_ = new COLORREF[pixels_size];
+		// extract image data
+		{
+			const BYTE *img_iter(image.accessPixels());
+			COLORREF *pixels_iter(pixels_);
+			const COLORREF * const pixels_end(pixels_iter + pixels_size);
+			while (pixels_iter != pixels_end)
+				*pixels_iter++ = RGB(img_iter[0], img_iter[1], img_iter[2]), img_iter += 3;
+		}
+		return true;
+	}
+
+	void Sky::MakeDefault()
+	{
+		_ASSERTE(NULL == pixels_);
+		const size_t pixels_size(size_.cx * size_.cy);
+		const size_t buffer_size (pixels_size * sizeof(COLORREF));
+		pixels_ = new COLORREF[pixels_size];
+		UncompressResource(IDR_SKY_TX, ri_cast<BYTE*>(pixels_), buffer_size);
+	}
+
+	int Sky::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const
+	{
+		// pack the sky texture and the palette
+		const int pixels_size(size_.cx * size_.cy * sizeof(COLORREF));
+		CopyMemory(buffer, pixels_, pixels_size);
+		// write XML metadata
+		{
+			char str[16];
+			// offset of compressed Sky data
+			_itot(buffer - initial_offset, str, 10);
+			node.InsertEndChild(TiXmlElement("offset"))->InsertEndChild(TiXmlText(str));
+		}
+		return pixels_size;
+	}
+
+	void Sky::Save(LPCTSTR path)
+	{
+		if (NULL == pixels_)
+			MakeDefault();
+		const size_t pixels_size(size_.cx * size_.cy);
+		fipImage img(FIT_BITMAP, static_cast<WORD>(size_.cx), static_cast<WORD>(size_.cy), 24);
+		BYTE *img_iter(img.accessPixels());
+		const COLORREF *pixels_iter(pixels_);
+		const COLORREF * const pixels_end(pixels_iter + pixels_size);
+		while (pixels_iter != pixels_end)
+		{
+			*img_iter++ = GetRValue(*pixels_iter);
+			*img_iter++ = GetGValue(*pixels_iter);
+			*img_iter++ = GetBValue(*pixels_iter);
+			++pixels_iter;
+		}
+		img.save(path);
+	}
+
+	void Sky::Unpack(TiXmlNode *node, BYTE *buffer)
+	{
+		if (NULL == node)
+		{
+			_RPT0(_CRT_WARN, "loading default sky texture\n");
+			MakeDefault();
+			return;
+		}
+		// allocate memory for the Sky
+		const size_t pixels_size(size_.cx * size_.cy);
+		_ASSERTE(NULL == pixels_);
+		pixels_ = new COLORREF[pixels_size];
+		// read in XML metadata
+		BYTE *pixels_buffer;
+		{
+			// find data
+			TiXmlHandle node_handle(node);
+			TiXmlText *offset_node (node_handle.FirstChildElement("offset").FirstChild().Text());
+			if (
+				NULL == offset_node)
+			{
+				_RPT0(_CRT_WARN, "loading default sky texture\n");
+				MakeDefault();
+				return;
+			}
+			// parse the data
+			pixels_buffer = buffer + atoi(offset_node->Value());
+		}
+		CopyMemory(pixels_, pixels_buffer, pixels_size * sizeof(COLORREF));
+		return;
+	}
+
+	//-----------------------
 	// Surface implementation
 	//-----------------------
 
-	const SIZE Surface::size_ = { 0x200, 0x200 };
+	const SIZE Surface::size_ = { 0x100, 0x100 };
 
 	Surface::Surface(HWND &error_hwnd)
 		:ErrorHandler(error_hwnd)
@@ -863,23 +1002,16 @@ namespace TaskCommon
 	bool Surface::Load(LPCTSTR path)
 	{
 		fipImage image;
-		// load the surface image
+		// load the image
+		image.load(path);
+		if (FALSE == image.isValid())
 		{
-			const DWORD delay(256);
-			const uint  try_count(32);
-			uint        try_num(0);
-			for (; try_num != try_count; ++try_num)
+			Sleep(512);
+			image.load(path);
+			if (FALSE == image.isValid())
 			{
-				image.load(path);
-				if (TRUE == image.isValid())
-					break;
-				else
-					Sleep(delay);
-			}
-			if (try_count == try_num)
-			{
-				MacroDisplayError(_T("Surface texture could not be loaded."));
-				return false;
+				MakeDefault();
+				return true;
 			}
 		}
 		// make sure the dimensions are correct
@@ -916,6 +1048,15 @@ namespace TaskCommon
 
 	void Surface::MakeDefault()
 	{
+		_ASSERTE(NULL == indices_);
+		const size_t indices_size(size_.cx * size_.cy);
+		const size_t palette_size(0x100 * sizeof(COLORREF));
+		const size_t buffer_size (indices_size + palette_size);
+		vector<BYTE> buffer(buffer_size);
+		UncompressResource(IDR_SURFACE_TX, &buffer[0], buffer_size);
+		indices_ = new BYTE[indices_size];
+		CopyMemory(indices_, &buffer[0], indices_size);
+		CopyMemory(palette_, &buffer[indices_size], palette_size);
 	}
 
 	int Surface::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset) const
@@ -935,8 +1076,26 @@ namespace TaskCommon
 		return surface_size + palette_size;
 	}
 
+	void Surface::Save(LPCTSTR path)
+	{
+		if (NULL == indices_)
+			MakeDefault();
+		const size_t indices_size(size_.cx * size_.cy);
+		const size_t palette_size(0x100 * sizeof(COLORREF));
+		fipImage img(FIT_BITMAP, static_cast<WORD>(size_.cx), static_cast<WORD>(size_.cy), 8);
+		CopyMemory(img.accessPixels(), indices_, indices_size);
+		CopyMemory(img.getPalette(),   palette_, palette_size);
+		img.save(path);
+	}
+
 	void Surface::Unpack(TiXmlNode *node, BYTE *buffer)
 	{
+		if (NULL == node)
+		{
+			_RPT0(_CRT_WARN, "loading default surface texture\n");
+			MakeDefault();
+			return;
+		}
 		// allocate memory for the Surface
 		const size_t indices_size(size_.cx * size_.cy);
 		const size_t palette_size(256 * sizeof(COLORREF));

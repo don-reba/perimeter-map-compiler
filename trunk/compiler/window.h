@@ -490,6 +490,18 @@ struct Msg<WM_SHOWWINDOW> : Msg_
 };
 
 template <>
+struct Msg<WM_TIMER> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	UINT TimerId() const {
+		return wprm_;
+	}
+	TIMERPROC TimerProc() {
+		return ri_cast<TIMERPROC>(lprm_);
+	}
+};
+
+template <>
 struct Msg<WM_WINDOWPOSCHANGING> : Msg_
 {
 	Msg(WndMsg &msg) : Msg_(msg) {}

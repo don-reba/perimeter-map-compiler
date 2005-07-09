@@ -72,6 +72,11 @@ private:
 		void operator() (const IdsType &ids);
 		ProjectManager &project_manager_;
 	};
+	struct ZeroLevelChanged : InfoWnd::ZeroLevelChanged {
+		ZeroLevelChanged(ProjectManager &project_manager);
+		void operator() ();
+		ProjectManager &project_manager_;
+	};
 // type definitions
 private:
 	typedef std::queue<Task*> QueueType;
@@ -94,7 +99,9 @@ public:
 	void OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_project = false);
 	// shrub management
 	void PackShrub();
-	void UnpackShrub(LPCTSTR shrub_path);
+	void UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd);
+	void OnProjectOpen(HWND main_hwnd);
+	void OnProjectUnpacked(HWND main_hwnd);
 	void OnResourceNotFound(Resource id);
 	// map management
 	void InstallMap();
@@ -126,8 +133,10 @@ private:
 	ProjectState project_state_;
 // callback implementation instances
 private:
-	FileUpdated  file_updated_;
-	FileNotFound file_not_found_;
+	FileUpdated      file_updated_;
+	FileNotFound     file_not_found_;
+public:
+	ZeroLevelChanged zero_level_changed_;
 // callbacks
 public:
 	TasksLeft *tasks_left_;

@@ -61,7 +61,7 @@ App::App()
 	:ErrorHandler(main_wnd_.hwnd_)
 	,project_manager_(main_wnd_, info_wnd_, preview_wnd_, stat_wnd_)
 	,main_wnd_(project_manager_, info_wnd_, preview_wnd_, stat_wnd_)
-	,info_wnd_(preview_wnd_)
+	,info_wnd_(preview_wnd_, &project_manager_.zero_level_changed_)
 {}
 
 bool App::Initialize(HINSTANCE instance)

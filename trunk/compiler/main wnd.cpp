@@ -318,6 +318,30 @@ void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
 	EnableWindow(stat_wnd_.hwnd_,       msg.wprm_);
 }
 
+void MainWnd::OnProjectOpen(Msg<WM_USR_PROJECT_OPEN> &msg)
+{
+	project_manager_.OnProjectOpen(hwnd_);
+	msg.handled_ = true;
+}
+
+void MainWnd::OnProjectUnpacked(Msg<WM_USR_PROJECT_UNPACKED> &msg)
+{
+	project_manager_.OnProjectUnpacked(hwnd_);
+	msg.handled_ = true;
+}
+
+void MainWnd::OnSysColorChange(Msg<WM_SYSCOLORCHANGE> &msg)
+{
+	for (size_t i(0); i != panel_count; ++i)
+	{
+		PanelData &panel(panels_[i]);
+		HBITMAP image(CreateButtonImage(panel.image_id_));
+		SendMessage(panel.button_hwnd_, BM_SETIMAGE, IMAGE_BITMAP, ri_cast<LPARAM>(image));
+		DeleteObject(panel.image_);
+		panel.image_ = image;
+	}
+}
+
 void MainWnd::OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg)
 {
 	if (0 == msg.TaskCount())
@@ -336,6 +360,7 @@ void MainWnd::OnToggleBusy(Msg<WM_USR_TOGGLE_BUSY> &msg)
 		ToggleWaitCursor(true);
 		ToggleBusyIcon(true, message.str().c_str());
 	}
+	msg.handled_ = true;
 }
 
 void MainWnd::ToggleBusyIcon(bool busy, LPCTSTR message)
@@ -376,6 +401,9 @@ void MainWnd::ProcessMessage(WndMsg &msg)
 		&MainWnd::OnCreate,
 		&MainWnd::OnDestroy,
 		&MainWnd::OnEnabled,
+		&MainWnd::OnProjectOpen,
+		&MainWnd::OnProjectUnpacked,
+		&MainWnd::OnSysColorChange,
 		&MainWnd::OnToggleBusy
 	};
 		if (!Handler::Call(mmp, this, msg))
@@ -390,9 +418,11 @@ void MainWnd::OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg)
 	switch (msg.Id())
 	{
 	case RS_HARDNESS:   message << _T("hardness.bmp");   break;
-	case RS_ZERO_LAYER: message << _T("zero layer.bmp"); break;
-	case RS_SURFACE:    message << _T("surface.bmp");    break;
+	case RS_HEIGHTMAP:  message << _T("heightmap.bmp");  break;
 	case RS_SKY:        message << _T("sky.bmp");        break;
+	case RS_SURFACE:    message << _T("surface.bmp");    break;
+	case RS_TEXTURE:    message << _T("texture.bmp");    break;
+	case RS_ZERO_LAYER: message << _T("zero layer.bmp"); break;
 	default: DebugBreak();
 	}
 	message << _T(".\nProject settings will be set to not use it.");
@@ -546,7 +576,7 @@ void MainWnd::OnUpackShrub(Msg<WM_COMMAND> &msg)
 	if (shrub_path.empty())
 		return;
 	// open the project
-	project_manager_.UnpackShrub(shrub_path.c_str());
+	project_manager_.UnpackShrub(shrub_path.c_str(), hwnd_);
 	SetMenuState(MS_SHRUB);
 	ToggleStateIcon(MS_SHRUB);
 }

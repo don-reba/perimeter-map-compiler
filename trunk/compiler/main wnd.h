@@ -47,7 +47,9 @@ class StatWnd;
 enum
 {
 	WM_USR_TOGGLE_BUSY = WM_APP + 32,
-	WM_USR_RESOURCE_NOT_FOUND
+	WM_USR_RESOURCE_NOT_FOUND,
+	WM_USR_PROJECT_OPEN,
+	WM_USR_PROJECT_UNPACKED
 };
 
 inline void PostToggleBusy(HWND hwnd, uint task_count) {
@@ -56,6 +58,16 @@ inline void PostToggleBusy(HWND hwnd, uint task_count) {
 
 inline void PostResourceNotFound(HWND hwnd, Resource id) {
 	PostMessage(hwnd, WM_USR_RESOURCE_NOT_FOUND, id, 0L);
+}
+
+inline void SendProjectOpen(HWND hwnd)
+{
+	SendMessage(hwnd, WM_USR_PROJECT_OPEN, 0, 0L);
+}
+
+inline void SendProjectUnpacked(HWND hwnd)
+{
+	SendMessage(hwnd, WM_USR_PROJECT_UNPACKED, 0, 0L);
 }
 
 template <>
@@ -145,7 +157,10 @@ private:
 	void OnCreate          (Msg<WM_CREATE>                 &msg);
 	void OnDestroy         (Msg<WM_DESTROY>                &msg);
 	void OnEnabled         (Msg<WM_ENABLE>                 &msg);
+	void OnProjectOpen     (Msg<WM_USR_PROJECT_OPEN>       &msg);
+	void OnProjectUnpacked (Msg<WM_USR_PROJECT_UNPACKED>   &msg);
 	void OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg);
+	void OnSysColorChange  (Msg<WM_SYSCOLORCHANGE>         &msg);
 	void OnToggleBusy      (Msg<WM_USR_TOGGLE_BUSY>        &msg);
 	// command
 	void OnAbout          (Msg<WM_COMMAND> &msg);

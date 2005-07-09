@@ -51,8 +51,10 @@
 // InfoWnd implementation
 //-----------------------
 
-InfoWnd::InfoWnd(PreviewWnd &preview_wnd)
-	:preview_wnd_(preview_wnd)
+InfoWnd::InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed)
+	:preview_wnd_               (preview_wnd)
+	,zero_level_changed_        (zero_layer_changed)
+	,zero_level_changes_ignored_(0)
 {}
 
 bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect, bool enabled)
@@ -84,6 +86,7 @@ bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect, bool enabled)
 
 void InfoWnd::Update(bool read_only)
 {
+	zero_level_changes_ignored_ = 0;
 	if (read_only)
 		EnableControls(false);
 	// fog colour
@@ -165,6 +168,10 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 			val = __min(val, max_val);
 			MacroProjectData(ID_ZERO_LEVEL) = val;
 			preview_wnd_.ProjectDataChanged(ProjectData::ID_ZERO_LEVEL);
+			if (zero_level_changes_ignored_ >= 1 && IsWindowVisible(hwnd_))
+				SetTimer(hwnd_, 0, 3000, NULL);
+			else
+				++zero_level_changes_ignored_;
 		} break;
 	case IDC_FOG_START:
 		if (EN_CHANGE == msg.CodeNotify())
@@ -245,13 +252,22 @@ void InfoWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	msg.handled_ = true;
 }
 
+void InfoWnd::OnTimer(Msg<WM_TIMER> &msg)
+{
+	_ASSERTE(msg.TimerId() == timer_id_);
+	KillTimer(hwnd_, 0);
+	(*zero_level_changed_)();
+	msg.handled_ = true;
+}
+
 void InfoWnd::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
 	{
 		&InfoWnd::OnColorStatic,
 		&InfoWnd::OnCommand,
-		&InfoWnd::OnInitDialog
+		&InfoWnd::OnInitDialog,
+		&InfoWnd::OnTimer
 	};
 	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);

@@ -306,15 +306,16 @@ BEGIN
                     IDC_STATIC,49,79,177,35
 END
 
-IDD_MAP_MANAGER DIALOGEX 0, 0, 104, 102
+IDD_MAP_MANAGER DIALOGEX 0, 0, 148, 116
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | 
     WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Manage Maps"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    LISTBOX         IDC_MAP_LIST,7,7,90,66,LBS_SORT | LBS_NOINTEGRALHEIGHT | 
-                    WS_VSCROLL | WS_TABSTOP
-    PUSHBUTTON      "Delete",IDC_DELETE_MAP,32,81,40,14
+    PUSHBUTTON      "Delete",IDC_DELETE_MAP,53,95,40,14
+    CONTROL         "",IDC_MAP_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_ALIGNLEFT | LVS_NOSORTHEADER | 
+                    WS_BORDER | WS_TABSTOP,7,7,134,83
 END
 
 IDD_PROJECT_SETTINGS DIALOGEX 0, 0, 113, 98
@@ -332,9 +333,9 @@ BEGIN
     CONTROL         "Custom Zero Layer",IDC_CUSTOM_ZERO_LAYER,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,35,77,10
     CONTROL         "Custom Surface Texture",IDC_CUSTOM_SURFACE,"Button",
-                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,7,48,94,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,48,94,10
     CONTROL         "Custom Sky Texture",IDC_CUSTOM_SKY,"Button",
-                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,7,61,81,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,61,81,10
 END
 
 
@@ -412,9 +413,9 @@ BEGIN
     IDD_MAP_MANAGER, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 97
+        RIGHTMARGIN, 141
         TOPMARGIN, 7
-        BOTTOMMARGIN, 95
+        BOTTOMMARGIN, 109
     END
 
     IDD_PROJECT_SETTINGS, DIALOG
@@ -446,6 +447,8 @@ IDR_SURVIVAL_SPG        BZ2                     "resource\\survival_spg.bz2"
 IDR_SPG2                BZ2                     "resource\\spg2.bz2"
 IDR_WORLDS_LIST         BZ2                     "resource\\worlds_list.bz2"
 IDR_WORLDS_LIST_2       BZ2                     "resource\\worlds_list2.bz2"
+IDR_SURFACE_TX          BZ2                     "resource\\leveledSurfaceTexture.bz2"
+IDR_SKY_TX              BZ2                     "resource\\up.bz2"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -455,14 +458,6 @@ IDR_WORLDS_LIST_2       BZ2                     "resource\\worlds_list2.bz2"
 IDB_PREVIEW             BITMAP                  "resource\\preview.bmp"
 IDB_STATS               BITMAP                  "resource\\stats.bmp"
 IDB_INFO                BITMAP                  "resource\\details.bmp"
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// IMG
-//
-
-IDR_UP_TX               IMG                     "resource/img1.bin"
-IDR_SURFACE_TX          IMG                     "resource\\leveledSurfaceTexture.tga"
 
 /////////////////////////////////////////////////////////////////////////////
 //
