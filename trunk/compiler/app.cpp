@@ -48,7 +48,7 @@ int APIENTRY _tWinMain(
 	int       nCmdShow)
 {
 	App app;
-	if (!app.Initialize(hInstance))
+	if (!app.Initialize(hInstance, lpCmdLine))
 		return 1;
 	return app.Run();
 }
@@ -64,7 +64,7 @@ App::App()
 	,info_wnd_(preview_wnd_, &project_manager_.zero_level_changed_)
 {}
 
-bool App::Initialize(HINSTANCE instance)
+bool App::Initialize(HINSTANCE instance, LPCTSTR cmd_line)
 {
 	instance_ = instance;
 	InitCommonControls();
@@ -109,6 +109,27 @@ bool App::Initialize(HINSTANCE instance)
 	// show the main window
 	ShowWindow(main_wnd_.hwnd_, SW_SHOW);
 	SetForegroundWindow(main_wnd_.hwnd_);
+	// parse the command line, and carry out appropriate axions
+	{
+		vector<TCHAR> path_vector(MAX_PATH);
+		TCHAR *path(&path_vector[0]);
+		// strip quotes, if they are present
+		{
+			const size_t cmd_line_length(_tcslen(cmd_line));
+			if (cmd_line[0] == _T('"') && cmd_line[cmd_line_length - 1] == _T('"'))
+			{
+				_tcscpy(path, cmd_line + 1);
+				path[cmd_line_length - 2] = _T('\0');
+			}
+			else
+				_tcscpy(path, cmd_line);
+		}
+		if (PathFileExists(path))
+		{
+			if (0 == _tcscmp(_T(".pmproj"), PathFindExtension(path)))
+				main_wnd_.OpenProject(path);
+		}
+	}
 	return true;
 }
 

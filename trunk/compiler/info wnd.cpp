@@ -254,7 +254,6 @@ void InfoWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 
 void InfoWnd::OnTimer(Msg<WM_TIMER> &msg)
 {
-	_ASSERTE(msg.TimerId() == timer_id_);
 	KillTimer(hwnd_, 0);
 	(*zero_level_changed_)();
 	msg.handled_ = true;

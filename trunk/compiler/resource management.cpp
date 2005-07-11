@@ -29,39 +29,62 @@
 //-----------------------------------------------------------------------------
 
 
-#pragma once
+#include "StdAfx.h"
 
 #include "error handler.h"
-#include "main wnd.h"
-#include "preview wnd.h"
-#include "project manager.h"
-#include "stat wnd.h"
+#include "resource.h"
+#include "resource management.h"
+#include "task common.h"
 
-//----------------------------------
-// main application class definition
-//----------------------------------
-class App : ErrorHandler
+using namespace TaskCommon;
+
+namespace RsrcMgmt
 {
-// construction/destruction
-public:
-	App();
-// interface
-public:
-	bool Initialize(HINSTANCE instance, LPCTSTR cmd_line);
-	int  Run();
-// internal function
-private:
-	void    Destroy();
-	tstring MakeIniFileName();
-// data
-private:
-	// application
-	HINSTANCE instance_;
-	// windows
-	InfoWnd    info_wnd_;
-	MainWnd    main_wnd_;
-	PreviewWnd preview_wnd_;
-	StatWnd    stat_wnd_;
-	// other
-	ProjectManager project_manager_;
-};
+	//bool SaveImageFromResource(uint id, LPCTSTR path, ErrorHandler &error_handler)
+	//{
+	//	// load image from the resourcesBYTE *compressed_buffer
+	//	BYTE *raw_image;
+	//	DWORD raw_image_size;
+	//	{
+	//		HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(id), _T("IMG")));
+	//		HGLOBAL resource(LoadResource(NULL, resource_info));
+	//		raw_image = ri_cast<BYTE*>(LockResource(resource));
+	//		if (NULL == raw_image)
+	//		{
+	//			error_handler.MacroDisplayError(_T("Image resource could not be locked."));
+	//			return false;
+	//		}
+	//		raw_image_size = SizeofResource(NULL, resource_info);
+	//	}
+	//	// save the image
+	//	SaveMemToFile(path, raw_image, raw_image_size, error_handler);
+	//	return true;
+	//}
+
+	bool UncompressResource(uint id, BYTE *result, size_t alloc)
+	{
+		// load the compressed template
+		BYTE *compressed_buffer;
+		DWORD compressed_buffer_size;
+		{
+			HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(id), _T("BZ2")));
+			HGLOBAL resource(LoadResource(NULL, resource_info));
+			compressed_buffer = ri_cast<BYTE*>(LockResource(resource));
+			if (NULL == compressed_buffer)
+				return false;
+			compressed_buffer_size = SizeofResource(NULL, resource_info);
+		}
+		// uncompress
+		if (BZ_OK != BZ2_bzBuffToBuffDecompress(
+			ri_cast<char*>(result),
+			&alloc,
+			ri_cast<char*>(compressed_buffer),
+			compressed_buffer_size,
+			0,
+			0))
+		{
+			return false;
+		}
+		return true;
+	}
+}

@@ -31,37 +31,30 @@
 
 #pragma once
 
-#include "error handler.h"
-#include "main wnd.h"
-#include "preview wnd.h"
-#include "project manager.h"
-#include "stat wnd.h"
+#include "pmc wnd.h"
 
-//----------------------------------
-// main application class definition
-//----------------------------------
-class App : ErrorHandler
+class MainWnd;
+class ProjectManager;
+
+class ProjectSettingsWnd : public PMCWindow
 {
 // construction/destruction
 public:
-	App();
+	ProjectSettingsWnd(ProjectManager &project_manager, MainWnd &main_wnd);
 // interface
 public:
-	bool Initialize(HINSTANCE instance, LPCTSTR cmd_line);
-	int  Run();
-// internal function
+	UINT_PTR DoModal(HWND parent_hwnd);
+// message handlers
 private:
-	void    Destroy();
-	tstring MakeIniFileName();
+	void OnCommand   (Msg<WM_COMMAND>    &msg);
+	void OnInitDialog(Msg<WM_INITDIALOG> &msg);
+// internal function
+protected:
+	void ProcessMessage(WndMsg &msg);
+private:
+	void Apply();
 // data
 private:
-	// application
-	HINSTANCE instance_;
-	// windows
-	InfoWnd    info_wnd_;
-	MainWnd    main_wnd_;
-	PreviewWnd preview_wnd_;
-	StatWnd    stat_wnd_;
-	// other
-	ProjectManager project_manager_;
+	MainWnd        &main_wnd_;
+	ProjectManager &project_manager_;
 };

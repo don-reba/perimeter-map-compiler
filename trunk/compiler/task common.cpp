@@ -29,9 +29,13 @@
 //-----------------------------------------------------------------------------
 
 
+//--------------------------------------------------------------------
+// WARN: this file is compiled with the flag  /QIfist (Suppress _ftol)
+//--------------------------------------------------------------------
+
+
 #include "stdafx.h"
 
-#include "error handler.h"
 #include "preview wnd.h"
 #include "project data.h"
 #include "resource.h"
@@ -358,18 +362,20 @@ namespace TaskCommon
 			vector<int>::const_iterator bzl_iter(blurred_zero_layer.begin());
 			BYTE *img_iter(image.accessPixels());
 			const BYTE * const img_end(img_iter + size);
-			while (img_iter != img_end)
 			{
-				// make sure the blur only expands the black areas
-				int v(*bzl_iter);
-				v = (0 == (v & 0x8000)) ? 0 : 0xFF & v >> 7;
-				// scale the pixel
-				float ratio(v / 255.0f);
-				*img_iter = static_cast<BYTE>(*img_iter * ratio + zero_level * (1.0f - ratio));
-				++img_iter;
-				++bzl_iter;
+				while (img_iter != img_end)
+				{
+					// make sure the blur only expands the black areas
+					int v(*bzl_iter);
+					v = (0 == (v & 0x8000)) ? 0 : 0xFF & v >> 7;
+					// scale the pixel (optimized to avoid fp ops)
+					uint scale(23);
+					uint ratio((v << scale) / 255);
+					*img_iter = static_cast<BYTE>((*img_iter * ratio + zero_level * ((1 << scale) - ratio)) >> scale);
+					++img_iter;
+					++bzl_iter;
+				}
 			}
-
 		}
 		// allocate new memory for the heightmap
 		const size_t data_size(size_.cx * size_.cy);
@@ -602,6 +608,18 @@ namespace TaskCommon
 	bool Lightmap::Create(const Heightmap &heightmap)
 	{
 		_ASSERTE(size_.cx + 1 == heightmap.size_.cx && size_.cy + 1 == heightmap.size_.cy);
+		// precalculate surface-sun dot products
+		BYTE surface_sun_dot[0x100];
+		{
+			const float dx(1.0f);
+			for (uint i(0); i != 0x100; ++i)
+			{
+				const float dy(static_cast<float>(i));
+				float length(sqrt(2 * (dx * dx + dy * dy)));
+				float dot((dx + dy) / length);
+				surface_sun_dot[i] = (BYTE)(255 * dot);
+			}
+		}
 		// allocate memory for the lightmap
 		const size_t data_size(size_.cx * size_.cy);
 		_ASSERTE(NULL == data_);
@@ -624,11 +642,7 @@ namespace TaskCommon
 				if (high_point_z - point_z < point_x)
 				// if the point is unshadowed
 				{
-					const float dx(1.0f);
-					const float dy(static_cast<float>(row_i[0] - row_i[1]));
-					float length(sqrt(2 * (dx * dx + dy * dy)));
-					float dot((dx + dy) / length);
-					*li = (BYTE)(255 * dot);
+					*li = surface_sun_dot[static_cast<int>(row_i[0]) - row_i[1]];
 					high_point_z = point_z;
 					high_point_x = row_i;
 				}
@@ -639,17 +653,9 @@ namespace TaskCommon
 			hi += size_.cx + 1;
 		}
 		// blur the lightmap (fake soft shadows :) )
-		// TODO: profile to see if the lightmap should have been integer all along
-		{
-			int *int_lightmap(new int[data_size]);
-			for (size_t i(0); i != data_size; ++i)
-				int_lightmap[i] = data_[i];
-			GaussianBlur(int_lightmap, size_);
-			GaussianBlur(int_lightmap, size_);
-			for (size_t i(0); i != data_size; ++i)
-				data_[i] = static_cast<BYTE>(int_lightmap[i]);
-			delete [] int_lightmap;
-		}
+		GaussianBlur<BYTE, unsigned short>(data_, size_);
+		GaussianBlur<BYTE, unsigned short>(data_, size_);
+		GaussianBlur<BYTE, unsigned short>(data_, size_);
 		return true;
 	}
 
@@ -2140,12 +2146,14 @@ namespace TaskCommon
 					{
 						for (uint x(0); x != allocation.width_; ++x)
 						{
+							// NOTE: optimized to avoid fp ops (the compiler insists on calling _ftol)
 							const COLORREF colour(texture.palette_[texture.indices_[offset]]);
-							float f_light(static_cast<float>(lightmap.data_[offset++]));
-							f_light = (f_light + 128.0f) / 255.0f;
-							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetBValue(colour) * f_light)));
-							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetGValue(colour) * f_light)));
-							*texture_iterator++ = static_cast<BYTE>(__max(0.0f, __min(255.0f, GetRValue(colour) * f_light)));
+							const uint factor(257); // precision
+							uint i_light(static_cast<uint>(lightmap.data_[offset++]) * factor);
+							i_light = (i_light + (128 * factor)) / 255;
+							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetBValue(colour) * i_light) / factor));
+							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetGValue(colour) * i_light) / factor));
+							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetRValue(colour) * i_light) / factor));
 							*texture_iterator++ = 0xFF; // alpha
 						}
 						offset += texture.size_.cx - allocation.width_;
@@ -2277,7 +2285,7 @@ namespace TaskCommon
 	// triangulation helper function - flatness heuristic
 	// determines flatness from the center point and the middles of the four sides of a quad
 	// the result is the distance between the projections of the middle point on the horizontal and the vertical
-	float Flatness(int h1, int h2, int v1, int v2, int c, int r)
+	float Flatness(float h1, float h2, float v1, float v2, float c, float r)
 	{
 		float dx;
 		float dy;
@@ -2285,9 +2293,9 @@ namespace TaskCommon
 		float length;
 		float cnst;
 		// project c onto h2 - h1
-		dx   = static_cast<float>(r + r);
-		dy   = static_cast<float>(h2 - h1);
-		c_dy = static_cast<float>(c - h1);
+		dx   = r + r;
+		dy   = h2 - h1;
+		c_dy = c - h1;
 		length = sqrt(dx * dx + dy * dy);
 		dx /= length;
 		dy /= length;
@@ -2295,9 +2303,9 @@ namespace TaskCommon
 		float h_proj_x = r    - cnst * dx;
 		float h_proj_y = c_dy - cnst * dy;
 		// project c onto v2 - v1
-		dx   = static_cast<float>(r  + r);
-		dy   = static_cast<float>(v2 - v1);
-		c_dy = static_cast<float>(c  - v1);
+		dx   = r  + r;
+		dy   = v2 - v1;
+		c_dy = c  - v1;
 		length = sqrt(dx * dx + dy * dy);
 		dx /= length;
 		dy /= length;
@@ -2381,18 +2389,18 @@ namespace TaskCommon
 				{
 					int offset = xi * (map_size.cx + 1) * 2 + (map_size.cx + 1) + yi * 2 + 1;
 					// stop if any of the underlying points are zero
-					for (int x(-1); x != 2; ++x)
-						for (int y(-1); y != 2; ++y)
+					for (int y(-1); y != 2; ++y)
+						for (int x(-1); x != 2; ++x)
 							if (heightmap.data_[offset + y * (map_size.cx + 1) + x] == 0)
 								goto end;
 					// check if the region is flat enough
 					if (Flatness(
-						(int)heightmap.data_[offset - 1],
-						(int)heightmap.data_[offset + 1],
-						(int)heightmap.data_[offset - map_size.cx - 1],
-						(int)heightmap.data_[offset + map_size.cx + 1],
-						(int)heightmap.data_[offset],
-						1) < threshold)
+						(float)heightmap.data_[offset - 1],
+						(float)heightmap.data_[offset + 1],
+						(float)heightmap.data_[offset - map_size.cx - 1],
+						(float)heightmap.data_[offset + map_size.cx + 1],
+						(float)heightmap.data_[offset],
+						1.0f) < threshold)
 						regions[0][index] = true;
 				end:
 					++index;
@@ -2420,12 +2428,12 @@ namespace TaskCommon
 						int side(radius + radius); // length of a side of the region
 						int offset((map_size.cx + 1) * (side * xi + radius) + side * yi + radius);
 						if (Flatness(
-							(int)heightmap.data_[offset - radius],
-							(int)heightmap.data_[offset + radius],
-							(int)heightmap.data_[offset - (map_size.cx + 1) * radius],
-							(int)heightmap.data_[offset + (map_size.cx + 1) * radius],
-							(int)heightmap.data_[offset],
-							radius) < threshold)
+							(float)heightmap.data_[offset - radius],
+							(float)heightmap.data_[offset + radius],
+							(float)heightmap.data_[offset - (map_size.cx + 1) * radius],
+							(float)heightmap.data_[offset + (map_size.cx + 1) * radius],
+							(float)heightmap.data_[offset],
+							(float)radius) < threshold)
 						{
 							regions[k - 1][index] = true;
 							// set the underlying regions to false
@@ -2437,206 +2445,37 @@ namespace TaskCommon
 					}
 				}
 			}
-			// build the mesh
+		}
+		// build the mesh
+		{
+			// we only need information for two levels at a time,
+			//  so a recursive approach would be wasteful
+			vector<TE>  queue1;
+			vector<TE>  queue2;
+			vector<TE> *current(&queue1);
+			vector<TE> *queued (&queue2);
+			vector<TE> *temp_array;
+			// add the first elements to the current queue
+			for (int i(0); i != 4; ++i)
 			{
-				// we only need information for two levels at a time,
-				//  so a recursive approach would be wasteful
-				vector<TE>  queue1;
-				vector<TE>  queue2;
-				vector<TE> *current(&queue1);
-				vector<TE> *queued (&queue2);
-				vector<TE> *temp_array;
-				// add the first elements to the current queue
-				for (int i(0); i != 4; ++i)
-				{
-					TE te;
-					te.index = i;
-					current->push_back(te);
-				}
-				short num; // number of regions per row or column of the heightmap
-				// heightmap values underlying the region
-				float tl_val, tr_val;
-				float bl_val, br_val;
-				// corresponding heightmap values
-				SimpleVertex tl_vert, tr_vert;
-				SimpleVertex bl_vert, br_vert;
-				// cartesian components of an index
-				short xi, yi;
-				// iterate through the hierarchy
-				for (int k(n - 2); k != 0; --k)
-				{
-					num = static_cast<short>(exp2(n - k - 1));
-					short side(static_cast<short>(exp2(k + 1))); // length of the region's side
-					vector<TE>::const_iterator te_i(current->begin());
-					const vector<TE>::const_iterator te_end(current->end());
-					for (; te_i != te_end; ++te_i)
-					{
-						const TE te(*te_i);
-						// split the index into cartesian coordinates
-						xi = static_cast<short>(te.index % num);
-						yi = static_cast<short>(te.index / num);
-						// calculate sides of the region
-						short l_coord(static_cast<short>(xi * side));
-						short r_coord(static_cast<short>(l_coord + side));
-						short b_coord(static_cast<short>(yi * side));
-						short t_coord(static_cast<short>(b_coord + side));
-						// calculate heightmap values at the corners of the region
-						{
-							BYTE *offset(heightmap.data_ + side * ((map_size.cx + 1) * yi + xi));
-							bl_val = *offset;
-							br_val = *(offset + side);
-							offset += side * (map_size.cx + 1);
-							tl_val = *offset;
-							tr_val = *(offset + side);
-						}
-						// constrain the heightmap values, if necessary
-						// bottom left
-						if (te.l_constrained && te.l_constraint.start != b_coord)
-							bl_val = te.l_constraint.ConstrainedVal(b_coord);
-						if (te.b_constrained && te.b_constraint.start != l_coord)
-							bl_val = te.b_constraint.ConstrainedVal(l_coord);
-						// bottom right
-						if (te.r_constrained && te.r_constraint.start != b_coord)
-							br_val = te.r_constraint.ConstrainedVal(b_coord);
-						if (te.b_constrained && (te.b_constraint.start + te.b_constraint.length) != r_coord)
-							br_val = te.b_constraint.ConstrainedVal(r_coord);
-						// top left
-						if (te.l_constrained && (te.l_constraint.start + te.l_constraint.length) != t_coord)
-							tl_val = te.l_constraint.ConstrainedVal(t_coord);
-						if (te.t_constrained && te.t_constraint.start != l_coord)
-							tl_val = te.t_constraint.ConstrainedVal(l_coord);
-						// top right
-						if (te.r_constrained && (te.r_constraint.start + te.r_constraint.length) != t_coord)
-							tr_val = te.r_constraint.ConstrainedVal(t_coord);
-						if (te.t_constrained && (te.t_constraint.start + te.t_constraint.length) != r_coord)
-							tr_val = te.t_constraint.ConstrainedVal(r_coord);
-						// if the region is flat, add it to the triangulation and continue
-						if (regions[k][te.index])
-						{
-							// bottom left vertex
-							bl_vert.x = l_coord;
-							bl_vert.y = b_coord;
-							bl_vert.z = bl_val;
-							// bottom right vertex
-							br_vert.x = r_coord;
-							br_vert.y = b_coord;
-							br_vert.z = br_val;
-							// top left vertex
-							tl_vert.x = l_coord;
-							tl_vert.y = t_coord;
-							tl_vert.z = tl_val;
-							// top right vertex
-							tr_vert.x = r_coord;
-							tr_vert.y = t_coord;
-							tr_vert.z = tr_val;
-							// add the vertices to the triangulation (counter-clockwise)
-							// TODO: try using indexes
-							vertices.push_back(bl_vert);
-							vertices.push_back(br_vert);
-							vertices.push_back(tr_vert);
-							vertices.push_back(bl_vert);
-							vertices.push_back(tr_vert);
-							vertices.push_back(tl_vert);
-							continue;
-						}
-						// check if each of the region's neighbours exists (relies on shortcircuiting)
-						bool l_constrained((xi != 0)       && regions[k][te.index - 1]);
-						bool r_constrained((xi != num - 1) && regions[k][te.index + 1]);
-						bool b_constrained((yi != 0)       && regions[k][te.index - num]);
-						bool t_constrained((yi != num - 1) && regions[k][te.index + num]);
-						// locate subregions
-						TE bl_te, br_te, tl_te, tr_te;
-						{
-							int offset(4 * te.index - 2 * xi);
-							bl_te.index = offset;
-							br_te.index = offset + 1;
-							tl_te.index = offset + num * 2;
-							tr_te.index = offset + num * 2 + 1;
-						}
-						// copy constraints
-						if (te.l_constrained) // left
-						{
-							_ASSERTE(!l_constrained);
-							bl_te.l_constrained = tl_te.l_constrained = true;
-							bl_te.l_constraint  = tl_te.l_constraint  = te.l_constraint;
-						}
-						if (te.r_constrained) // right
-						{
-							_ASSERTE(!r_constrained);
-							br_te.r_constrained = tr_te.r_constrained = true;
-							br_te.r_constraint  = tr_te.r_constraint  = te.r_constraint;
-						}
-						if (te.b_constrained) // bottom
-						{
-							_ASSERTE(!b_constrained);
-							bl_te.b_constrained = br_te.b_constrained = true;
-							bl_te.b_constraint  = br_te.b_constraint  = te.b_constraint;
-						}
-						if (te.t_constrained) // top
-						{
-							_ASSERTE(!t_constrained);
-							tl_te.t_constrained = tr_te.t_constrained = true;
-							tl_te.t_constraint  = tr_te.t_constraint  = te.t_constraint;
-						}
-						// add the constraints
-						if (l_constrained) // left
-						{
-							// constrain the bottom left region and the top left region
-							_ASSERTE(bl_te.l_constrained == false);
-							_ASSERTE(tl_te.l_constrained == false);
-							bl_te.l_constrained       = tl_te.l_constrained       = true;
-							bl_te.l_constraint.start  = tl_te.l_constraint.start  = b_coord;
-							bl_te.l_constraint.length = tl_te.l_constraint.length = side;
-							bl_te.l_constraint.s_val  = tl_te.l_constraint.s_val  = bl_val;
-							bl_te.l_constraint.f_val  = tl_te.l_constraint.f_val  = tl_val;
-						}
-						if (r_constrained) // right
-						{
-							// constrain the bottom right region and the top right region
-							_ASSERTE(br_te.r_constrained == false);
-							_ASSERTE(tr_te.r_constrained == false);
-							br_te.r_constrained       = tr_te.r_constrained       = true;
-							br_te.r_constraint.start  = tr_te.r_constraint.start  = b_coord;
-							br_te.r_constraint.length = tr_te.r_constraint.length = side;
-							br_te.r_constraint.s_val  = tr_te.r_constraint.s_val  = br_val;
-							br_te.r_constraint.f_val  = tr_te.r_constraint.f_val  = tr_val;
-						}
-						if (b_constrained) // bottom
-						{
-							// constrain the bottom left region and the bottom right region
-							_ASSERTE(bl_te.b_constrained == false);
-							_ASSERTE(br_te.b_constrained == false);
-							bl_te.b_constrained       = br_te.b_constrained       = true;
-							bl_te.b_constraint.start  = br_te.b_constraint.start  = l_coord;
-							bl_te.b_constraint.length = br_te.b_constraint.length = side;
-							bl_te.b_constraint.s_val  = br_te.b_constraint.s_val  = bl_val;
-							bl_te.b_constraint.f_val  = br_te.b_constraint.f_val  = br_val;
-						}
-						if (t_constrained) // top
-						{
-							// constrain the top left region and the top right region
-							_ASSERTE(tl_te.t_constrained == false);
-							_ASSERTE(tr_te.t_constrained == false);
-							tl_te.t_constrained       = tr_te.t_constrained       = true;
-							tl_te.t_constraint.start  = tr_te.t_constraint.start  = l_coord;
-							tl_te.t_constraint.length = tr_te.t_constraint.length = side;
-							tl_te.t_constraint.s_val  = tr_te.t_constraint.s_val  = tl_val;
-							tl_te.t_constraint.f_val  = tr_te.t_constraint.f_val  = tr_val;
-						}
-						// enqueue the subregions
-						queued->push_back(bl_te);
-						queued->push_back(br_te);
-						queued->push_back(tl_te);
-						queued->push_back(tr_te);
-					}
-					// switch queues
-					current->clear();
-					temp_array = current;
-					current = queued;
-					queued = temp_array;
-				}
-				// handle the special case of k = 0
-				num = static_cast<short>(map_size.cx / 2);
+				TE te;
+				te.index = i;
+				current->push_back(te);
+			}
+			short num; // number of regions per row or column of the heightmap
+			// heightmap values underlying the region
+			float tl_val, tr_val;
+			float bl_val, br_val;
+			// corresponding heightmap values
+			SimpleVertex tl_vert, tr_vert;
+			SimpleVertex bl_vert, br_vert;
+			// cartesian components of an index
+			short xi, yi;
+			// iterate through the hierarchy
+			for (int k(n - 2); k != 0; --k)
+			{
+				num = static_cast<short>(exp2(n - k - 1));
+				short side(static_cast<short>(exp2(k + 1))); // length of the region's side
 				vector<TE>::const_iterator te_i(current->begin());
 				const vector<TE>::const_iterator te_end(current->end());
 				for (; te_i != te_end; ++te_i)
@@ -2646,17 +2485,19 @@ namespace TaskCommon
 					xi = static_cast<short>(te.index % num);
 					yi = static_cast<short>(te.index / num);
 					// calculate sides of the region
-					short l_coord(xi + xi);
-					short r_coord(l_coord + 2);
-					short b_coord(yi + yi);
-					short t_coord(b_coord + 2);
+					short l_coord(static_cast<short>(xi * side));
+					short r_coord(static_cast<short>(l_coord + side));
+					short b_coord(static_cast<short>(yi * side));
+					short t_coord(static_cast<short>(b_coord + side));
 					// calculate heightmap values at the corners of the region
-					BYTE *offset(heightmap.data_ + 2 * ((map_size.cx + 1) * yi + xi));
-					bl_val = *offset;
-					br_val = *(offset + 2);
-					offset += 2 * (map_size.cx + 1);
-					tl_val = *offset;
-					tr_val = *(offset + 2);
+					{
+						BYTE *offset(heightmap.data_ + side * ((map_size.cx + 1) * yi + xi));
+						bl_val = *offset;
+						br_val = *(offset + side);
+						offset += side * (map_size.cx + 1);
+						tl_val = *offset;
+						tr_val = *(offset + side);
+					}
 					// constrain the heightmap values, if necessary
 					// bottom left
 					if (te.l_constrained && te.l_constraint.start != b_coord)
@@ -2707,110 +2548,160 @@ namespace TaskCommon
 						vertices.push_back(tl_vert);
 						continue;
 					}
-					// shift "offset" to the region's center
-					offset -= map_size.cx;
-					// find the middle point
-					float center(*offset);
-					// if any point under the region is zero, do not triangulate it
-					//  this is justified because inner regions will not have zero subregions
-					//  and boundary regions are not as important
-					if (
-						*offset                     == 0 ||
-						*(offset + 1)               == 0 ||
-						*(offset - 1)               == 0 ||
-						*(offset + map_size.cx)     == 0 ||
-						*(offset + map_size.cx + 2) == 0 ||
-						*(offset - map_size.cx - 2) == 0 ||
-						*(offset - map_size.cx)     == 0)
-						continue;
-					// bottom left subregion
+					// check if each of the region's neighbours exists (relies on shortcircuiting)
+					bool l_constrained((xi != 0)       && regions[k][te.index - 1]);
+					bool r_constrained((xi != num - 1) && regions[k][te.index + 1]);
+					bool b_constrained((yi != 0)       && regions[k][te.index - num]);
+					bool t_constrained((yi != num - 1) && regions[k][te.index + num]);
+					// locate subregions
+					TE bl_te, br_te, tl_te, tr_te;
+					{
+						int offset(4 * te.index - 2 * xi);
+						bl_te.index = offset;
+						br_te.index = offset + 1;
+						tl_te.index = offset + num * 2;
+						tr_te.index = offset + num * 2 + 1;
+					}
+					// copy constraints
+					if (te.l_constrained) // left
+					{
+						_ASSERTE(!l_constrained);
+						bl_te.l_constrained = tl_te.l_constrained = true;
+						bl_te.l_constraint  = tl_te.l_constraint  = te.l_constraint;
+					}
+					if (te.r_constrained) // right
+					{
+						_ASSERTE(!r_constrained);
+						br_te.r_constrained = tr_te.r_constrained = true;
+						br_te.r_constraint  = tr_te.r_constraint  = te.r_constraint;
+					}
+					if (te.b_constrained) // bottom
+					{
+						_ASSERTE(!b_constrained);
+						bl_te.b_constrained = br_te.b_constrained = true;
+						bl_te.b_constraint  = br_te.b_constraint  = te.b_constraint;
+					}
+					if (te.t_constrained) // top
+					{
+						_ASSERTE(!t_constrained);
+						tl_te.t_constrained = tr_te.t_constrained = true;
+						tl_te.t_constraint  = tr_te.t_constraint  = te.t_constraint;
+					}
+					// add the constraints
+					if (l_constrained) // left
+					{
+						// constrain the bottom left region and the top left region
+						_ASSERTE(bl_te.l_constrained == false);
+						_ASSERTE(tl_te.l_constrained == false);
+						bl_te.l_constrained       = tl_te.l_constrained       = true;
+						bl_te.l_constraint.start  = tl_te.l_constraint.start  = b_coord;
+						bl_te.l_constraint.length = tl_te.l_constraint.length = side;
+						bl_te.l_constraint.s_val  = tl_te.l_constraint.s_val  = bl_val;
+						bl_te.l_constraint.f_val  = tl_te.l_constraint.f_val  = tl_val;
+					}
+					if (r_constrained) // right
+					{
+						// constrain the bottom right region and the top right region
+						_ASSERTE(br_te.r_constrained == false);
+						_ASSERTE(tr_te.r_constrained == false);
+						br_te.r_constrained       = tr_te.r_constrained       = true;
+						br_te.r_constraint.start  = tr_te.r_constraint.start  = b_coord;
+						br_te.r_constraint.length = tr_te.r_constraint.length = side;
+						br_te.r_constraint.s_val  = tr_te.r_constraint.s_val  = br_val;
+						br_te.r_constraint.f_val  = tr_te.r_constraint.f_val  = tr_val;
+					}
+					if (b_constrained) // bottom
+					{
+						// constrain the bottom left region and the bottom right region
+						_ASSERTE(bl_te.b_constrained == false);
+						_ASSERTE(br_te.b_constrained == false);
+						bl_te.b_constrained       = br_te.b_constrained       = true;
+						bl_te.b_constraint.start  = br_te.b_constraint.start  = l_coord;
+						bl_te.b_constraint.length = br_te.b_constraint.length = side;
+						bl_te.b_constraint.s_val  = br_te.b_constraint.s_val  = bl_val;
+						bl_te.b_constraint.f_val  = br_te.b_constraint.f_val  = br_val;
+					}
+					if (t_constrained) // top
+					{
+						// constrain the top left region and the top right region
+						_ASSERTE(tl_te.t_constrained == false);
+						_ASSERTE(tr_te.t_constrained == false);
+						tl_te.t_constrained       = tr_te.t_constrained       = true;
+						tl_te.t_constraint.start  = tr_te.t_constraint.start  = l_coord;
+						tl_te.t_constraint.length = tr_te.t_constraint.length = side;
+						tl_te.t_constraint.s_val  = tr_te.t_constraint.s_val  = tl_val;
+						tl_te.t_constraint.f_val  = tr_te.t_constraint.f_val  = tr_val;
+					}
+					// enqueue the subregions
+					queued->push_back(bl_te);
+					queued->push_back(br_te);
+					queued->push_back(tl_te);
+					queued->push_back(tr_te);
+				}
+				// switch queues
+				current->clear();
+				temp_array = current;
+				current = queued;
+				queued = temp_array;
+			}
+			// handle the special case of k = 0
+			num = static_cast<short>(map_size.cx / 2);
+			vector<TE>::const_iterator te_i(current->begin());
+			const vector<TE>::const_iterator te_end(current->end());
+			for (; te_i != te_end; ++te_i)
+			{
+				const TE te(*te_i);
+				// split the index into cartesian coordinates
+				xi = static_cast<short>(te.index % num);
+				yi = static_cast<short>(te.index / num);
+				// calculate sides of the region
+				short l_coord(xi + xi);
+				short r_coord(l_coord + 2);
+				short b_coord(yi + yi);
+				short t_coord(b_coord + 2);
+				// calculate heightmap values at the corners of the region
+				BYTE *offset(heightmap.data_ + 2 * ((map_size.cx + 1) * yi + xi));
+				bl_val = *offset;
+				br_val = *(offset + 2);
+				offset += 2 * (map_size.cx + 1);
+				tl_val = *offset;
+				tr_val = *(offset + 2);
+				// constrain the heightmap values, if necessary
+				// bottom left
+				if (te.l_constrained && te.l_constraint.start != b_coord)
+					bl_val = te.l_constraint.ConstrainedVal(b_coord);
+				if (te.b_constrained && te.b_constraint.start != l_coord)
+					bl_val = te.b_constraint.ConstrainedVal(l_coord);
+				// bottom right
+				if (te.r_constrained && te.r_constraint.start != b_coord)
+					br_val = te.r_constraint.ConstrainedVal(b_coord);
+				if (te.b_constrained && (te.b_constraint.start + te.b_constraint.length) != r_coord)
+					br_val = te.b_constraint.ConstrainedVal(r_coord);
+				// top left
+				if (te.l_constrained && (te.l_constraint.start + te.l_constraint.length) != t_coord)
+					tl_val = te.l_constraint.ConstrainedVal(t_coord);
+				if (te.t_constrained && te.t_constraint.start != l_coord)
+					tl_val = te.t_constraint.ConstrainedVal(l_coord);
+				// top right
+				if (te.r_constrained && (te.r_constraint.start + te.r_constraint.length) != t_coord)
+					tr_val = te.r_constraint.ConstrainedVal(t_coord);
+				if (te.t_constrained && (te.t_constraint.start + te.t_constraint.length) != r_coord)
+					tr_val = te.t_constraint.ConstrainedVal(r_coord);
+				// if the region is flat, add it to the triangulation and continue
+				if (regions[k][te.index])
+				{
 					// bottom left vertex
 					bl_vert.x = l_coord;
 					bl_vert.y = b_coord;
 					bl_vert.z = bl_val;
 					// bottom right vertex
-					br_vert.x = l_coord + 1.0f;
-					br_vert.y = b_coord;
-					br_vert.z = (bl_val + br_val) / 2.0f;
-					// top left vertex
-					tl_vert.x = l_coord;
-					tl_vert.y = b_coord + 1.0f;
-					tl_vert.z = (bl_val + tl_val) / 2.0f;
-					// top right vertex
-					tr_vert.x = l_coord + 1.0f;
-					tr_vert.y = b_coord + 1.0f;
-					tr_vert.z = center;
-					// add the vertices to the triangulation (counter-clockwise)
-					// TODO: try using indexes
-					vertices.push_back(bl_vert);
-					vertices.push_back(br_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(bl_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(tl_vert);
-					// bottom right subregion
-					// bottom left vertex
-					bl_vert.x = l_coord + 1.0f;
-					bl_vert.y = b_coord;
-					bl_vert.z = (bl_val + br_val) / 2.0f;
-					// bottom right vertex
 					br_vert.x = r_coord;
 					br_vert.y = b_coord;
 					br_vert.z = br_val;
 					// top left vertex
-					tl_vert.x = l_coord + 1.0f;
-					tl_vert.y = b_coord + 1.0f;
-					tl_vert.z = center;
-					// top right vertex
-					tr_vert.x = r_coord;
-					tr_vert.y = b_coord + 1.0f;
-					tr_vert.z = (br_val + tr_val) / 2.0f;
-					// add the vertices to the triangulation (counter-clockwise)
-					// TODO: try using indexes
-					vertices.push_back(bl_vert);
-					vertices.push_back(br_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(bl_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(tl_vert);
-					// top left subregion
-					// bottom left vertex
-					bl_vert.x = l_coord;
-					bl_vert.y = b_coord + 1.0f;
-					bl_vert.z = (bl_val + tl_val) / 2.0f;
-					// bottom right vertex
-					br_vert.x = l_coord + 1.0f;
-					br_vert.y = b_coord + 1.0f;
-					br_vert.z = center;
-					// top left vertex
 					tl_vert.x = l_coord;
 					tl_vert.y = t_coord;
 					tl_vert.z = tl_val;
-					// top right vertex
-					tr_vert.x = l_coord + 1.0f;
-					tr_vert.y = t_coord;
-					tr_vert.z = (tl_val + tr_val) / 2.0f;
-					// add the vertices to the triangulation (counter-clockwise)
-					// TODO: try using indexes
-					vertices.push_back(bl_vert);
-					vertices.push_back(br_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(bl_vert);
-					vertices.push_back(tr_vert);
-					vertices.push_back(tl_vert);
-					// top right subregion
-					// bottom left vertex
-					bl_vert.x = l_coord + 1.0f;
-					bl_vert.y = b_coord + 1.0f;
-					bl_vert.z = center;
-					// bottom right vertex
-					br_vert.x = r_coord;
-					br_vert.y = b_coord + 1.0f;
-					br_vert.z = (br_val + tr_val) / 2.0f;
-					// top left vertex
-					tl_vert.x = l_coord + 1.0f;
-					tl_vert.y = t_coord;
-					tl_vert.z = (tl_val + tr_val) / 2.0f;
 					// top right vertex
 					tr_vert.x = r_coord;
 					tr_vert.y = t_coord;
@@ -2823,7 +2714,124 @@ namespace TaskCommon
 					vertices.push_back(bl_vert);
 					vertices.push_back(tr_vert);
 					vertices.push_back(tl_vert);
+					continue;
 				}
+				// shift "offset" to the region's center
+				offset -= map_size.cx;
+				// find the middle point
+				float center(*offset);
+				// if any point under the region is zero, do not triangulate it
+				//  this is justified because inner regions will not have zero subregions
+				//  and boundary regions are not as important
+				if (
+					*offset                     == 0 ||
+					*(offset + 1)               == 0 ||
+					*(offset - 1)               == 0 ||
+					*(offset + map_size.cx)     == 0 ||
+					*(offset + map_size.cx + 2) == 0 ||
+					*(offset - map_size.cx - 2) == 0 ||
+					*(offset - map_size.cx)     == 0)
+					continue;
+				// bottom left subregion
+				// bottom left vertex
+				bl_vert.x = l_coord;
+				bl_vert.y = b_coord;
+				bl_vert.z = bl_val;
+				// bottom right vertex
+				br_vert.x = l_coord + 1.0f;
+				br_vert.y = b_coord;
+				br_vert.z = (bl_val + br_val) / 2.0f;
+				// top left vertex
+				tl_vert.x = l_coord;
+				tl_vert.y = b_coord + 1.0f;
+				tl_vert.z = (bl_val + tl_val) / 2.0f;
+				// top right vertex
+				tr_vert.x = l_coord + 1.0f;
+				tr_vert.y = b_coord + 1.0f;
+				tr_vert.z = center;
+				// add the vertices to the triangulation (counter-clockwise)
+				// TODO: try using indexes
+				vertices.push_back(bl_vert);
+				vertices.push_back(br_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(bl_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(tl_vert);
+				// bottom right subregion
+				// bottom left vertex
+				bl_vert.x = l_coord + 1.0f;
+				bl_vert.y = b_coord;
+				bl_vert.z = (bl_val + br_val) / 2.0f;
+				// bottom right vertex
+				br_vert.x = r_coord;
+				br_vert.y = b_coord;
+				br_vert.z = br_val;
+				// top left vertex
+				tl_vert.x = l_coord + 1.0f;
+				tl_vert.y = b_coord + 1.0f;
+				tl_vert.z = center;
+				// top right vertex
+				tr_vert.x = r_coord;
+				tr_vert.y = b_coord + 1.0f;
+				tr_vert.z = (br_val + tr_val) / 2.0f;
+				// add the vertices to the triangulation (counter-clockwise)
+				// TODO: try using indexes
+				vertices.push_back(bl_vert);
+				vertices.push_back(br_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(bl_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(tl_vert);
+				// top left subregion
+				// bottom left vertex
+				bl_vert.x = l_coord;
+				bl_vert.y = b_coord + 1.0f;
+				bl_vert.z = (bl_val + tl_val) / 2.0f;
+				// bottom right vertex
+				br_vert.x = l_coord + 1.0f;
+				br_vert.y = b_coord + 1.0f;
+				br_vert.z = center;
+				// top left vertex
+				tl_vert.x = l_coord;
+				tl_vert.y = t_coord;
+				tl_vert.z = tl_val;
+				// top right vertex
+				tr_vert.x = l_coord + 1.0f;
+				tr_vert.y = t_coord;
+				tr_vert.z = (tl_val + tr_val) / 2.0f;
+				// add the vertices to the triangulation (counter-clockwise)
+				// TODO: try using indexes
+				vertices.push_back(bl_vert);
+				vertices.push_back(br_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(bl_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(tl_vert);
+				// top right subregion
+				// bottom left vertex
+				bl_vert.x = l_coord + 1.0f;
+				bl_vert.y = b_coord + 1.0f;
+				bl_vert.z = center;
+				// bottom right vertex
+				br_vert.x = r_coord;
+				br_vert.y = b_coord + 1.0f;
+				br_vert.z = (br_val + tr_val) / 2.0f;
+				// top left vertex
+				tl_vert.x = l_coord + 1.0f;
+				tl_vert.y = t_coord;
+				tl_vert.z = (tl_val + tr_val) / 2.0f;
+				// top right vertex
+				tr_vert.x = r_coord;
+				tr_vert.y = t_coord;
+				tr_vert.z = tr_val;
+				// add the vertices to the triangulation (counter-clockwise)
+				// TODO: try using indexes
+				vertices.push_back(bl_vert);
+				vertices.push_back(br_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(bl_vert);
+				vertices.push_back(tr_vert);
+				vertices.push_back(tl_vert);
 			}
 		}
 		delete [] regions;

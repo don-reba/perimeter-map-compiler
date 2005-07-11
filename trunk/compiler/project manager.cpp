@@ -37,6 +37,8 @@
 #include "project manager.h"
 #include "task common.h"
 
+#include <stdexcept>
+
 //-------------------------------
 // project manager implementation
 //-------------------------------
@@ -238,6 +240,23 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 
 void ProjectManager::PackShrub()
 {
+	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
+	SIZE map_size = {
+		exp2(MacroProjectData(ID_POWER_X)),
+		exp2(MacroProjectData(ID_POWER_Y))
+	};
+	AddTask(new UpdateDataTask(
+		map_name,
+		folder_path_.c_str(),
+		map_size,
+		project_state_,
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
+		MacroAppData(ID_ENABLE_LIGHTING),
+		MacroAppData(ID_THRESHOLD),
+		MacroAppData(ID_DISPLAY_HARDNESS),
+		MacroAppData(ID_DISPLAY_TEXTURE),
+		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
 	AddTask(new PackShrubTask(
@@ -489,6 +508,23 @@ void ProjectManager::OnResourceNotFound(Resource id)
 
 void ProjectManager::InstallMap()
 {
+	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
+	SIZE map_size = {
+		exp2(MacroProjectData(ID_POWER_X)),
+		exp2(MacroProjectData(ID_POWER_Y))
+	};
+	AddTask(new UpdateDataTask(
+		map_name,
+		folder_path_.c_str(),
+		map_size,
+		project_state_,
+		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
+		MacroAppData(ID_ENABLE_LIGHTING),
+		MacroAppData(ID_THRESHOLD),
+		MacroAppData(ID_DISPLAY_HARDNESS),
+		MacroAppData(ID_DISPLAY_TEXTURE),
+		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
 	AddTask(new InstallMapTask(error_hwnd_, MacroAppData(ID_PERIMETER_PATH)));
@@ -631,7 +667,20 @@ DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
 		{
 			ProjectManager *obj(ri_cast<ProjectManager*>(parameter));
 			AutoCriticalSection acs(&obj->processor_section_);
-			obj->MacroDisplayError(_T("There was not enough memory to carry out a task.\nThe following queued tasks have been cancelled."));
+			obj->MacroDisplayError(_T("There was not enough memory to carry out a task.\nThe queued tasks will be cancelled."));
+			while (!obj->tasks_.empty())
+			{
+				delete obj->tasks_.front();
+				obj->tasks_.pop();
+			}
+		}
+		catch (TaskException e)
+		{
+			ProjectManager *obj(ri_cast<ProjectManager*>(parameter));
+			tstring msg(e.Msg());
+			msg += _T("\nThe queued tasks will been cancelled.");
+			AutoCriticalSection acs(&obj->processor_section_);
+			obj->MacroDisplayError(msg.c_str());
 			while (!obj->tasks_.empty())
 			{
 				delete obj->tasks_.front();
@@ -678,7 +727,12 @@ ProjectManager::FileUpdated::FileUpdated(ProjectManager &project_manager)
 
 void ProjectManager::FileUpdated::operator() (const IdsType &ids)
 {
-	project_manager_.AddTask(new LoadProjectDataTask(project_manager_.error_hwnd_));
+	IdsType adjusted_ids;
+	adjusted_ids.set();
+	adjusted_ids.set(RS_SKY,     false);
+	adjusted_ids.set(RS_SURFACE, false);
+	// load data
+	project_manager_.AddTask(new LoadProjectDataTask(adjusted_ids, project_manager_.error_hwnd_));
 	project_manager_.AddTask(new UpdatePanelsTask(
 		project_manager_.info_wnd_,
 		project_manager_.preview_wnd_,

@@ -150,6 +150,8 @@ public:
 public:
 	void AddPanelWnds(PanelInfo (&panels)[panel_count]);
 	bool Create(POINT position);
+	void OpenProject(LPCTSTR path);
+	void UnpackShrub(LPCTSTR path);
 // message handlers
 private:
 	// window

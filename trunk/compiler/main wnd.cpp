@@ -310,6 +310,20 @@ bool MainWnd::Create(POINT position)
 	return true;
 }
 
+void MainWnd::OpenProject(LPCTSTR path)
+{
+	project_manager_.OpenProject(path, hwnd_);
+	SetMenuState(MS_PROJECT);
+	ToggleStateIcon(MS_PROJECT);
+}
+
+void MainWnd::UnpackShrub(LPCTSTR path)
+{
+	project_manager_.UnpackShrub(path, hwnd_);
+	SetMenuState(MS_SHRUB);
+	ToggleStateIcon(MS_SHRUB);
+}
+
 void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
 {
 	EnableWindow(info_wnd_.hwnd_,       msg.wprm_);
@@ -534,14 +548,10 @@ void MainWnd::OnNewProject(Msg<WM_COMMAND> &msg)
 void MainWnd::OnOpenProject(Msg<WM_COMMAND> &msg)
 {
 	msg.result_  = TRUE;
-	// get the project folder path
 	tstring pmproj_path(GetFilePathDlg(_T("Open Project"), _T("Map Project Files (*.pmproj)\0*.pmproj\0")));
 	if (pmproj_path.empty())
 		return;
-	// open the project
-	project_manager_.OpenProject(pmproj_path.c_str(), hwnd_);
-	SetMenuState(MS_PROJECT);
-	ToggleStateIcon(MS_PROJECT);
+	OpenProject(pmproj_path.c_str());
 }
 
 void MainWnd::OnPackShrub(Msg<WM_COMMAND> &msg)
@@ -571,14 +581,10 @@ void MainWnd::OnSaveThumbnail(Msg<WM_COMMAND> &msg)
 void MainWnd::OnUpackShrub(Msg<WM_COMMAND> &msg)
 {
 	msg.result_  = TRUE;
-	// get the project folder path
 	tstring shrub_path(GetFilePathDlg(_T("Unpack Shrub"), _T("Shrub Files (*.shrub)\0*.shrub\0")));
 	if (shrub_path.empty())
 		return;
-	// open the project
-	project_manager_.UnpackShrub(shrub_path.c_str(), hwnd_);
-	SetMenuState(MS_SHRUB);
-	ToggleStateIcon(MS_SHRUB);
+	UnpackShrub(shrub_path.c_str());
 }
 
 VOID CALLBACK MainWnd::ToolTipCleanupCallback(HWND hwnd, UINT msg_id, DWORD data, LRESULT result)

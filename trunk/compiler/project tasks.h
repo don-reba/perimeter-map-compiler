@@ -76,12 +76,12 @@ enum ProjectState
 
 enum Resource
 {
-	RS_HEIGHTMAP,
-	RS_TEXTURE,
 	RS_HARDNESS,
-	RS_ZERO_LAYER,
-	RS_SURFACE,
+	RS_HEIGHTMAP,
 	RS_SKY,
+	RS_SURFACE,
+	RS_TEXTURE,
+	RS_ZERO_LAYER,
 	resource_count
 };
 typedef std::bitset<resource_count> IdsType;
@@ -118,6 +118,19 @@ public:
 	TaskCommon::ZeroLayer *zero_layer_;
 };
 
+//---------------------
+// Task exception class
+//---------------------
+
+class TaskException
+{
+public:
+	TaskException(LPCTSTR msg) : msg_(msg) {}
+	const tstring& Msg() const { return msg_; }
+private:
+	tstring msg_;
+};
+
 //---------------------------------------------------------------------------------
 // base class for the family of functors responcible for main application functions
 //---------------------------------------------------------------------------------
@@ -140,7 +153,6 @@ class CreateDefaultFilesTask : public Task, public ErrorHandler
 {
 public:
 	CreateDefaultFilesTask(HWND &error_hwnd);
-public:
 	void operator() ();
 };
 
