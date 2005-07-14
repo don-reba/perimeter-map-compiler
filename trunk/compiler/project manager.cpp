@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+	//-----------------------------------------------------------------------------
 // Perimeter Map Compiler
 // Copyright (c) 2005, Don Reba
 // All rights reserved.
@@ -491,19 +491,24 @@ void ProjectManager::OnProjectUnpacked(HWND main_hwnd)
 {
 }
 
-void ProjectManager::OnResourceNotFound(Resource id)
+void ProjectManager::OnResourceCreated(Resource id)
 {
+	FILETIME null_last_write;
+	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
 	switch (id)
 	{
 	case RS_HARDNESS:
-		tracker_.EnableDatum(id, false);
-		MacroProjectData(ID_CUSTOM_HARDNESS) = false;
+		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
 		break;
 	case RS_ZERO_LAYER:
-		tracker_.EnableDatum(id, false);
-		MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
-	// TODO: complete
+		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero layer.bmp"), null_last_write);
+		break;
 	}
+}
+
+void ProjectManager::OnResourceNotFound(Resource id)
+{
+	tracker_.EnableDatum(id, false);
 }
 
 void ProjectManager::InstallMap()
@@ -577,20 +582,10 @@ void ProjectManager::ReloadFiles(const IdsType &ids)
 		AddTask(new FreeProjectDataTask());
 }
 
-void ProjectManager::CreateResouce(Resource id)
+void ProjectManager::CreateResource(Resource id, HWND main_hwnd)
 {
-	FILETIME null_last_write;
-	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
-	switch (id)
-	{
-	case RS_HARDNESS:
-		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
-		break;
-	case RS_ZERO_LAYER:
-		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero_layer.bmp"), null_last_write);
-		break;
-	}
 	AddTask(new CreateResourceTask(id, error_hwnd_));
+	AddTask(new NotifyResourceCreatedTask(id, main_hwnd));
 	IdsType ids;
 	ids[id] = true;
 	SIZE map_size = {
@@ -609,6 +604,11 @@ void ProjectManager::CreateResouce(Resource id)
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
 		TaskCommon::MapInfo::LoadFromGlobal()));
+}
+
+void ProjectManager::DisableResource(Resource id)
+{
+	tracker_.EnableDatum(id, false);
 }
 
 void ProjectManager::UpdateSettings()

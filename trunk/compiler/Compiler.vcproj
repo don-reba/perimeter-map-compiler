@@ -28,7 +28,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
-				UsePrecompiledHeader="1"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="stdafx.h"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="FALSE"
@@ -442,6 +442,9 @@
 			</File>
 		</Filter>
 		<File
+			RelativePath=".\resource\about.evmp.bz2">
+		</File>
+		<File
 			RelativePath=".\VTune\Compiler.vpj">
 		</File>
 		<File
@@ -466,10 +469,10 @@
 			RelativePath=".\spg_header.txt">
 		</File>
 		<File
-			RelativePath=".\sph.bz2">
+			RelativePath=".\resource\sph.bz2">
 		</File>
 		<File
-			RelativePath=".\resource\sph.bz2">
+			RelativePath=".\sph.bz2">
 		</File>
 		<File
 			RelativePath=".\resource\survival_spg.bz2">

@@ -114,11 +114,19 @@ void ProjectSettingsWnd::Apply()
 	MacroProjectData(ID_CUSTOM_SURFACE)    = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SURFACE));
 	MacroProjectData(ID_CUSTOM_SKY)        = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SKY));
 	if (MacroProjectData(ID_CUSTOM_HARDNESS))
-		project_manager_.CreateResouce(RS_HARDNESS);
+		project_manager_.CreateResource(RS_HARDNESS, main_wnd_.hwnd_);
+	else
+		project_manager_.DisableResource(RS_HARDNESS);
 	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
-		project_manager_.CreateResouce(RS_ZERO_LAYER);
+		project_manager_.CreateResource(RS_ZERO_LAYER, main_wnd_.hwnd_);
+	else
+		project_manager_.DisableResource(RS_ZERO_LAYER);
 	if (MacroProjectData(ID_CUSTOM_SURFACE))
-		project_manager_.CreateResouce(RS_SURFACE);
+		project_manager_.CreateResource(RS_SURFACE, main_wnd_.hwnd_);
+	else
+		project_manager_.DisableResource(RS_SURFACE);
 	if (MacroProjectData(ID_CUSTOM_SKY))
-		project_manager_.CreateResouce(RS_SKY);
+		project_manager_.CreateResource(RS_SKY, main_wnd_.hwnd_);
+	else
+		project_manager_.DisableResource(RS_SKY);
 }

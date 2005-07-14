@@ -138,10 +138,8 @@ int App::Run()
 	MSG msg;
 	HACCEL hAccelTable(LoadAccelerators(instance_, (LPCTSTR)IDC_COMPILER));
 	// Main message loop:
-	__int64 dbg_counter(0);
 	while (GetMessage(&msg, NULL, 0, 0)) 
 	{
-		++dbg_counter;
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
 		{
 			TranslateMessage(&msg);

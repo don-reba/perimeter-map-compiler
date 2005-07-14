@@ -34,7 +34,6 @@
 #define IDR_SPH                         164
 #define IDD_PREFERENCES                 165
 #define IDI_TRIANGLE                    167
-#define IDD_ABOUTBOX                    171
 #define IDD_MAP_MANAGER                 173
 #define IDR_TEXT2                       175
 #define IDR_WORLDS_LIST                 175
@@ -52,6 +51,8 @@
 #define IDD_PROJECT_SETTINGS            200
 #define IDR_SURFACE_TX                  201
 #define IDR_SKY_TX                      202
+#define IDR_BZ25                        203
+#define IDR_EVMP                        203
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_LIGHTING                    1000
@@ -109,7 +110,6 @@
 #define IDC_DISPLAY_TEXTURE             1047
 #define IDC_DISPLAY_HARDNESS            1048
 #define IDC_DISPLAY_ZERO_LAYER          1049
-#define IDC_LIST1                       1049
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -133,7 +133,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        203
+#define _APS_NEXT_RESOURCE_VALUE        204
 #define _APS_NEXT_COMMAND_VALUE         32803
 #define _APS_NEXT_CONTROL_VALUE         1050
 #define _APS_NEXT_SYMED_VALUE           110

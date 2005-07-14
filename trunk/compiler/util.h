@@ -88,3 +88,35 @@ inline int log2(unsigned int n)
 	}
 	return l;
 }
+
+inline void ScreenToClient(HWND hwnd, RECT *rect)
+{
+	POINT corner;
+	RECT &rect_ref(*rect);
+	corner.x = rect_ref.left;
+	corner.y = rect_ref.top;
+	ScreenToClient(hwnd, &corner);
+	rect_ref.left = corner.x;
+	rect_ref.top  = corner.y;
+	corner.x = rect_ref.right;
+	corner.y = rect_ref.bottom;
+	ScreenToClient(hwnd, &corner);
+	rect_ref.right  = corner.x;
+	rect_ref.bottom = corner.y;
+}
+
+inline void ClientToScreen(HWND hwnd, RECT *rect)
+{
+	POINT corner;
+	RECT &rect_ref(*rect);
+	corner.x = rect_ref.left;
+	corner.y = rect_ref.top;
+	ClientToScreen(hwnd, &corner);
+	rect_ref.left = corner.x;
+	rect_ref.top  = corner.y;
+	corner.x = rect_ref.right;
+	corner.y = rect_ref.bottom;
+	ClientToScreen(hwnd, &corner);
+	rect_ref.right  = corner.x;
+	rect_ref.bottom = corner.y;
+}

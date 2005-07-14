@@ -46,10 +46,11 @@ class StatWnd;
 
 enum
 {
-	WM_USR_TOGGLE_BUSY = WM_APP + 32,
+	WM_USR_PROJECT_OPEN = WM_APP + 32,
+	WM_USR_PROJECT_UNPACKED,
+	WM_USR_RESOURCE_CREATED,
 	WM_USR_RESOURCE_NOT_FOUND,
-	WM_USR_PROJECT_OPEN,
-	WM_USR_PROJECT_UNPACKED
+	WM_USR_TOGGLE_BUSY
 };
 
 inline void PostToggleBusy(HWND hwnd, uint task_count) {
@@ -70,14 +71,10 @@ inline void SendProjectUnpacked(HWND hwnd)
 	SendMessage(hwnd, WM_USR_PROJECT_UNPACKED, 0, 0L);
 }
 
-template <>
-struct Msg<WM_USR_TOGGLE_BUSY> : Msg_
+inline void SendResourceCreated(HWND hwnd, Resource id)
 {
-	Msg(WndMsg &msg) : Msg_(msg) {}
-	uint TaskCount() const {
-		return wprm_;
-	}
-};
+	SendMessage(hwnd, WM_USR_RESOURCE_CREATED, id, 0L);
+}
 
 template <>
 struct Msg<WM_USR_RESOURCE_NOT_FOUND> : Msg_
@@ -85,6 +82,24 @@ struct Msg<WM_USR_RESOURCE_NOT_FOUND> : Msg_
 	Msg(WndMsg &msg) : Msg_(msg) {}
 	Resource Id() const {
 		return static_cast<Resource>(wprm_);
+	}
+};
+
+template <>
+struct Msg<WM_USR_RESOURCE_CREATED> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	Resource Id() const {
+		return static_cast<Resource>(wprm_);
+	}
+};
+
+template <>
+struct Msg<WM_USR_TOGGLE_BUSY> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+	uint TaskCount() const {
+		return wprm_;
 	}
 };
 
@@ -162,6 +177,7 @@ private:
 	void OnProjectOpen     (Msg<WM_USR_PROJECT_OPEN>       &msg);
 	void OnProjectUnpacked (Msg<WM_USR_PROJECT_UNPACKED>   &msg);
 	void OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg);
+	void OnResourceCreated (Msg<WM_USR_RESOURCE_CREATED>   &msg);
 	void OnSysColorChange  (Msg<WM_SYSCOLORCHANGE>         &msg);
 	void OnToggleBusy      (Msg<WM_USR_TOGGLE_BUSY>        &msg);
 	// command

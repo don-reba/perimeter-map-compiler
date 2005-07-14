@@ -33,8 +33,11 @@
 
 #include "about wnd.h"
 #include "resource.h"
+#include "resource management.h"
+#include "task common.h"
 
 #include <cmath>
+#include <fstream>
 
 //---------------------
 // About implementation
@@ -49,18 +52,6 @@ About::About()
 	bk_colours_[1] = 0x00007FFF;
 	bk_colours_[2] = 0x00FFFFFF;
 	bk_colours_[3] = 0x00A56E3A;
-	// initialise the hollow control brush
-	ctl_brush_ = ri_cast<HBRUSH>(GetStockObject(HOLLOW_BRUSH));
-	// initialise image list for drawing the icons
-	icon_list_ = ImageList_Create(64, 64, ILC_COLOR24 | ILC_MASK, 1, 1);
-	HICON icon(ri_cast<HICON>(LoadImage(
-		GetModuleHandle(NULL),
-		MAKEINTRESOURCE(IDI_SHRUB_ACTIVE),
-		IMAGE_ICON,
-		0,
-		0,
-		LR_DEFAULTCOLOR)));
-	ImageList_AddIcon(icon_list_, icon);
 	// initialise the painting brush probabilites
 	for (size_t r(0); r != brush_size_; ++r)
 		for (size_t c(0); c != brush_size_; ++c)
@@ -74,18 +65,55 @@ About::About()
 
 About::~About()
 {
-	ImageList_Destroy(icon_list_);
-	DeleteObject(ctl_brush_);
 }
 
 INT_PTR About::DoModal(HWND parent_wnd)
 {
-	return DialogBoxParam(
-		GetModuleHandle(NULL),
-		MAKEINTRESOURCE(IDD_ABOUTBOX),
+	parent_wnd = GetAncestor(parent_wnd, GA_ROOT);
+	HINSTANCE hinstance(GetModuleHandle(NULL));
+	// register window class
+	WNDCLASSEX window_class = { sizeof(window_class) };
+	{
+		window_class.lpfnWndProc   = WndProc<About>;
+		window_class.hInstance     = hinstance;
+		window_class.hIcon         = LoadIcon(hinstance, (LPCTSTR)IDI_COMPILER);
+		window_class.hCursor       = LoadCursor(NULL, IDC_ARROW);
+		window_class.lpszClassName = _T("EnhancedAboutDialog");
+		window_class.hIconSm       = LoadIcon(hinstance, (LPCTSTR)IDI_COMPILER);
+		RegisterClassEx(&window_class);
+	}
+	// create window
+	CreateWindow(
+		window_class.lpszClassName,
+		_T("About Perimeter Map Compiler"),
+		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
 		parent_wnd,
-		DlgProc<About>,
-		ri_cast<LPARAM>(this));
+		NULL,
+		hinstance,
+		this);
+	if (NULL == hwnd_)
+		return IDCANCEL;
+	// disable the parent
+	bool parent_was_enabled = EnableWindow(parent_wnd, FALSE) == FALSE;
+	// enter the message loop
+	MSG msg = {};
+	quitting_ = false;
+	while (!quitting_ && GetMessage(&msg, NULL, 0, 0)) 
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	if (WM_QUIT == msg.message)
+		PostQuitMessage(static_cast<int>(msg.wParam));
+	// enable the parent
+	if (parent_was_enabled)
+		EnableWindow(parent_wnd, TRUE);
+	SetFocus(parent_wnd);
+	return IDOK;
 }
 
 void About::OnCaptureChanged(Msg<WM_CAPTURECHANGED> &msg)
@@ -95,23 +123,69 @@ void About::OnCaptureChanged(Msg<WM_CAPTURECHANGED> &msg)
 	msg.handled_ = true;
 }
 
-void About::OnCommand(Msg<WM_COMMAND> &msg)
+void About::OnCreate(Msg<WM_CREATE> &msg)
 {
-	switch (msg.CtrlId())
-	{
-	case IDOK:
-	case IDCANCEL:
-		EndDialog(hwnd_, 0);
-		return;
-	}
 	msg.result_  = FALSE;
 	msg.handled_ = true;
-}
-
-void About::OnCtlColorStatic(Msg<WM_CTLCOLORSTATIC> &msg)
-{
-	SetBkMode(msg.DC(), TRANSPARENT);
-	msg.result_  = ri_cast<LRESULT>(ctl_brush_);
+	// load evmp
+	uint width, height;
+	{
+		const size_t evmp_alloc(0x200000); // 2MB should be enough
+		vector<BYTE> evmp(evmp_alloc);
+		if (!RsrcMgmt::UncompressResource(IDR_EVMP, &evmp[0], evmp_alloc))
+		{
+			MacroDisplayError(_T("EVMP could not be loaded."));
+			return;
+		}
+		width  = *ri_cast<uint*>(&evmp[0]);
+		height = *ri_cast<uint*>(&evmp[4]);
+		bmp_size_.cx = width;
+		bmp_size_.cy = height;
+		map_size_.cx = width + 1;
+		map_size_.cy = height;
+		map_.resize(map_size_.cx * map_size_.cy);
+		CopyMemory(&map_[0], &evmp[8], map_.size() * sizeof(MapPixel));
+	}
+	// initialise the background bitmap
+	{
+		RECT client_rect;
+		GetClientRect(hwnd_, &client_rect);
+		HDC client_dc(GetDC(hwnd_));
+		bk_dc_ = CreateCompatibleDC(client_dc);
+		bk_bmp_ = CreateCompatibleBitmap(
+			client_dc,
+			client_rect.right - client_rect.left,
+			client_rect.bottom - client_rect.top);
+		ReleaseDC(hwnd_, client_dc);
+		SelectObject(bk_dc_, bk_bmp_);
+		RenderLines(0, 316);
+	}
+	// resize window (centre on the same monitor as the parent)
+	{
+		RECT rect = { 0, 0, width, height };
+		AdjustWindowRect(&rect, GetWindowLong(hwnd_, GWL_STYLE), FALSE);
+		HMONITOR monitor(MonitorFromWindow(GetParent(hwnd_), MONITOR_DEFAULTTONEAREST));
+		MONITORINFO info = { sizeof(info) };
+		if (!GetMonitorInfo(monitor, &info))
+		{
+			MacroDisplayError(_T("Monitor information could not be querried."));
+			return;
+		}
+		SIZE win_size = { rect.right - rect.left, rect.bottom - rect.top };
+		RECT &mon_rect(info.rcMonitor);
+		SetWindowPos(
+			hwnd_,
+			NULL,
+			mon_rect.left + ((mon_rect.right  - mon_rect.left) - win_size.cx) / 2,
+			mon_rect.top  + ((mon_rect.bottom - mon_rect.top)  - win_size.cy) / 2,
+			win_size.cx,
+			win_size.cy,
+			SWP_SHOWWINDOW | SWP_NOZORDER);
+	}
+	// set timers
+	SetTimer(hwnd_, TMR_CHANGE_BK,   12000, NULL);
+	SetTimer(hwnd_, TMR_DRAW_STROKE, 128,   NULL);
+	msg.result_  = TRUE;
 	msg.handled_ = true;
 }
 
@@ -120,6 +194,7 @@ void About::OnDestroy(Msg<WM_DESTROY> &msg)
 	// destroy the background dc
 	DeleteDC(bk_dc_);
 	DeleteObject(bk_bmp_);
+	quitting_ = true;
 	msg.result_  = FALSE;
 	msg.handled_ = true;
 }
@@ -139,35 +214,17 @@ void About::OnEraseBkgnd(Msg<WM_ERASEBKGND> &msg)
 		0,
 		0,
 		SRCCOPY);
-	// draw icon
-	ImageList_Draw(icon_list_, 0, msg.DC(), 12, 12, ILD_NORMAL);
-	msg.result_  = TRUE;
 	msg.handled_ = true;
 }
 
-void About::OnInitDialog(Msg<WM_INITDIALOG> &msg)
+void About::OnKeyDown(Msg<WM_KEYDOWN> &msg)
 {
-	// initialise the background bitmap
+	switch (msg.VKey())
 	{
-		RECT client_rect;
-		GetClientRect(hwnd_, &client_rect);
-		HDC client_dc(GetDC(hwnd_));
-		bk_dc_ = CreateCompatibleDC(client_dc);
-		bk_bmp_ = CreateCompatibleBitmap(
-			client_dc,
-			client_rect.right - client_rect.left,
-			client_rect.bottom - client_rect.top);
-		ReleaseDC(hwnd_, client_dc);
-		SelectObject(bk_dc_, bk_bmp_);
-		HBRUSH brush(CreateSolidBrush(bk_colours_[0]));
-		FillRect(bk_dc_, &client_rect, brush);
-		DeleteObject(brush);
+	case VK_ESCAPE:
+		DestroyWindow(hwnd_);
+		break;
 	}
-	// set timers
-	SetTimer(hwnd_, ri_cast<UINT_PTR>(this),     12000, ChangeBackground);
-	SetTimer(hwnd_, ri_cast<UINT_PTR>(this) + 1, 128,   DrawStroke);
-	msg.result_  = TRUE;
-	msg.handled_ = true;
 }
 
 void About::OnLButtonDown(Msg<WM_LBUTTONDOWN> &msg)
@@ -204,21 +261,7 @@ void About::OnSetCursor(Msg<WM_SETCURSOR> &msg)
 	RECT client_rect;
 	POINT cursor_pos;
 	GetClientRect(hwnd_, &client_rect);
-	{
-		POINT corner;
-		// top left
-		corner.x = client_rect.left;
-		corner.y = client_rect.top;
-		ClientToScreen(hwnd_, &corner);
-		client_rect.left = corner.x;
-		client_rect.top  = corner.y;
-		// bottom right
-		corner.x = client_rect.right;
-		corner.y = client_rect.bottom;
-		ClientToScreen(hwnd_, &corner);
-		client_rect.right  = corner.x;
-		client_rect.bottom = corner.y;
-	}
+	ClientToScreen(hwnd_, &client_rect);
 	GetCursorPos(&cursor_pos);
 	if (TRUE == PtInRect(&client_rect, cursor_pos))
 		SetCursor(LoadCursor(NULL, IDC_HAND));
@@ -228,54 +271,190 @@ void About::OnSetCursor(Msg<WM_SETCURSOR> &msg)
 	msg.handled_ = true;
 }
 
+void About::OnTimer(Msg<WM_TIMER> &msg)
+{
+	switch (msg.TimerId())
+	{
+	case TMR_CHANGE_BK:   ChangeBackground(); break;
+	case TMR_DRAW_STROKE: DrawStroke();       break;
+	};
+}
+
 void About::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
 	{
 		&About::OnCaptureChanged,
-		&About::OnCommand,
-		&About::OnCtlColorStatic,
+		&About::OnCreate,
 		&About::OnDestroy,
 		&About::OnEraseBkgnd,
-		&About::OnInitDialog,
+		&About::OnKeyDown,
 		&About::OnLButtonDown,
 		&About::OnLButtonUp,
 		&About::OnMouseMove,
-		&About::OnSetCursor
+		&About::OnSetCursor,
+		&About::OnTimer
 	};
 	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
 }
 
-VOID CALLBACK About::ChangeBackground(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+void About::ChangeBackground()
 {
-	About* obj(ri_cast<About*>(idEvent));
-	obj->current_bk_colour_ = (obj->current_bk_colour_ + 1) % obj->num_bk_colours_;
+	current_bk_colour_ = (current_bk_colour_ + 1) % num_bk_colours_;
 }
 
-VOID CALLBACK About::DrawStroke(HWND hWnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+void About::DrawStroke()
 {
-	About* obj(ri_cast<About*>(idEvent - 1));
-	if (!obj->painting_)
+	if (!painting_)
+		return;
+	// return if the brush does not touch the canvas
+	if (
+		cursor_pos_.x + static_cast<int>(brush_size_) <  0            ||
+		cursor_pos_.y + static_cast<int>(brush_size_) <  0            ||
+		cursor_pos_.x - static_cast<int>(brush_size_) >= bmp_size_.cx ||
+		cursor_pos_.y - static_cast<int>(brush_size_) >= bmp_size_.cy)
 		return;
 	// seed random number generator
 	srand(clock());
+	// calculate the border around the painting region
+	_ASSERTE(0 == brush_size_ % 2);
+	const int radius(brush_size_ / 2);
+	RECT offset;
+	offset.left   = cursor_pos_.x - radius;
+	offset.top    = cursor_pos_.y - radius;
+	offset.right  = map_size_.cx - offset.left - brush_size_;
+	offset.bottom = map_size_.cy - offset.top  - brush_size_;
 	// draw a stroke
-	for (size_t r(0); r != brush_size_; ++r)
-		for (size_t c(0); c != brush_size_; ++c)
+	MapType::iterator map_iter(map_.begin() + map_size_.cx * offset.top);
+	for (int r(0); r != brush_size_; ++r)
+	{
+		if (0 <= offset.top + r && offset.top + r < bmp_size_.cy)
 		{
-			float p(static_cast<float>(rand()));
-			p /= RAND_MAX;
-			if (p > obj->brush_[r][c])
+			map_iter += offset.left;
+			for (int c(0); c != brush_size_; ++c)
 			{
-				const size_t x(r - brush_size_ / 2);
-				const size_t y(c - brush_size_ / 2);
-				SetPixelV(
-					obj->bk_dc_,
-					obj->cursor_pos_.x + x,
-					obj->cursor_pos_.y + y,
-					obj->bk_colours_[obj->current_bk_colour_]);
+				if (0 <= offset.left + c && offset.left + c < bmp_size_.cx)
+				{
+					float p(static_cast<float>(rand()));
+					p /= RAND_MAX;
+					if (p > brush_[r][c] && map_iter->flags | MapPixel::F_SOFT)
+						if (current_bk_colour_)
+							map_iter->top_texture = bk_colours_[current_bk_colour_];
+						else
+							map_iter->heightmap = static_cast<uint>(__max(0, static_cast<int>(map_iter->heightmap) - 4));
+				}
+				++map_iter;
 			}
+			map_iter += offset.right;
 		}
-	InvalidateRect(hWnd, NULL, TRUE);
+		else
+			map_iter += map_size_.cx;
+	}
+	{
+		uint overlap(0);
+		if (offset.top < 0)
+			overlap += -offset.top;
+		if (offset.top + brush_size_ >= bmp_size_.cy)
+			overlap += offset.top + brush_size_ - bmp_size_.cy + 1;
+		const uint first_line(__max(0, offset.top));
+		const uint line_count(brush_size_ - overlap);
+		RenderLines(first_line, line_count);
+	}
+	InvalidateRect(hwnd_, NULL, TRUE);
+}
+
+void About::RenderLines(uint first_line, uint line_count)
+{
+	// precalculate surface-sun dot products
+	BYTE surface_sun_dot[0x100];
+	{
+		const float dx(1.0f);
+		for (uint i(0); i != 0x100; ++i)
+		{
+			const float dy(static_cast<float>(i));
+			float length(sqrt(2 * (dx * dx + dy * dy)));
+			float dot((dx + dy) / length);
+			surface_sun_dot[i] = (BYTE)(0xFF * dot);
+		}
+	}
+	// allocate a temporary buffer
+	const int border(3);
+	SIZE temp_dim = { bmp_size_.cx + 2 * border, line_count + 2 * border };
+	typedef vector<BYTE> TempType;
+	TempType temp(temp_dim.cx * temp_dim.cy);
+	// calculate adjusted first_line and line_count, for borders
+	const uint first_line_e(__max(0, (int)first_line - border));
+	const uint temp_offset (border + first_line_e - first_line);
+	const uint line_count_e(__min(
+		line_count + border * 2 - temp_offset,
+		line_count - (first_line_e + line_count - bmp_size_.cy)));
+	// calculate the lightmap
+	{
+		TempType::iterator      temp_iter(temp.begin() + temp_dim.cx * temp_offset);
+		MapType::const_iterator map_iter (map_.begin() + map_size_.cx * first_line_e);
+		MapType::const_iterator row_iter;
+		MapType::const_iterator high_point_x;
+		int                     high_point_z;
+		for (uint y(0); y != line_count_e; ++y)
+		{
+			row_iter     = map_iter + bmp_size_.cx;  // end of the row
+			high_point_x = row_iter;                 // location of the nearest peak
+			high_point_z = row_iter->heightmap;      // hight of the nearest peak
+			temp_iter += bmp_size_.cx + border;      // move to the end of the row
+			while (row_iter != map_iter)
+			{
+				--temp_iter;
+				--row_iter;
+				const ptrdiff_t point_x(&*high_point_x - &*row_iter); // distance to the nearest peak
+				const int       point_z(row_iter->heightmap);         // height of the current point
+				// if the point is unshadowed, dot surface slope with the sun, othewise set to zero
+				if (high_point_z - point_z < point_x * 2)
+				{
+					// multiply the texture by ratio (using integer arithmetic)
+					_ASSERTE(temp_iter - temp.begin() < temp.size());
+					*temp_iter = surface_sun_dot[point_z - row_iter[1].heightmap];
+					// shift the highest point to this one
+					high_point_z = point_z;
+					high_point_x = row_iter;
+				}
+				else
+					*temp_iter = 0x30;
+			}
+			temp_iter += temp_dim.cx - border;
+			map_iter  += map_size_.cx;
+		}
+	}
+	// mirror the bottom border
+	/*{
+		TempType::iterator temp_iter(temp.begin() + temp_dim.cx * (bmp_size_.cx + border));
+		for (int i(0); i != border; ++i)
+	}*/
+	// blur the buffer
+	TaskCommon::GaussianBlur<BYTE, unsigned short>(&temp[0], temp_dim);
+	// merge the buffer with the bitmap
+	{
+		TempType::const_iterator temp_iter(temp.begin() + temp_dim.cx * border);
+		MapType::const_iterator  map_iter (map_.begin() + map_size_.cx * first_line);
+		for (uint y(first_line); y != first_line + line_count; ++y)
+		{
+			temp_iter += border;
+			for (LONG x(0); x != bmp_size_.cx; ++x)
+			{
+				// determine the texture colour
+				const COLORREF colour(map_iter->heightmap ? map_iter->top_texture : map_iter->bottom_texture);
+				// compute the lighting ratio * 0x100
+				const uint factor(0x101); // precision (odd to avoid bit shifts)
+				const uint i_light(((*temp_iter + 0x80) * factor) / 0x100);
+				SetPixelV(bk_dc_, x, y, RGB(
+					__min(0xFF, (GetRValue(colour) * i_light) / factor),
+					__min(0xFF, (GetGValue(colour) * i_light) / factor),
+					__min(0xFF, (GetBValue(colour) * i_light) / factor)));
+				++temp_iter;
+				++map_iter;
+			}
+			temp_iter += border;
+			++map_iter;
+		}
+	}
 }

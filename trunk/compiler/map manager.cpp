@@ -372,22 +372,6 @@ void MapManager::FilesInDir(LPCTSTR dir, vector<tstring> &files, size_t depth)
 	}
 }
 
-void MapManager::ScreenToClient(HWND hwnd, RECT *rect)
-{
-	POINT corner;
-	RECT &rect_ref(*rect);
-	corner.x = rect_ref.left;
-	corner.y = rect_ref.top;
-	::ScreenToClient(hwnd, &corner);
-	rect_ref.left = corner.x;
-	rect_ref.top  = corner.y;
-	corner.x = rect_ref.right;
-	corner.y = rect_ref.bottom;
-	::ScreenToClient(hwnd, &corner);
-	rect_ref.right  = corner.x;
-	rect_ref.bottom = corner.y;
-}
-
 void MapManager::GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool recurse)
 {
 	vector<TCHAR> path_vector(MAX_PATH);

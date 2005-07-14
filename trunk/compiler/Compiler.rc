@@ -292,20 +292,6 @@ BEGIN
                     BS_AUTORADIOBUTTON | WS_TABSTOP,120,143,47,10
 END
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 234, 150
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
-    WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-EXSTYLE WS_EX_TOPMOST
-CAPTION "About Perimeter Map Compiler"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
-BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,116,129,50,14
-    LTEXT           "Perimeter Map Compiler 1.1 beta 2\nCopyright (c) 2005, Don Reba\nAll rights reserved.",
-                    IDC_STATIC,49,47,177,27
-    LTEXT           "Special thanks to:\n@!!ex - for pioneering work with Perimeter file formats\nK-D Lab - for feedback and support\nToR and V.I.N. - for beta testing",
-                    IDC_STATIC,49,79,177,35
-END
-
 IDD_MAP_MANAGER DIALOGEX 0, 0, 148, 116
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | 
     WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
@@ -398,18 +384,6 @@ BEGIN
         BOTTOMMARGIN, 178
     END
 
-    IDD_ABOUTBOX, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 226
-        VERTGUIDE, 28
-        VERTGUIDE, 49
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 143
-        HORZGUIDE, 27
-        HORZGUIDE, 47
-    END
-
     IDD_MAP_MANAGER, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -449,6 +423,7 @@ IDR_WORLDS_LIST         BZ2                     "resource\\worlds_list.bz2"
 IDR_WORLDS_LIST_2       BZ2                     "resource\\worlds_list2.bz2"
 IDR_SURFACE_TX          BZ2                     "resource\\leveledSurfaceTexture.bz2"
 IDR_SKY_TX              BZ2                     "resource\\up.bz2"
+IDR_EVMP                BZ2                     "resource\\about.evmp.bz2"
 
 /////////////////////////////////////////////////////////////////////////////
 //

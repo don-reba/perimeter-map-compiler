@@ -51,7 +51,6 @@ protected:
 	void ProcessMessage(WndMsg &msg);
 private:
 	static void FilesInDir(LPCTSTR dir, vector<tstring> &files, size_t depth = 0);
-	static void ScreenToClient(HWND hwnd, RECT *rect);
 private:
 	void    GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool recurse = true);
 	bool    GetInstallPath(string &install_path);

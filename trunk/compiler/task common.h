@@ -286,8 +286,8 @@ namespace TaskCommon
 	public:
 		static void Apply(T *pix, SIZE size)
 		{
-			StateT sr0, sr1, sr2, sr3;                   // row state
-			vector<SC> sc(size.cx); // column state
+			StateT sr0, sr1, sr2, sr3; // row state
+			vector<SC> sc(size.cx);    // column state
 			const LONG write_offset(-size.cx * 2 - 2);
 			for (LONG y = 0; y != 4; ++y)
 			{
@@ -356,7 +356,7 @@ namespace TaskCommon
 					sc1 = tmp2;
 					tmp2 = sc2 + tmp1;
 					sc2 = tmp1;
-					pix[write_offset] = (static_cast<StateT>(0x80) + sc3 + tmp2) / static_cast<StateT>(0x100);
+					pix[write_offset] = static_cast<T>((static_cast<StateT>(0x80) + sc3 + tmp2) / static_cast<StateT>(0x100));
 					sc3 = tmp2;
 					++pix;
 				}

@@ -256,6 +256,19 @@ private:
 };
 
 //------------------------------------------
+// notifies that a resource has been created
+//------------------------------------------
+class NotifyResourceCreatedTask : public Task
+{
+public:
+	NotifyResourceCreatedTask(Resource id, HWND main_hwnd);
+	void operator() ();
+private:
+	Resource id_;
+	HWND     main_hwnd_;
+};
+
+//------------------------------------------
 // notifies that a project has been unpacked
 //------------------------------------------
 class NotifyProjectUnpackedTask : public Task

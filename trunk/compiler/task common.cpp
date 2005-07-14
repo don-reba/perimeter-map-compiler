@@ -617,41 +617,41 @@ namespace TaskCommon
 				const float dy(static_cast<float>(i));
 				float length(sqrt(2 * (dx * dx + dy * dy)));
 				float dot((dx + dy) / length);
-				surface_sun_dot[i] = (BYTE)(255 * dot);
+				surface_sun_dot[i] = (BYTE)(0xFF * dot);
 			}
 		}
 		// allocate memory for the lightmap
 		const size_t data_size(size_.cx * size_.cy);
 		_ASSERTE(NULL == data_);
-		data_ = new BYTE[data_size];
-		// calculate lighting
-		const BYTE *hi(heightmap.data_); // heightmap iterator
-		BYTE *li(data_); // lightmap iterator
-		for (LONG r(0); r != size_.cy; ++r)
-		{
-			const BYTE * row_i(hi + size_.cx);
-			int          high_point_z(*row_i);
-			const BYTE * high_point_x(row_i);
-			li += size_.cx;
-			while (row_i != hi)
+			data_ = new BYTE[data_size];
+			// calculate lighting
+			const BYTE *hi(heightmap.data_); // heightmap iterator
+			BYTE *li(data_); // lightmap iterator
+			for (LONG r(0); r != size_.cy; ++r)
 			{
-				--li;
-				--row_i;
-				const ptrdiff_t point_x(high_point_x - row_i);
-				const int       point_z(*row_i);
-				if (high_point_z - point_z < point_x)
-				// if the point is unshadowed
+				const BYTE * row_i(hi + size_.cx);
+				int          high_point_z(*row_i);
+				const BYTE * high_point_x(row_i);
+				li += size_.cx;
+				while (row_i != hi)
 				{
-					*li = surface_sun_dot[static_cast<int>(row_i[0]) - row_i[1]];
-					high_point_z = point_z;
-					high_point_x = row_i;
+					--li;
+					--row_i;
+					const ptrdiff_t point_x(high_point_x - row_i);
+					const int       point_z(*row_i);
+					if (high_point_z - point_z < point_x)
+					// if the point is unshadowed
+					{
+						*li = surface_sun_dot[point_z - row_i[1]];
+						high_point_z = point_z;
+						high_point_x = row_i;
+					}	
+					else
+						*li = 0x00;
 				}
-				else
-					*li = 0x00;
+				li += size_.cx;
+				hi += size_.cx + 1;
 			}
-			li += size_.cx;
-			hi += size_.cx + 1;
-		}
 		// blur the lightmap (fake soft shadows :) )
 		GaussianBlur<BYTE, unsigned short>(data_, size_);
 		GaussianBlur<BYTE, unsigned short>(data_, size_);
@@ -734,7 +734,6 @@ namespace TaskCommon
 	{
 		size_t sizes[8] =
 		{
-			map_name_.size() * sizeof(tstring::value_type),
 			sizeof(power_x_),
 			sizeof(power_y_),
 			sizeof(zero_level_),
@@ -747,14 +746,13 @@ namespace TaskCommon
 		for (int i(0); i != 8; ++i)
 			*size += sizes[i];
 		*data = new BYTE[*size];
-		CopyMemory(*data, map_name_.c_str(), sizes[0]);
-		CopyMemory(*data, &power_x_,         sizes[1]);
-		CopyMemory(*data, &power_y_,         sizes[2]);
-		CopyMemory(*data, &zero_level_,      sizes[3]);
-		CopyMemory(*data, &fog_start_,       sizes[4]);
-		CopyMemory(*data, &fog_end_,         sizes[5]);
-		CopyMemory(*data, &fog_colour_,      sizes[6]);
-		CopyMemory(*data, &sps_,             sizes[7]);
+		CopyMemory(*data, &power_x_,    sizes[0]);
+		CopyMemory(*data, &power_y_,    sizes[1]);
+		CopyMemory(*data, &zero_level_, sizes[2]);
+		CopyMemory(*data, &fog_start_,  sizes[3]);
+		CopyMemory(*data, &fog_end_,    sizes[4]);
+		CopyMemory(*data, &fog_colour_, sizes[5]);
+		CopyMemory(*data, &sps_,        sizes[6]);
 	}
 
 	void MapInfo::Pack(TiXmlNode &node)
@@ -2148,12 +2146,12 @@ namespace TaskCommon
 						{
 							// NOTE: optimized to avoid fp ops (the compiler insists on calling _ftol)
 							const COLORREF colour(texture.palette_[texture.indices_[offset]]);
-							const uint factor(257); // precision
-							uint i_light(static_cast<uint>(lightmap.data_[offset++]) * factor);
-							i_light = (i_light + (128 * factor)) / 255;
-							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetBValue(colour) * i_light) / factor));
-							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetGValue(colour) * i_light) / factor));
-							*texture_iterator++ = static_cast<BYTE>(__min(255, (GetRValue(colour) * i_light) / factor));
+							const uint factor(0x101); // precision (odd to avoid bit shifts)
+							uint i_light(lightmap.data_[offset++] * factor);
+							i_light = (i_light + (0x80 * factor)) / 0xFF;
+							*texture_iterator++ = static_cast<BYTE>(__min(0xFF, (GetBValue(colour) * i_light) / factor));
+							*texture_iterator++ = static_cast<BYTE>(__min(0xFF, (GetGValue(colour) * i_light) / factor));
+							*texture_iterator++ = static_cast<BYTE>(__min(0xFF, (GetRValue(colour) * i_light) / factor));
 							*texture_iterator++ = 0xFF; // alpha
 						}
 						offset += texture.size_.cx - allocation.width_;

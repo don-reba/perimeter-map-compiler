@@ -573,6 +573,20 @@ void LoadProjectDataTask::operator() ()
 		task_data_.surface_->Load(PathCombine(path, folder_path, _T("surface.bmp")));
 }
 
+//-----------------------------------------
+// NotifyResourceCreatedTask implementation
+//-----------------------------------------
+
+NotifyResourceCreatedTask::NotifyResourceCreatedTask(Resource id, HWND main_hwnd)
+	:id_       (id)
+	,main_hwnd_(main_hwnd)
+{}
+
+void NotifyResourceCreatedTask::operator() ()
+{
+	SendResourceCreated(main_hwnd_, id_);
+}
+
 //-------------------------------------
 // NotifyProjectOpenTask implementation
 //-------------------------------------

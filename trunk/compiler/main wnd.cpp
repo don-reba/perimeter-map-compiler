@@ -173,7 +173,7 @@ bool MainWnd::Create(POINT position)
 		}
 	}
 	// create the main window
-	hwnd_ = CreateWindow(
+	CreateWindow(
 		window_class.lpszClassName,
 		_T("Perimeter Map Compiler"),
 		MainWndMetrics::window_style,
@@ -410,18 +410,24 @@ void MainWnd::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
 	{
-		&MainWnd::OnResourceNotFound,
 		&MainWnd::OnCommand,
 		&MainWnd::OnCreate,
 		&MainWnd::OnDestroy,
 		&MainWnd::OnEnabled,
 		&MainWnd::OnProjectOpen,
 		&MainWnd::OnProjectUnpacked,
+		&MainWnd::OnResourceCreated,
+		&MainWnd::OnResourceNotFound,
 		&MainWnd::OnSysColorChange,
 		&MainWnd::OnToggleBusy
 	};
 		if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
+}
+
+void MainWnd::OnResourceCreated(Msg<WM_USR_RESOURCE_CREATED> &msg)
+{
+	project_manager_.OnResourceCreated(msg.Id());
 }
 
 void MainWnd::OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg)

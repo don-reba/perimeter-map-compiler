@@ -103,13 +103,15 @@ public:
 	void OnProjectOpen(HWND main_hwnd);
 	void OnProjectUnpacked(HWND main_hwnd);
 	void OnResourceNotFound(Resource id);
+	void OnResourceCreated(Resource id);
 	// map management
 	void InstallMap();
 	// miscellaneous
 	void SaveThumbnail();
 	// data management
+	void CreateResource(Resource id, HWND main_hwnd);
+	void DisableResource(Resource id);
 	void ReloadFiles(const IdsType &ids);
-	void CreateResouce(Resource id);
 	// settings
 	void UpdateSettings();
 // internal function

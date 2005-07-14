@@ -74,8 +74,9 @@ protected:
 		static bool initialized(false);
 		if (WM_CREATE == uMsg)
 		{
-			reinterpret_cast<Window*>(lParam)->hwnd_ = hWnd;
-			SetWindowLong(hWnd, GWL_USERDATA, ri_cast<LONG>(ri_cast<CREATESTRUCT*>(lParam)->lpCreateParams));
+			LPCREATESTRUCT cs(ri_cast<LPCREATESTRUCT>(lParam));
+			ri_cast<Window*>(cs->lpCreateParams)->hwnd_ = hWnd;
+			SetWindowLong(hWnd, GWL_USERDATA, ri_cast<LONG>(cs->lpCreateParams));
 			initialized = true;
 		}
 		if (!initialized)
