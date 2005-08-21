@@ -186,7 +186,7 @@ namespace TaskCommon
 	void Hardness::Save(LPCTSTR path)
 	{
 		_ASSERTE(NULL != data_);
-		// initialize the heightmap image
+		// initialize the hardness image
 		fipImage image(
 			FIT_BITMAP,
 			static_cast<WORD>(size_.cx),
@@ -1331,7 +1331,7 @@ namespace TaskCommon
 		// record xml metadata
 		{
 			TCHAR str[16];
-			// offset of compressed heightmap data
+			// offset of the compressed data
 			_itot(buffer - initial_offset, str, 10);
 			node.InsertEndChild(TiXmlElement("offset"))->InsertEndChild(TiXmlText(str));
 		}
@@ -1341,7 +1341,7 @@ namespace TaskCommon
 	void ZeroLayer::Save(LPCTSTR path)
 	{
 		_ASSERTE(!data_.empty());
-		// initialize the heightmap image
+		// initialize the image
 		fipImage image(
 			FIT_BITMAP,
 			static_cast<WORD>(size_.cx),

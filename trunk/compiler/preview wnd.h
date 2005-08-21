@@ -145,6 +145,19 @@ private:
 		D3DCOLOR color;
 		static const DWORD FVF = D3DFVF_XYZ | D3DFVF_DIFFUSE;
 	};
+	class Marker : public Billboard
+	{
+	public:
+		Marker(D3DXCOLOR colour);
+		D3DXCOLOR GetColour();
+		bool      Initialize(IDirect3DDevice9 *device);
+		void      Release();
+		bool      Set(D3DXVECTOR2 position);
+		void      SetColour(D3DXCOLOR colour);
+	private:
+		D3DXCOLOR colour_;
+	};
+	typedef vector<Marker> Markers;
 	// map segment for rendering
 	struct Section
 	{
@@ -202,8 +215,7 @@ protected:
 	void ProcessMessage(WndMsg &msg);
 private:
 	void BuildZeroLayerVB();
-	void InitializeDevice();
-	void MakeFrameMarker(uint marker, D3DXVECTOR2 position);
+	bool InitializeDevice();
 	void MakeProjectiveMatrix();
 	void MakeViewMatrix();
 	void PopWorldMatrix();
@@ -216,8 +228,7 @@ private:
 	IDirect3D9       *d3d_;
 	IDirect3DDevice9 *device_;
 	// DX resources
-	static const size_t     billboard_count_ = 5;
-	Billboard               billboards_[billboard_count_];
+	Markers                 markers_;
 	IDirect3DVertexBuffer9 *terrain_vb_;
 	std::stack<D3DXMATRIX>  world_matrix_stack_;
 	FLOAT                   world_stretch_;

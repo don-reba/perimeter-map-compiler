@@ -181,21 +181,15 @@ bool FileTracker::WasUpdated(FileDatum &datum, Resource id)
 	TCHAR path[MAX_PATH];
 	PathCombine(path, folder_path_.c_str(), datum.file_name_.c_str());
 	// open the file
-	HANDLE file(INVALID_HANDLE_VALUE);
+	WIN32_FILE_ATTRIBUTE_DATA attributes;
+	bool attributes_valid(false);
 	const DWORD retry_interval(1000); // milliseconds
 	const uint  try_count(8);
 	uint try_num(0);
 	for (; try_num != try_count; ++try_num)
 	{
-		file = CreateFile(
-			path,
-			GENERIC_READ,
-			FILE_SHARE_READ | FILE_SHARE_WRITE,
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL);
-		if (INVALID_HANDLE_VALUE == file)
+		Sleep(retry_interval);
+		if (FALSE == GetFileAttributesEx(path, GetFileExInfoStandard, &attributes))
 		{
 			DWORD error(GetLastError());
 			if (ERROR_FILE_NOT_FOUND == error)
@@ -203,20 +197,17 @@ bool FileTracker::WasUpdated(FileDatum &datum, Resource id)
 				(*file_not_found_)(id, path);
 				return false;
 			}
-			else
-				Sleep(retry_interval);
 		}
 		else
+		{
+			attributes_valid = true;
 			break;
+		}
 	}
-	if (INVALID_HANDLE_VALUE == file || try_count == try_num)
+	if (!attributes_valid)
 		return false;
-	// retrieve the last write time
-	FILETIME last_write;
-	GetFileTime(file, NULL, NULL, &last_write);
-	CloseHandle(file);
 	// check if the file has been written to since the last write
-	bool was_updated(0 > CompareFileTime(&datum.last_write_, &last_write));
-	datum.last_write_ = last_write;
+	bool was_updated(0 > CompareFileTime(&datum.last_write_, &attributes.ftLastWriteTime));
+	datum.last_write_ = attributes.ftLastWriteTime;
 	return was_updated;
 }

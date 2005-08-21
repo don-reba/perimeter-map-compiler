@@ -45,13 +45,14 @@
 
 About::About()
 	:painting_(false)
-	,current_bk_colour_(1)
+	,current_bk_colour_(0)
 {
+	// set initial mouse coordinate records
+	cursor_pos_.x = cursor_pos_.y = 0;
 	// initialise the background colours
-	bk_colours_[0] = GetSysColor(COLOR_BTNFACE);
-	bk_colours_[1] = 0x00007FFF;
-	bk_colours_[2] = 0x00FFFFFF;
-	bk_colours_[3] = 0x00A56E3A;
+	bk_colours_[0] = 0x00007FFF;
+	bk_colours_[1] = 0x00FFFFFF;
+	bk_colours_[2] = 0x00A56E3A;
 	// initialise the painting brush probabilites
 	for (size_t r(0); r != brush_size_; ++r)
 		for (size_t c(0); c != brush_size_; ++c)
@@ -69,8 +70,10 @@ About::~About()
 
 INT_PTR About::DoModal(HWND parent_wnd)
 {
-	parent_wnd = GetAncestor(parent_wnd, GA_ROOT);
+	parent_hwnd_ = GetAncestor(parent_wnd, GA_ROOT);
 	HINSTANCE hinstance(GetModuleHandle(NULL));
+	// disable the parent
+	parent_was_enabled_ = EnableWindow(parent_hwnd_, FALSE) == FALSE;
 	// register window class
 	WNDCLASSEX window_class = { sizeof(window_class) };
 	{
@@ -91,14 +94,17 @@ INT_PTR About::DoModal(HWND parent_wnd)
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		parent_wnd,
+		parent_hwnd_,
 		NULL,
 		hinstance,
 		this);
 	if (NULL == hwnd_)
+	{
+		// enable the parent
+		if (parent_was_enabled_)
+			EnableWindow(parent_hwnd_, TRUE);
 		return IDCANCEL;
-	// disable the parent
-	bool parent_was_enabled = EnableWindow(parent_wnd, FALSE) == FALSE;
+	}
 	// enter the message loop
 	MSG msg = {};
 	quitting_ = false;
@@ -109,10 +115,6 @@ INT_PTR About::DoModal(HWND parent_wnd)
 	}
 	if (WM_QUIT == msg.message)
 		PostQuitMessage(static_cast<int>(msg.wParam));
-	// enable the parent
-	if (parent_was_enabled)
-		EnableWindow(parent_wnd, TRUE);
-	SetFocus(parent_wnd);
 	return IDOK;
 }
 
@@ -183,7 +185,7 @@ void About::OnCreate(Msg<WM_CREATE> &msg)
 			SWP_SHOWWINDOW | SWP_NOZORDER);
 	}
 	// set timers
-	SetTimer(hwnd_, TMR_CHANGE_BK,   12000, NULL);
+	SetTimer(hwnd_, TMR_CHANGE_BK,   10000, NULL);
 	SetTimer(hwnd_, TMR_DRAW_STROKE, 128,   NULL);
 	msg.result_  = TRUE;
 	msg.handled_ = true;
@@ -194,9 +196,8 @@ void About::OnDestroy(Msg<WM_DESTROY> &msg)
 	// destroy the background dc
 	DeleteDC(bk_dc_);
 	DeleteObject(bk_bmp_);
+	// set the modal loop to stop
 	quitting_ = true;
-	msg.result_  = FALSE;
-	msg.handled_ = true;
 }
 
 void About::OnEraseBkgnd(Msg<WM_ERASEBKGND> &msg)
@@ -221,17 +222,24 @@ void About::OnKeyDown(Msg<WM_KEYDOWN> &msg)
 {
 	switch (msg.VKey())
 	{
+	case VK_RETURN:
 	case VK_ESCAPE:
-		DestroyWindow(hwnd_);
+	case VK_SPACE:
+		Destroy();
 		break;
 	}
 }
 
 void About::OnLButtonDown(Msg<WM_LBUTTONDOWN> &msg)
 {
-	SetCapture(hwnd_);
 	cursor_pos_.x = msg.Position().x;
 	cursor_pos_.y = msg.Position().y;
+	if (
+		cursor_pos_.x > 0 && cursor_pos_.x < bmp_size_.cx &&
+		cursor_pos_.y > 0 && cursor_pos_.y < bmp_size_.cy &&
+		!(map_[cursor_pos_.y * map_size_.cx + cursor_pos_.x].flags & MapPixel::F_OK))
+		Destroy();
+	SetCapture(hwnd_);
 	painting_     = true;
 	msg.result_   = FALSE;
 	msg.handled_  = true;
@@ -263,8 +271,14 @@ void About::OnSetCursor(Msg<WM_SETCURSOR> &msg)
 	GetClientRect(hwnd_, &client_rect);
 	ClientToScreen(hwnd_, &client_rect);
 	GetCursorPos(&cursor_pos);
-	if (TRUE == PtInRect(&client_rect, cursor_pos))
+	if (
+		TRUE == PtInRect(&client_rect, cursor_pos)        &&
+		cursor_pos_.x > 0 && cursor_pos_.x < bmp_size_.cx &&
+		cursor_pos_.y > 0 && cursor_pos_.y < bmp_size_.cy &&
+		map_[cursor_pos_.y * map_size_.cx + cursor_pos_.x].flags & MapPixel::F_OK)
+	{
 		SetCursor(LoadCursor(NULL, IDC_HAND));
+	}
 	else
 		SetCursor(LoadCursor(NULL, IDC_ARROW));
 	msg.result_  = TRUE;
@@ -310,10 +324,10 @@ void About::DrawStroke()
 		return;
 	// return if the brush does not touch the canvas
 	if (
-		cursor_pos_.x + static_cast<int>(brush_size_) <  0            ||
-		cursor_pos_.y + static_cast<int>(brush_size_) <  0            ||
-		cursor_pos_.x - static_cast<int>(brush_size_) >= bmp_size_.cx ||
-		cursor_pos_.y - static_cast<int>(brush_size_) >= bmp_size_.cy)
+		cursor_pos_.x + static_cast<int>(brush_size_/2) <  0            ||
+		cursor_pos_.y + static_cast<int>(brush_size_/2) <  0            ||
+		cursor_pos_.x - static_cast<int>(brush_size_/2) >= bmp_size_.cx ||
+		cursor_pos_.y - static_cast<int>(brush_size_/2) >= bmp_size_.cy)
 		return;
 	// seed random number generator
 	srand(clock());
@@ -338,11 +352,11 @@ void About::DrawStroke()
 				{
 					float p(static_cast<float>(rand()));
 					p /= RAND_MAX;
-					if (p > brush_[r][c] && map_iter->flags | MapPixel::F_SOFT)
-						if (current_bk_colour_)
+					if (p > brush_[r][c] && map_iter->flags & MapPixel::F_SOFT)
+						if (current_bk_colour_ < 3)
 							map_iter->top_texture = bk_colours_[current_bk_colour_];
 						else
-							map_iter->heightmap = static_cast<uint>(__max(0, static_cast<int>(map_iter->heightmap) - 4));
+							map_iter->heightmap = static_cast<uint>(__max(0, static_cast<int>(map_iter->heightmap) - 3));
 				}
 				++map_iter;
 			}
@@ -355,13 +369,20 @@ void About::DrawStroke()
 		uint overlap(0);
 		if (offset.top < 0)
 			overlap += -offset.top;
-		if (offset.top + brush_size_ >= bmp_size_.cy)
+		if (offset.top + static_cast<int>(brush_size_) >= bmp_size_.cy)
 			overlap += offset.top + brush_size_ - bmp_size_.cy + 1;
 		const uint first_line(__max(0, offset.top));
 		const uint line_count(brush_size_ - overlap);
 		RenderLines(first_line, line_count);
 	}
 	InvalidateRect(hwnd_, NULL, TRUE);
+}
+
+void About::Destroy()
+{
+	if (parent_was_enabled_)
+		EnableWindow(parent_hwnd_, TRUE);
+	DestroyWindow(hwnd_);
 }
 
 void About::RenderLines(uint first_line, uint line_count)
@@ -412,7 +433,7 @@ void About::RenderLines(uint first_line, uint line_count)
 				if (high_point_z - point_z < point_x * 2)
 				{
 					// multiply the texture by ratio (using integer arithmetic)
-					_ASSERTE(temp_iter - temp.begin() < temp.size());
+					_ASSERTE(temp_iter - temp.begin() < static_cast<int>(temp.size()));
 					*temp_iter = surface_sun_dot[point_z - row_iter[1].heightmap];
 					// shift the highest point to this one
 					high_point_z = point_z;

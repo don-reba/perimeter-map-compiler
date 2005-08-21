@@ -508,6 +508,11 @@ void ProjectManager::OnResourceCreated(Resource id)
 
 void ProjectManager::OnResourceNotFound(Resource id)
 {
+	switch (id)
+	{
+	case RS_HARDNESS:   MacroProjectData(ID_CUSTOM_HARDNESS)   = false;
+	case RS_ZERO_LAYER: MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
+	};
 	tracker_.EnableDatum(id, false);
 }
 
@@ -551,7 +556,7 @@ void ProjectManager::SaveThumbnail()
 
 void ProjectManager::ReloadFiles(const IdsType &ids)
 {
-	if (ids.none())
+	if (ids.none() || PS_INACTIVE == project_state_)
 		return;
 	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
 	SIZE map_size = {

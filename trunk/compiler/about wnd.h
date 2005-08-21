@@ -49,7 +49,7 @@ class About : public PMCWindow
 private:
 	struct MapPixel
 	{
-		enum Flag { F_SOFT };
+		enum Flag { F_SOFT = 1, F_OK = 2 };
 		uint top_texture    : 24;
 		uint flags          : 8;
 		uint bottom_texture : 24;
@@ -83,21 +83,24 @@ protected:
 	void ProcessMessage(WndMsg &msg);
 private:
 	void ChangeBackground();
+	void Destroy();
 	void DrawStroke();
 	void RenderLines(uint first_line, uint line_count);
 // data
 private:
-	static const size_t num_bk_colours_ = 4;     // number of background colours to cycle through
+	static const size_t num_bk_colours_ = 6;     // number of background colours to cycle through
 	static const size_t brush_size_ = 64;        // diameter of the brush in pixels
+	HBITMAP    bk_bmp_;                          // bitmap to back the background DC
 	COLORREF   bk_colours_[num_bk_colours_];     // background colours to cycle through
+	HDC        bk_dc_;                           // background DC
+	SIZE       bmp_size_;                        // dimensions of the map, excluding padding
 	float      brush_[brush_size_][brush_size_]; // probability that a pixel under the brush will be painted
 	size_t     current_bk_colour_;               // index of the current stroke colour
-	HBITMAP    bk_bmp_;                          // bitmap to back the background DC
-	HDC        bk_dc_;                           // background DC
-	bool       quitting_;                        // flag signifying the dialog's coming demise
-	MapType    map_;                             // the array containing map data
-	SIZE       map_size_;                        // dimensions of the map, including padding
-	SIZE       bmp_size_;                        // dimensions of the map, excluding padding
-	bool       painting_;                        // determines whether DrawStroke should act or not
 	POINT      cursor_pos_;                      // position of the cursor for painting
+	MapType    map_;                             // the array containing map data
+	HWND       parent_hwnd_;
+	SIZE       map_size_;                        // dimensions of the map, including padding
+	bool       parent_was_enabled_;              // whether the parent has to be reenabled at exit
+	bool       painting_;                        // determines whether DrawStroke should act or not
+	bool       quitting_;                        // flag signifying the dialog's coming demise
 };

@@ -46,6 +46,7 @@ public:
 	struct ZeroLevelChanged {
 		virtual void operator() () = 0;
 	};
+	typedef vector<POINT> Locations;
 // construction/destruction
 public:
 	InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed);
@@ -63,13 +64,15 @@ private:
 protected:
 	void ProcessMessage(WndMsg &msg);
 private:
+	void AddLocation(tstring name, uint x, uint y);
 	static BOOL CALLBACK EnumChildrenProc(HWND hwnd, LPARAM lprm);
 	void EnableControls(bool on);
 // data
 private:
-	HBRUSH      fog_colour_;
-	COLORREF    custom_colours_[16];
-	PreviewWnd &preview_wnd_;
-	uint        zero_level_changes_ignored_;
+	HBRUSH            fog_colour_;
+	COLORREF          custom_colours_[16];
+	Locations         locations_;
+	PreviewWnd       &preview_wnd_;
+	uint              zero_level_changes_ignored_;
 	ZeroLevelChanged *zero_level_changed_;
 };

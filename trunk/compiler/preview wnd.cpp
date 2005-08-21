@@ -128,24 +128,19 @@ void PreviewWnd::OnDestroy(Msg<WM_DESTROY> &msg)
 	// release the terrain VB
 	if (NULL != terrain_vb_)
 		terrain_vb_->Release();
-	// release billboard VBs
-	{
-		Billboard *i(billboards_);
-		const Billboard *end(i + billboard_count_);
-		for (; i != end; ++i)
-			if (NULL != i->vertices_)
-				i->vertices_->Release();
-	}
+	// release marker VBs
+	foreach (Marker &marker, markers_)
+		marker.Release();
 	// release zero layer VB
 	if (NULL != zero_layer_vb_)
 		zero_layer_vb_->Release();
-	// release the device
-	if (NULL != device_)
-		device_->Release();
 	// release the textures
 	if (textures_valid_)
 		foreach(Section &section, sections_)
 			section.texture_->Release();
+	// release the device
+	if (NULL != device_)
+		device_->Release();
 }
 
 void PreviewWnd::OnExitSizeMove(Msg<WM_EXITSIZEMOVE> &msg)
@@ -156,7 +151,13 @@ void PreviewWnd::OnExitSizeMove(Msg<WM_EXITSIZEMOVE> &msg)
 
 void PreviewWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 {
-	InitializeDevice();
+	msg.result_  = TRUE;
+	msg.handled_ = true;
+	if (!InitializeDevice())
+	{
+		EndDialog(hwnd_, 0);
+		return;
+	}
 	// initialize zero_layer_colour_
 	zero_layer_colour_ = D3DCOLOR_ARGB(
 		MacroAppData(ID_ZERO_LAYER_OPACITY),
@@ -164,23 +165,19 @@ void PreviewWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 		GetGValue(MacroAppData(ID_ZERO_LAYER_COLOUR)),
 		GetBValue(MacroAppData(ID_ZERO_LAYER_COLOUR)));
 	// initialize the frame marker VBs
-	for (uint i(0); i != billboard_count_; ++i)
-	{
-		if (FAILED(device_->CreateVertexBuffer(
-			7 * sizeof(ColouredVertex),
-			0,
-			ColouredVertex::FVF,
-			D3DPOOL_MANAGED,
-			&billboards_[i].vertices_,
-			NULL)))
+	markers_.push_back(Marker(D3DCOLOR_ARGB(0xFF, 0xFF, 0x00, 0x00))); // player 0
+	markers_.push_back(Marker(D3DCOLOR_ARGB(0xFF, 0x00, 0xFF, 0x00))); // player 1
+	markers_.push_back(Marker(D3DCOLOR_ARGB(0xFF, 0x00, 0xFF, 0x00))); // player 2
+	markers_.push_back(Marker(D3DCOLOR_ARGB(0xFF, 0x00, 0xFF, 0x00))); // player 3
+	markers_.push_back(Marker(D3DCOLOR_ARGB(0xFF, 0x00, 0xFF, 0x00))); // player 4
+	foreach (Marker &marker, markers_)
+		if (!marker.Initialize(device_))
 		{
-			MacroDisplayError(_T("A billboard could not be created."));
-			msg.result_ = FALSE;
-			msg.handled_ = true;
+			DestroyWindow(hwnd_);
 			return;
 		}
-	}
 	// initialize the zero layer VB
+	_ASSERTE(NULL == zero_layer_vb_);
 	if (FAILED(device_->CreateVertexBuffer(
 		4 * sizeof(ColouredVertex),
 		0,
@@ -190,12 +187,8 @@ void PreviewWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 		NULL)))
 	{
 		MacroDisplayError(_T("Zero layer could not be created."));
-		msg.result_ = FALSE;
-		msg.handled_ = true;
 		return;
 	}
-	msg.result_  = TRUE;
-	msg.handled_ = true;
 }
 
 void PreviewWnd::OnKeyDown(Msg<WM_KEYDOWN> &msg)
@@ -425,27 +418,22 @@ void PreviewWnd::OnProjectChanged(Msg<WM_USR_PROJECT_CHANGED> &msg)
 	radius_ = static_cast<float>(__max(map_size_.cx, map_size_.cy));
 	// set frame markers
 	{
-		D3DXVECTOR2 position;
-		// 0
-		position.x = static_cast<FLOAT>(MacroProjectData(ID_SP_0).x);
-		position.y = static_cast<FLOAT>(MacroProjectData(ID_SP_0).y);
-		MakeFrameMarker(0, position);
-		// 1
-		position.x = static_cast<FLOAT>(MacroProjectData(ID_SP_1).x);
-		position.y = static_cast<FLOAT>(MacroProjectData(ID_SP_1).y);
-		MakeFrameMarker(1, position);
-		// 2
-		position.x = static_cast<FLOAT>(MacroProjectData(ID_SP_2).x);
-		position.y = static_cast<FLOAT>(MacroProjectData(ID_SP_2).y);
-		MakeFrameMarker(2, position);
-		// 3
-		position.x = static_cast<FLOAT>(MacroProjectData(ID_SP_3).x);
-		position.y = static_cast<FLOAT>(MacroProjectData(ID_SP_3).y);
-		MakeFrameMarker(3, position);
-		// 4
-		position.x = static_cast<FLOAT>(MacroProjectData(ID_SP_4).x);
-		position.y = static_cast<FLOAT>(MacroProjectData(ID_SP_4).y);
-		MakeFrameMarker(4, position);
+		_ASSERTE(markers_.size() >= 5);
+		markers_[0].Set(D3DXVECTOR2(
+			static_cast<FLOAT>(MacroProjectData(ID_SP_0).x),
+			static_cast<FLOAT>(MacroProjectData(ID_SP_0).y)));
+		markers_[1].Set(D3DXVECTOR2(
+			static_cast<FLOAT>(MacroProjectData(ID_SP_1).x),
+			static_cast<FLOAT>(MacroProjectData(ID_SP_1).y)));
+		markers_[2].Set(D3DXVECTOR2(
+			static_cast<FLOAT>(MacroProjectData(ID_SP_2).x),
+			static_cast<FLOAT>(MacroProjectData(ID_SP_2).y)));
+		markers_[3].Set(D3DXVECTOR2(
+			static_cast<FLOAT>(MacroProjectData(ID_SP_3).x),
+			static_cast<FLOAT>(MacroProjectData(ID_SP_3).y)));
+		markers_[4].Set(D3DXVECTOR2(
+			static_cast<FLOAT>(MacroProjectData(ID_SP_4).x),
+			static_cast<FLOAT>(MacroProjectData(ID_SP_4).y)));
 	}
 	// set fog parameters
 	{
@@ -581,38 +569,33 @@ void PreviewWnd::OnStateChanged(Msg<WM_USR_STATE_CHANGED> &msg)
 	{
 	case ProjectData::ID_SP_0:
 		{
-			D3DXVECTOR2 position(
+			markers_.at(0).Set(D3DXVECTOR2(
 				static_cast<FLOAT>(MacroProjectData(ID_SP_0).x),
-				static_cast<FLOAT>(MacroProjectData(ID_SP_0).y));
-			MakeFrameMarker(0, position);
+				static_cast<FLOAT>(MacroProjectData(ID_SP_0).y)));
 		} break;
 	case ProjectData::ID_SP_1:
 		{
-			D3DXVECTOR2 position(
+			markers_.at(1).Set(D3DXVECTOR2(
 				static_cast<FLOAT>(MacroProjectData(ID_SP_1).x),
-				static_cast<FLOAT>(MacroProjectData(ID_SP_1).y));
-			MakeFrameMarker(1, position);
+				static_cast<FLOAT>(MacroProjectData(ID_SP_1).y)));
 		} break;
 	case ProjectData::ID_SP_2:
 		{
-			D3DXVECTOR2 position(
+			markers_.at(2).Set(D3DXVECTOR2(
 				static_cast<FLOAT>(MacroProjectData(ID_SP_2).x),
-				static_cast<FLOAT>(MacroProjectData(ID_SP_2).y));
-			MakeFrameMarker(2, position);
+				static_cast<FLOAT>(MacroProjectData(ID_SP_2).y)));
 		} break;
 	case ProjectData::ID_SP_3:
 		{
-			D3DXVECTOR2 position(
+			markers_.at(3).Set(D3DXVECTOR2(
 				static_cast<FLOAT>(MacroProjectData(ID_SP_3).x),
-				static_cast<FLOAT>(MacroProjectData(ID_SP_3).y));
-			MakeFrameMarker(3, position);
+				static_cast<FLOAT>(MacroProjectData(ID_SP_3).y)));
 		} break;
 	case ProjectData::ID_SP_4:
 		{
-			D3DXVECTOR2 position(
+			markers_.at(4).Set(D3DXVECTOR2(
 				static_cast<FLOAT>(MacroProjectData(ID_SP_4).x),
-				static_cast<FLOAT>(MacroProjectData(ID_SP_4).y));
-			MakeFrameMarker(4, position);
+				static_cast<FLOAT>(MacroProjectData(ID_SP_4).y)));
 		} break;
 	case ProjectData::ID_ZERO_LEVEL:
 		{
@@ -656,6 +639,8 @@ void PreviewWnd::OnTextureAllocate(Msg<WM_USR_TEXTURE_ALLOCATE> &msg)
 	allocation->bitmaps_ = new D3DXCOLOR*[texture_count];
 	for (size_t i(0), size(sections_.size()); i != size; ++i)
 	{
+		if (NULL != sections_[i].texture_)
+			sections_[i].texture_->Release();
 		if (D3D_OK != device_->CreateTexture(
 			texture_width,
 			texture_height,
@@ -743,7 +728,7 @@ void PreviewWnd::BuildZeroLayerVB()
 	zero_layer_vb_->Unlock();
 }
 
-void PreviewWnd::InitializeDevice()
+bool PreviewWnd::InitializeDevice()
 {
 	HRESULT result;
 	// get window dimensions
@@ -774,7 +759,7 @@ void PreviewWnd::InitializeDevice()
 			MacroDisplayError(_T("Direct3D9 device could not be acquired."));
 			device_ = NULL;
 			DestroyWindow(hwnd_);
-			return;
+			return false;
 		}
 	}
 	else
@@ -792,7 +777,7 @@ void PreviewWnd::InitializeDevice()
 			case D3DERR_DRIVERINTERNALERROR:
 				MacroDisplayError(_T("Internal Driver Error on IDirect3DDevice9::TestCooperativeLevel."));
 				DestroyWindow(hwnd_);
-				return;
+				return false;
 			default:
 				Sleep(500);
 			}
@@ -803,7 +788,7 @@ void PreviewWnd::InitializeDevice()
 		{
 			MacroDisplayError(_T("Direct3DDevice9 could not be reset."));
 			DestroyWindow(hwnd_);
-			return;
+			return false;
 		}
 		// set some states
 		device_->SetRenderState(D3DRS_FOGCOLOR, fog_colour_);
@@ -838,37 +823,7 @@ void PreviewWnd::InitializeDevice()
 	}
 	MakeViewMatrix();
 	MakeProjectiveMatrix();
-}
-
-void PreviewWnd::MakeFrameMarker(uint marker, D3DXVECTOR2 position)
-{
-	// set position
-	billboards_[marker].position_ = position;
-	// set colour
-	D3DXCOLOR colour;
-	if (0 == marker)
-		colour = D3DCOLOR_ARGB(0xFF, 0xFF, 0x00, 0x00);
-	else
-		colour = D3DCOLOR_ARGB(0xFF, 0x00, 0xFF, 0x00);
-	// set vertices
-	ColouredVertex *vertices;
-	if (FAILED(billboards_[marker].vertices_->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
-	{
-		MacroDisplayError(_T("Frame marker buffer could not be locked."));
-		return;
-	}
-	const FLOAT radius(4.0f);
-	const FLOAT height(512.0f);
-	const D3DXCOLOR clear  (colour & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF));
-	const D3DXCOLOR opaque (clear  | D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00));
-	vertices[0] = ColouredVertex(-radius,     0.0f, 0.0f,   clear);
-	vertices[1] = ColouredVertex(-radius,     0.0f, height, 0L);
-	vertices[2] = ColouredVertex(-radius / 4, 0.0f, 0.0f,   opaque);
-	vertices[3] = ColouredVertex(0.0f,        0.0f, height, 0L);
-	vertices[4] = ColouredVertex(radius / 4,  0.0f, 0.0f,   opaque);
-	vertices[5] = ColouredVertex(radius,      0.0f, height, 0L);
-	vertices[6] = ColouredVertex(radius,      0.0f, 0.0f,   clear);
-	billboards_[marker].vertices_->Unlock();
+	return true;
 }
 
 void PreviewWnd::MakeProjectiveMatrix()
@@ -896,8 +851,8 @@ void PreviewWnd::MakeViewMatrix()
 	up += target_;
 	D3DXMatrixLookAtLH(&view_matrix_, &eye, &target_, &up);
 	// set billboard angles
-	for (int i(0); i != billboard_count_; ++i)
-		billboards_[i].CalculateAngle(eye.x, eye.y);
+	foreach (Marker &marker, markers_)
+		marker.CalculateAngle(eye.x, eye.y);
 }
 
 void PreviewWnd::PopWorldMatrix()
@@ -1046,23 +1001,23 @@ void PreviewWnd::Render()
 				// render the frame markers
 				device_->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA);
 				device_->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-				for (int i(0); i != billboard_count_; ++i)
+				foreach(Marker marker, markers_)
 				{
 					// set marker position
 					D3DXMATRIX frame_marker_matrix;
 					{
 						D3DXMATRIX frame_marker_rotation;
-						D3DXMatrixRotationZ(&frame_marker_rotation, billboards_[i].angle_);
+						D3DXMatrixRotationZ(&frame_marker_rotation, marker.angle_);
 						D3DXMatrixTranslation(
 							&frame_marker_matrix,
-							billboards_[i].position_.x,
-							billboards_[i].position_.y,
+							marker.position_.x,
+							marker.position_.y,
 							0);
 						D3DXMatrixMultiply(&frame_marker_matrix, &frame_marker_rotation, &frame_marker_matrix);
 					}
 					StackedMatrix stacked_frame_marker_matrix(*this, frame_marker_matrix);
 					// render the marker
-					if (D3D_OK != device_->SetStreamSource(0, billboards_[i].vertices_, 0, sizeof(ColouredVertex)))
+					if (D3D_OK != device_->SetStreamSource(0, marker.vertices_, 0, sizeof(ColouredVertex)))
 					{
 						MacroDisplayError(_T("IDirect3DDevice9::SetStreamSource failed."));
 						break;
@@ -1118,4 +1073,65 @@ PreviewWnd::Billboard::Billboard()
 void PreviewWnd::Billboard::CalculateAngle(float eye_x, float eye_y)
 {
 	angle_ = atan2(eye_y - position_.y, eye_x - position_.x) - D3DX_PI / 2;
+}
+
+//----------------------------------
+// PreviewWnd::Marker implementation
+//----------------------------------
+
+PreviewWnd::Marker::Marker(D3DXCOLOR colour)
+	:colour_(colour)
+{}
+
+bool PreviewWnd::Marker::Initialize(IDirect3DDevice9 *device)
+{
+	if (NULL != vertices_)
+		vertices_->Release();
+	return SUCCEEDED(device->CreateVertexBuffer(
+		7 * sizeof(ColouredVertex),
+		0,
+		ColouredVertex::FVF,
+		D3DPOOL_MANAGED,
+		&vertices_,
+		NULL));
+}
+
+D3DXCOLOR PreviewWnd::Marker::GetColour()
+{
+	return colour_;
+}
+
+void PreviewWnd::Marker::Release()
+{
+	if (NULL != vertices_)
+		vertices_->Release();
+}
+
+bool PreviewWnd::Marker::Set(D3DXVECTOR2 position)
+{
+	_ASSERTE(NULL != vertices_);
+	// set position
+	position_ = position;
+	// set vertices
+	ColouredVertex *vertices;
+	if (FAILED(vertices_->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
+		return false;
+	const FLOAT radius(4.0f);
+	const FLOAT height(512.0f);
+	const D3DXCOLOR clear  (colour_ & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF));
+	const D3DXCOLOR opaque (clear  | D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00));
+	vertices[0] = ColouredVertex(-radius,     0.0f, 0.0f,   clear);
+	vertices[1] = ColouredVertex(-radius,     0.0f, height, 0L);
+	vertices[2] = ColouredVertex(-radius / 4, 0.0f, 0.0f,   opaque);
+	vertices[3] = ColouredVertex(0.0f,        0.0f, height, 0L);
+	vertices[4] = ColouredVertex(radius / 4,  0.0f, 0.0f,   opaque);
+	vertices[5] = ColouredVertex(radius,      0.0f, height, 0L);
+	vertices[6] = ColouredVertex(radius,      0.0f, 0.0f,   clear);
+	vertices_->Unlock();
+	return true;
+}
+
+void PreviewWnd::Marker::SetColour(D3DXCOLOR colour)
+{
+	colour_ = colour;
 }
