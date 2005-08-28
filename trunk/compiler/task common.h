@@ -38,17 +38,27 @@
 struct TextureAllocation;
 struct SimpleVertex;
 
-//----------------------------------------------------------------------------------
+//------------------------------------------------------------
 // some functions used by the Tasks, but also useful to others
-//----------------------------------------------------------------------------------
+//------------------------------------------------------------
 
 namespace TaskCommon
 {
-// types
+	//------------------------------------------------------------------------
+	// types used by the rest of the namespace, as well as possibly other code
+	//------------------------------------------------------------------------
+
 	struct Hardness;
-	struct Heightmap;
+	class  Heightmap;
+	class  Heightmap8;
+	class  Heightmap16;
+	struct Lightmap;
 	struct MapInfo;
 	struct ZeroLayer;
+
+	//--------------------------------------------------------------------------
+	// 1-bit bitmap specifying the areas that are not accessible to terraforming
+	//--------------------------------------------------------------------------
 
 	struct Hardness : public ErrorHandler
 	{
@@ -60,26 +70,97 @@ namespace TaskCommon
 		void Save(LPCTSTR path);
 		void Unpack(TiXmlNode *node, BYTE *buffer, const vector<bool> &mask);
 		BYTE *data_;
+		WORD *data16_;
 		SIZE size_;
 	};
-	struct Heightmap : public ErrorHandler
+
+	//---------------------------------------------------------------
+	// 8-bit or 16-bit grayscale bitmap defining the shape of the map
+	//---------------------------------------------------------------
+
+	class Heightmap : public ErrorHandler
 	{
-		Heightmap(SIZE size, HWND &error_hwnd);
-		~Heightmap();
-		bool Load(LPCTSTR path, const ZeroLayer *zero_layer, uint zero_level);
+	public:
+		Heightmap(WORD bpp, ErrorHandler &error_handler);
+		virtual ~Heightmap();
+	public:
+		virtual void MakeDefault() = 0;
+		virtual int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask) = 0;
+	public:
+		WORD GetBpp() const;
+	private:
+		const WORD bpp_;
+	public:
+		SIZE  size_;
+	};
+
+	class Heightmap8 : public Heightmap
+	{
+	public:
+		Heightmap8(SIZE size, ErrorHandler &error_handler);
+		~Heightmap8();
+	public:
+		void MakeDefault();
+		bool Load(fipImage &image, const ZeroLayer *zero_layer, uint zero_level);
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
 		void Unpack(TiXmlNode *node, BYTE *buffer, vector<bool> &mask);
+	public:
 		BYTE *data_;
-		SIZE size_;
 	};
+
+	class Heightmap16 : public Heightmap
+	{
+	public:
+		Heightmap16(SIZE size, ErrorHandler &error_handler);
+		~Heightmap16();
+	public:
+		void MakeDefault();
+		bool Load(fipImage &image, const ZeroLayer *zero_layer, uint zero_level);
+		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, vector<bool> &mask);
+		void Unpack(TiXmlNode *node, BYTE *buffer, vector<bool> &mask);
+	public:
+		operator Heightmap8*();
+	public:
+		WORD *data_;
+	};
+
+	Heightmap* LoadHeightmap(
+		SIZE             size,
+		ErrorHandler    &error_handler,
+		LPCTSTR          path,
+		const ZeroLayer *zero_layer,
+		uint             zero_level);
+
+	Heightmap* UnpackHeightmap(
+		SIZE size,
+		ErrorHandler &error_handler,
+		TiXmlNode *node,
+		BYTE *buffer,
+		vector<bool> &mask);
+
+	//--------------------------------------------------------------
+	// 8-bit bitmap storing lightness of the map
+	// is to be incremented by 0x80 and multiplyied with the texture
+	//--------------------------------------------------------------
+
 	struct Lightmap : public ErrorHandler
 	{
+	public:
 		Lightmap(SIZE size, HWND &error_hwnd);
 		~Lightmap();
 		bool Create(const Heightmap &heightmap);
+	private:
+		bool Create8 (const Heightmap &heightmap);
+		bool Create16(const Heightmap &heightmap);
+	public:
 		BYTE *data_;
 		SIZE size_;
 	};
+
+	//---------------------------------------------
+	// additional information associated with a map
+	//---------------------------------------------
+
 	struct MapInfo
 	{
 	public:
@@ -106,6 +187,11 @@ namespace TaskCommon
 		bool     custom_surface_;
 		bool     custom_zero_layer_;
 	};
+
+	//---------------------------------
+	// custom 24-bit colour sky texture
+	//---------------------------------
+
 	struct Sky : public ErrorHandler
 	{
 		Sky(HWND &error_hwnd);
@@ -118,6 +204,11 @@ namespace TaskCommon
 		COLORREF *pixels_;
 		static const SIZE size_;
 	};
+
+	//--------------------------------------
+	// custom paletted 8-bit surface texture
+	//--------------------------------------
+
 	struct Surface : public ErrorHandler
 	{
 		Surface(HWND &error_hwnd);
@@ -131,6 +222,11 @@ namespace TaskCommon
 		COLORREF  palette_[0x100];
 		static const SIZE size_;
 	};
+
+	//--------------------------------------------------
+	// paletted 8-bit texture defining colour of the map
+	//--------------------------------------------------
+
 	struct Texture : public ErrorHandler
 	{
 		Texture(SIZE size, HWND &error_hwnd);
@@ -142,6 +238,11 @@ namespace TaskCommon
 		COLORREF  palette_[0x100];
 		SIZE      size_;
 	};
+
+	//--------------------------------------------------------------------
+	// 1-bit bitmap defining the areas appearing terraformed at game start
+	//--------------------------------------------------------------------
+
 	struct ZeroLayer : public ErrorHandler
 	{
 		ZeroLayer(SIZE size, HWND &error_hwnd);
@@ -153,7 +254,11 @@ namespace TaskCommon
 		vector<bool> data_;
 		SIZE size_;
 	};
-	// triangulation element
+
+	//-------------------------------------------------
+	// a triangulation element for use by Triangulate()
+	//-------------------------------------------------
+
 	struct TE
 	{
 		struct Constraint
@@ -180,10 +285,17 @@ namespace TaskCommon
 		Constraint t_constraint;
 		int index;
 	};
-// defaults
-	void DefaultHeightmap(BYTE *buffer, SIZE size);
+
+	//---------
+	// defaults
+	//---------
+
 	void DefaultTexture(BYTE *buffer, COLORREF palette[256], SIZE size);
-// file IO
+
+	//--------
+	// file IO
+	//--------
+
 	DWORD LoadFile(const LPCTSTR name, BYTE *&pBuffer, ErrorHandler &error_handler);
 	void  SaveHardness(
 		LPCTSTR       path,
@@ -233,9 +345,27 @@ namespace TaskCommon
 		const ZeroLayer *zero_layer,
 		LPCTSTR          path,
 		ErrorHandler    &error_handler);
-// "incredible math" (Lithium Flower)
+	void  SaveVMP(
+		const Heightmap8 &heightmap,
+		const Texture    &texture,
+		const ZeroLayer  *zero_layer,
+		LPCTSTR           path,
+		ErrorHandler     &error_handler);
+	void  SaveVMP(
+		const Heightmap16 &heightmap,
+		const Texture     &texture,
+		const ZeroLayer   *zero_layer,
+		LPCTSTR            path,
+		ErrorHandler      &error_handler);
+
+	//-----------------------------------
+	// "incredible math" (Lithium Flower)
+	//-----------------------------------
+
 	COLORREF AverageColour(const Texture &texture, const Heightmap &heightmap);
-	uint     AverageHeight(const Heightmap &heightmap);
+	float    AverageHeight(const Heightmap   &heightmap);
+	float    AverageHeight(const Heightmap8  &heightmap);
+//	float    AverageHeight(const Heightmap16 &heightmap);
 	DWORD    CalculateChecksum(BYTE *data, size_t size, DWORD seed);
 	void     CreateTextures(
 		const Texture     &texture,
@@ -258,8 +388,15 @@ namespace TaskCommon
 		size_t                                      str_length,
 		const vector<std::pair<tstring, tstring> > &seq,
 		tstring                                    &result);
-	void     Triangulate(Heightmap &heightmap, vector<SimpleVertex> &vertices, float mesh_threshold);
-// other
+	void     Triangulate(
+		const Heightmap8 &heightmap,
+		vector<SimpleVertex> &vertices,
+		float mesh_threshold);
+	
+	//------
+	// other
+	//------
+
 	bool GetInstallPath(tstring &install_path, ErrorHandler &error_handler);
 	bool RegisterMap(LPCTSTR map_name, DWORD checksum, ErrorHandler &error_handler);
 }
@@ -270,6 +407,111 @@ namespace TaskCommon
 
 namespace TaskCommon
 {
+	template<typename HMType>
+	COLORREF AverageColour(const Texture &texture, const HMType &heightmap)
+	{
+		const BYTE *texture_iter;
+		const BYTE *heightmap_iter;
+		const size_t num_colors(256);
+		int color_count[num_colors];
+		const int *color_iter;
+		uint half_size(0);
+		uint sum;
+		LONG r, c; // row, column
+		// count the number of non-null pixels of the heightmap
+		heightmap_iter = heightmap.data_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+				if (0 != *heightmap_iter++)
+					++half_size;
+			++heightmap_iter;
+		}
+		half_size /= 2;
+		// count the number of occurences of each value of blue
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetBValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median blue
+		BYTE median_b;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_b = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetGValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median green
+		BYTE median_g;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_g = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetRValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median red
+		BYTE median_r;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_r = static_cast<BYTE>(color_iter - color_count);
+		return RGB(median_r, median_g, median_b);
+	}
+
 	// fast 5x5 Gaussian blur by Frederick M. Waltz and John W. V. Miller
 	// http://www-personal.engin.umd.umich.edu/~jwvm/ece581/21_GBlur.pdf
 	// does not blur the 3-pixel border around the image

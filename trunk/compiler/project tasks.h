@@ -53,7 +53,7 @@ class StatWnd;
 
 namespace TaskCommon
 {
-	struct Heightmap;
+	class  Heightmap;
 	struct Lightmap;
 	struct Texture;
 }
@@ -76,7 +76,7 @@ enum ProjectState
 
 enum Resource
 {
-	RS_HARDNESS,
+	RS_HARDNESS = 0,
 	RS_HEIGHTMAP,
 	RS_SKY,
 	RS_SURFACE,

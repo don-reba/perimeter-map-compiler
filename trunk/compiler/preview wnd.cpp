@@ -867,6 +867,16 @@ void PreviewWnd::ProjectChanged()
 	SendProjectChanged(hwnd_);
 }
 
+void PreviewWnd::HighlightMarker(size_t marker_index)
+{
+	_ASSERTE(marker_index < markers_.size());
+	if (marker_index >= markers_.size())
+		return;
+	for (size_t i(0); i != markers_.size(); ++i)
+		markers_[i].Highlight(i == marker_index);
+	Render();
+}
+
 void PreviewWnd::ProjectDataChanged(int type)
 {
 	SendStateChanged(hwnd_, type);
@@ -1001,7 +1011,7 @@ void PreviewWnd::Render()
 				// render the frame markers
 				device_->SetRenderState(D3DRS_SRCBLEND,  D3DBLEND_SRCALPHA);
 				device_->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-				foreach(Marker marker, markers_)
+				foreach(const Marker &marker, markers_)
 				{
 					// set marker position
 					D3DXMATRIX frame_marker_matrix;
@@ -1079,9 +1089,38 @@ void PreviewWnd::Billboard::CalculateAngle(float eye_x, float eye_y)
 // PreviewWnd::Marker implementation
 //----------------------------------
 
-PreviewWnd::Marker::Marker(D3DXCOLOR colour)
-	:colour_(colour)
+PreviewWnd::Marker::Marker(D3DCOLOR colour)
+	:colour_     (colour)
+	,highlighted_(false)
 {}
+
+D3DCOLOR PreviewWnd::Marker::GetColour()
+{
+	return colour_;
+}
+
+bool PreviewWnd::Marker::Highlight(bool on)
+{
+	_ASSERTE(NULL != vertices_);
+	// set vertices
+	ColouredVertex *vertices;
+	if (FAILED(vertices_->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
+		return false;
+	if (on)
+	{
+		vertices[2].color = 0xFFFFFFFF;
+		vertices[4].color = 0xFFFFFFFF;
+	}
+	else
+	{
+		const D3DCOLOR opaque (colour_ | 0xFF000000);
+		vertices[2].color = opaque;
+		vertices[4].color = opaque;
+	}
+	vertices_->Unlock();
+	highlighted_ = on;
+	return true;
+}
 
 bool PreviewWnd::Marker::Initialize(IDirect3DDevice9 *device)
 {
@@ -1094,11 +1133,6 @@ bool PreviewWnd::Marker::Initialize(IDirect3DDevice9 *device)
 		D3DPOOL_MANAGED,
 		&vertices_,
 		NULL));
-}
-
-D3DXCOLOR PreviewWnd::Marker::GetColour()
-{
-	return colour_;
 }
 
 void PreviewWnd::Marker::Release()
@@ -1118,8 +1152,8 @@ bool PreviewWnd::Marker::Set(D3DXVECTOR2 position)
 		return false;
 	const FLOAT radius(4.0f);
 	const FLOAT height(512.0f);
-	const D3DXCOLOR clear  (colour_ & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF));
-	const D3DXCOLOR opaque (clear  | D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00));
+	const D3DCOLOR clear  (colour_ & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF));
+	const D3DCOLOR opaque (highlighted_ ? 0xFFFFFFFF : (colour_  | D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00)));
 	vertices[0] = ColouredVertex(-radius,     0.0f, 0.0f,   clear);
 	vertices[1] = ColouredVertex(-radius,     0.0f, height, 0L);
 	vertices[2] = ColouredVertex(-radius / 4, 0.0f, 0.0f,   opaque);
@@ -1131,7 +1165,7 @@ bool PreviewWnd::Marker::Set(D3DXVECTOR2 position)
 	return true;
 }
 
-void PreviewWnd::Marker::SetColour(D3DXCOLOR colour)
+void PreviewWnd::Marker::SetColour(D3DCOLOR colour)
 {
 	colour_ = colour;
 }

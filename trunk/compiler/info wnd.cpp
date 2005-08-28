@@ -112,8 +112,11 @@ void InfoWnd::Update(bool read_only)
 	locations_.at(4).x = MacroProjectData(ID_SP_0).x;
 	locations_.at(4).y = MacroProjectData(ID_SP_0).y;
 	ComboBox_SetCurSel(GetDlgItem(hwnd_, IDC_LOCATION_LIST), 0);
-	UD_SetPos(GetDlgItem(hwnd_, IDC_LOCATION_X_SPIN), MacroProjectData(ID_SP_1).x);
-	UD_SetPos(GetDlgItem(hwnd_, IDC_LOCATION_Y_SPIN), MacroProjectData(ID_SP_1).y);
+	SendMessage(
+		hwnd_,
+		WM_COMMAND,
+		MAKEWPARAM(IDC_LOCATION_LIST, CBN_SELCHANGE),
+		ri_cast<LPARAM>(GetDlgItem(hwnd_, IDC_LOCATION_LIST)));
 	if (!read_only)
 		EnableControls(true);
 }
@@ -175,9 +178,28 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	case IDC_LOCATION_LIST:
 		if (CBN_SELCHANGE == msg.CodeNotify())
 		{
-			POINT point(locations_.at(ComboBox_GetCurSel(msg.CtrlHwnd())));
+			// get the index of the newly selected element
+			size_t index;
+			{
+				int signed_index(ComboBox_GetCurSel(msg.CtrlHwnd()));
+				if (signed_index < 0)
+					return;
+				index = static_cast<size_t>(signed_index);
+			}
+			// set the position edit boxes to the corresponding values
+			POINT point(locations_.at(index));
 			UD_SetPos(GetDlgItem(hwnd_, IDC_LOCATION_X_SPIN), point.x);
 			UD_SetPos(GetDlgItem(hwnd_, IDC_LOCATION_Y_SPIN), point.y);
+			// adjust index and highlight the corresponding marker
+			switch (index)
+			{
+			case 0: index = 1; break;
+			case 1: index = 2; break;
+			case 2: index = 3; break;
+			case 3: index = 4; break;
+			case 4: index = 0; break;
+			}
+			preview_wnd_.HighlightMarker(index);
 		} break;
 	case IDC_LOCATION_X:
 		if (EN_CHANGE == msg.CodeNotify())

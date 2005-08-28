@@ -42,7 +42,7 @@ class StatWnd : public PanelWindow
 // interface
 public:
 	bool Create(HWND parent_wnd, const RECT &window_rect);
-	void SetAverageHeight(uint height);
+	void SetAverageHeight(float height);
 	void SetAverageColour(COLORREF colour);
 // message handlers
 private:

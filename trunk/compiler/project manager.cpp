@@ -216,6 +216,8 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 			MacroAppData(ID_DISPLAY_ZERO_LAYER),
 			TaskCommon::MapInfo::LoadFromGlobal()));
 	}
+	// get the correct extensions of the already existing files
+	FindFileNames();
 	// create default files
 	if (new_project)
 		AddTask(new CreateDefaultFilesTask(error_hwnd_));
@@ -225,12 +227,12 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	//  in a way that would schedule the files for immediate update
 	FILETIME null_last_write;
 	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
-	tracker_.SetDatum(RS_HEIGHTMAP, _T("heightmap.bmp"), null_last_write);
-	tracker_.SetDatum(RS_TEXTURE,   _T("texture.bmp"),   null_last_write);
+	tracker_.SetDatum(RS_HEIGHTMAP, file_names_[RS_HEIGHTMAP].c_str(), null_last_write);
+	tracker_.SetDatum(RS_TEXTURE,   file_names_[RS_TEXTURE].c_str(),   null_last_write);
 	if (MacroProjectData(ID_CUSTOM_HARDNESS))
-		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
+		tracker_.SetDatum(RS_HARDNESS, file_names_[RS_HARDNESS].c_str(), null_last_write);
 	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
-		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero layer.bmp"), null_last_write);
+		tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SURFACE))
 	//	tracker_.SetDatum(RS_SURFACE, _T("surface.bmp"), null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SKY))
@@ -707,6 +709,49 @@ void ProjectManager::AddTask(Task *task)
 		(*tasks_left_)(tasks_.size());
 	}
 	ResumeThread(processor_thread_);
+}
+
+void ProjectManager::FindFileNames()
+{
+	// define a buffer for path operations
+	vector<TCHAR> buffer_v(MAX_PATH);
+	TCHAR *buffer(&buffer_v[0]);
+	// set name bases
+	file_names_[RS_HARDNESS]   = _T("hardness");
+	file_names_[RS_HEIGHTMAP]  = _T("heightmap");
+	file_names_[RS_SKY]        = _T("sky");
+	file_names_[RS_SURFACE]    = _T("surface");
+	file_names_[RS_TEXTURE]    = _T("texture");
+	file_names_[RS_ZERO_LAYER] = _T("zero layer");
+	// declare valid extensions
+	const size_t extension_count(4);
+	tstring extensions[extension_count] = {
+		_T(".bmp"), _T(".png"), _T(".tiff"), _T(".tga")
+	};
+	// check which of the extensions is valid for each file name
+	tstring *names_iter     (file_names_);
+	tstring *names_end      (names_iter + resource_count);
+	tstring *extensions_iter(extensions);
+	tstring *extensions_end (extensions_iter + extension_count);
+	for (; names_iter != names_end; ++names_iter)
+	{
+		for (; extensions_iter != extensions_end; ++extensions_iter)
+		{
+			PathCombine(buffer, folder_path_.c_str(), names_iter->c_str());
+			PathAddExtension(buffer, extensions_iter->c_str());
+			if (TRUE == PathFileExists(buffer))
+			{
+				_tcscpy(buffer, names_iter->c_str());
+				PathAddExtension(buffer, extensions_iter->c_str());
+				*names_iter = buffer;
+				break;
+			}
+		}
+		// default to .bmp
+		_tcscpy(buffer, names_iter->c_str());
+		PathAddExtension(buffer, _T(".bmp"));
+		*names_iter = buffer;
+	}
 }
 
 //--------------------------------------------

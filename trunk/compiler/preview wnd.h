@@ -148,14 +148,16 @@ private:
 	class Marker : public Billboard
 	{
 	public:
-		Marker(D3DXCOLOR colour);
-		D3DXCOLOR GetColour();
+		Marker(D3DCOLOR colour);
+		D3DCOLOR GetColour();
+		bool      Highlight(bool on);
 		bool      Initialize(IDirect3DDevice9 *device);
 		void      Release();
 		bool      Set(D3DXVECTOR2 position);
-		void      SetColour(D3DXCOLOR colour);
+		void      SetColour(D3DCOLOR colour);
 	private:
 		D3DXCOLOR colour_;
+		bool      highlighted_;
 	};
 	typedef vector<Marker> Markers;
 	// map segment for rendering
@@ -190,6 +192,7 @@ public:
 // interface
 public:
 	bool Create(HWND parent_wnd, const RECT &window_rect);
+	void HighlightMarker(size_t marker_index);
 	void ProjectChanged();
 	void ProjectDataChanged(int type);
 	void UpdateSettings();

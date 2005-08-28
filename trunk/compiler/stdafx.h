@@ -70,8 +70,9 @@ using std::vector;
 #include "foreach.h"
 // useful typedefs and definitions
 #define ri_cast reinterpret_cast
-typedef unsigned int uint;
-typedef unsigned long ulong;
+typedef unsigned int   uint;
+typedef unsigned long  ulong;
+typedef unsigned short ushort;
 // extremely annoying definitions
 #undef min
 #undef max

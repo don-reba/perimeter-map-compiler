@@ -63,9 +63,13 @@ bool StatWnd::Create(HWND parent_wnd, const RECT &window_rect)
 	return true;
 }
 
-void StatWnd::SetAverageHeight(uint height)
+void StatWnd::SetAverageHeight(float height)
 {
-	SetDlgItemInt(hwnd_, IDC_AVE_HEIGHT, height, false);
+	const size_t buffer_size(32);
+	vector<TCHAR> v_buffer(buffer_size);
+	TCHAR *buffer(&v_buffer[0]);
+	_sntprintf(buffer, buffer_size - 1, "%.1f", height);
+	SetDlgItemText(hwnd_,IDC_AVE_HEIGHT, buffer);
 }
 
 void StatWnd::SetAverageColour(COLORREF colour)

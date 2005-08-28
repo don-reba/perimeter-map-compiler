@@ -118,6 +118,7 @@ public:
 private:
 	static DWORD WINAPI ProcessorThread(LPVOID parameter);
 	void AddTask(Task *task);
+	void FindFileNames();
 // data
 private:
 	// threading
@@ -133,6 +134,7 @@ private:
 	tstring      folder_path_;
 	FileTracker  tracker_;
 	ProjectState project_state_;
+	tstring file_names_[resource_count];
 // callback implementation instances
 private:
 	FileUpdated      file_updated_;

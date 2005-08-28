@@ -545,7 +545,7 @@ void LoadProjectDataTask::operator() ()
 	_ASSERTE(NULL == task_data_.zero_layer_);
 	// allocate data
 	task_data_.hardness_   = new Hardness (task_data_.map_size_, error_hwnd_);
-	task_data_.heightmap_  = new Heightmap(task_data_.map_size_, error_hwnd_);
+	task_data_.heightmap_  = NULL;
 	task_data_.sky_        = new Sky      (error_hwnd_);
 	task_data_.surface_    = new Surface  (error_hwnd_);
 	task_data_.texture_    = new Texture  (task_data_.map_size_, error_hwnd_);
@@ -559,7 +559,9 @@ void LoadProjectDataTask::operator() ()
 	if (ids_[RS_ZERO_LAYER])
 		task_data_.zero_layer_->Load(PathCombine(path, folder_path, _T("zero layer.bmp")));
 	if (ids_[RS_HEIGHTMAP])
-		task_data_.heightmap_->Load(
+		task_data_.heightmap_ = LoadHeightmap(
+			task_data_.map_size_,
+			*this,
 			PathCombine(path, folder_path, _T("heightmap.bmp")),
 			ids_[RS_ZERO_LAYER] ? task_data_.zero_layer_ : NULL,
 			task_data_.map_info_.zero_level_);
@@ -650,9 +652,23 @@ void PackShrubTask::operator() ()
 		BYTE   *data;
 		size_t  size;
 		// heightmap
-		data = heightmap.data_;
-		size = heightmap.size_.cx * heightmap.size_.cy;
-		checksum = CalculateChecksum(data, size, checksum);
+		switch (heightmap.GetBpp())
+		{
+		case 8:
+			{
+				const Heightmap8 &heightmap8(ri_cast<const Heightmap8&>(heightmap));
+				data = heightmap8.data_;
+				size = heightmap8.size_.cx * heightmap8.size_.cy;
+				checksum = CalculateChecksum(data, size, checksum);
+			} break;
+		case 16:
+			{
+				const Heightmap16 &heightmap16(ri_cast<const Heightmap16&>(heightmap));
+				data = ri_cast<BYTE*>(heightmap16.data_);
+				size = heightmap16.size_.cx * heightmap16.size_.cy * 2;
+				checksum = CalculateChecksum(data, size, checksum);
+			} break;
+		}
 		// texture
 		data = texture.indices_;
 		size = texture.size_.cx * texture.size_.cy;
@@ -884,9 +900,13 @@ void UnpackShrubTask::operator() ()
 	vector<bool> mask;
 	{
 		_ASSERTE(NULL == task_data_.heightmap_);
-		task_data_.heightmap_ = new Heightmap(task_data_.map_size_, error_hwnd_);
-		Heightmap &heightmap(*task_data_.heightmap_);
-		heightmap.Unpack(content_node->FirstChildElement("heightmap"), buffer_, mask);
+		task_data_.heightmap_ = UnpackHeightmap(
+			task_data_.map_size_,
+			*this,
+			content_node->FirstChildElement("heightmap"),
+			buffer_,
+			mask);
+		_ASSERTE(NULL != task_data_.heightmap_);
 	}
 	// unpack the texture
 	{
@@ -908,7 +928,7 @@ void UnpackShrubTask::operator() ()
 	}
 	// unpack the sky texture
 	{
-		_ASSERTE(NULL == task_data_.hardness_);
+		_ASSERTE(NULL == task_data_.sky_);
 		TiXmlElement *node(content_node->FirstChildElement("sky"));
 		if (NULL != node)
 		{
@@ -919,7 +939,7 @@ void UnpackShrubTask::operator() ()
 	}
 	// unpack the surface texture
 	{
-		_ASSERTE(NULL == task_data_.hardness_);
+		_ASSERTE(NULL == task_data_.surface_);
 		TiXmlElement *node(content_node->FirstChildElement("surface"));
 		if (NULL != node)
 		{
@@ -1057,11 +1077,25 @@ void UpdatePanelsTask::operator() ()
 	{
 		// update the heightmap
 		if (ids[RS_HEIGHTMAP])
-		{
-			vector<SimpleVertex> vertices;
-			Triangulate(heightmap, vertices, task_data_.mesh_threshold_);
-			SendSetTerrain(preview_wnd_.hwnd_, vertices);
-		}
+			switch (heightmap.GetBpp())
+			{
+			case 8:
+				{
+					vector<SimpleVertex> vertices;
+					Triangulate(ri_cast<const Heightmap8&>(heightmap), vertices, task_data_.mesh_threshold_);
+					SendSetTerrain(preview_wnd_.hwnd_, vertices);
+				} break;
+			case 16:
+				{
+					vector<SimpleVertex> vertices;
+					{
+						Heightmap8 *heightmap8(ri_cast<Heightmap16&>(heightmap));
+						Triangulate(*heightmap8, vertices, task_data_.mesh_threshold_);
+						delete heightmap8;
+					}
+					SendSetTerrain(preview_wnd_.hwnd_, vertices);
+				} break;
+			}
 		// update the texture
 		if (task_data_.display_texture_)
 		{
