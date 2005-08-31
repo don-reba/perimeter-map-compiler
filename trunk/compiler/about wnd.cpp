@@ -125,6 +125,11 @@ void About::OnCaptureChanged(Msg<WM_CAPTURECHANGED> &msg)
 	msg.handled_ = true;
 }
 
+void About::OnClose(Msg<WM_CLOSE> &msg)
+{
+	Destroy();
+}
+
 void About::OnCreate(Msg<WM_CREATE> &msg)
 {
 	msg.result_  = FALSE;
@@ -147,6 +152,10 @@ void About::OnCreate(Msg<WM_CREATE> &msg)
 		map_size_.cy = height;
 		map_.resize(map_size_.cx * map_size_.cy);
 		CopyMemory(&map_[0], &evmp[8], map_.size() * sizeof(MapPixel));
+		// initialize the temporary buffer
+		temp_dim_.cx = bmp_size_.cx + 2 * border_;
+		temp_dim_.cy = map_size_.cy + 2 * border_;
+		temp_buffer_.resize(temp_dim_.cx * temp_dim_.cy);
 	}
 	// initialise the background bitmap
 	{
@@ -160,7 +169,7 @@ void About::OnCreate(Msg<WM_CREATE> &msg)
 			client_rect.bottom - client_rect.top);
 		ReleaseDC(hwnd_, client_dc);
 		SelectObject(bk_dc_, bk_bmp_);
-		RenderLines(0, 316);
+		RenderLines(0, map_size_.cy);
 	}
 	// resize window (centre on the same monitor as the parent)
 	{
@@ -299,6 +308,7 @@ void About::ProcessMessage(WndMsg &msg)
 	static Handler mmp[] =
 	{
 		&About::OnCaptureChanged,
+		&About::OnClose,
 		&About::OnCreate,
 		&About::OnDestroy,
 		&About::OnEraseBkgnd,
@@ -399,30 +409,25 @@ void About::RenderLines(uint first_line, uint line_count)
 			surface_sun_dot[i] = (BYTE)(0xFF * dot);
 		}
 	}
-	// allocate a temporary buffer
-	const int border(3);
-	SIZE temp_dim = { bmp_size_.cx + 2 * border, line_count + 2 * border };
-	typedef vector<BYTE> TempType;
-	TempType temp(temp_dim.cx * temp_dim.cy);
 	// calculate adjusted first_line and line_count, for borders
-	const uint first_line_e(__max(0, (int)first_line - border));
-	const uint temp_offset (border + first_line_e - first_line);
+	const uint first_line_e(__max(0, (int)first_line - border_));
+	const uint temp_offset (border_ + first_line_e - first_line);
 	const uint line_count_e(__min(
-		line_count + border * 2 - temp_offset,
+		line_count + border_ * 2 - temp_offset,
 		line_count - (first_line_e + line_count - bmp_size_.cy)));
 	// calculate the lightmap
 	{
-		TempType::iterator      temp_iter(temp.begin() + temp_dim.cx * temp_offset);
+		TempType::iterator      temp_iter(temp_buffer_.begin() + temp_dim_.cx * temp_offset);
 		MapType::const_iterator map_iter (map_.begin() + map_size_.cx * first_line_e);
 		MapType::const_iterator row_iter;
 		MapType::const_iterator high_point_x;
 		int                     high_point_z;
 		for (uint y(0); y != line_count_e; ++y)
 		{
-			row_iter     = map_iter + bmp_size_.cx;  // end of the row
-			high_point_x = row_iter;                 // location of the nearest peak
-			high_point_z = row_iter->heightmap;      // hight of the nearest peak
-			temp_iter += bmp_size_.cx + border;      // move to the end of the row
+			row_iter     = map_iter + bmp_size_.cx; // end of the row
+			high_point_x = row_iter;                // location of the nearest peak
+			high_point_z = row_iter->heightmap;     // hight of the nearest peak
+			temp_iter += bmp_size_.cx + border_;    // move to the end of the row
 			while (row_iter != map_iter)
 			{
 				--temp_iter;
@@ -433,7 +438,7 @@ void About::RenderLines(uint first_line, uint line_count)
 				if (high_point_z - point_z < point_x * 2)
 				{
 					// multiply the texture by ratio (using integer arithmetic)
-					_ASSERTE(temp_iter - temp.begin() < static_cast<int>(temp.size()));
+					_ASSERTE(temp_iter - temp_buffer_.begin() < static_cast<int>(temp_buffer_.size()));
 					*temp_iter = surface_sun_dot[point_z - row_iter[1].heightmap];
 					// shift the highest point to this one
 					high_point_z = point_z;
@@ -442,24 +447,24 @@ void About::RenderLines(uint first_line, uint line_count)
 				else
 					*temp_iter = 0x30;
 			}
-			temp_iter += temp_dim.cx - border;
+			temp_iter += temp_dim_.cx - border_;
 			map_iter  += map_size_.cx;
 		}
 	}
 	// mirror the bottom border
 	/*{
-		TempType::iterator temp_iter(temp.begin() + temp_dim.cx * (bmp_size_.cx + border));
+		TempType::iterator temp_iter(temp_buffer_.begin() + temp_dim_.cx * (bmp_size_.cx + border));
 		for (int i(0); i != border; ++i)
 	}*/
 	// blur the buffer
-	TaskCommon::GaussianBlur<BYTE, unsigned short>(&temp[0], temp_dim);
+	TaskCommon::GaussianBlur<BYTE, ushort>(&temp_buffer_[0], temp_dim_);
 	// merge the buffer with the bitmap
 	{
-		TempType::const_iterator temp_iter(temp.begin() + temp_dim.cx * border);
+		TempType::const_iterator temp_iter(temp_buffer_.begin() + temp_dim_.cx * border_);
 		MapType::const_iterator  map_iter (map_.begin() + map_size_.cx * first_line);
 		for (uint y(first_line); y != first_line + line_count; ++y)
 		{
-			temp_iter += border;
+			temp_iter += border_;
 			for (LONG x(0); x != bmp_size_.cx; ++x)
 			{
 				// determine the texture colour
@@ -474,7 +479,7 @@ void About::RenderLines(uint first_line, uint line_count)
 				++temp_iter;
 				++map_iter;
 			}
-			temp_iter += border;
+			temp_iter += border_;
 			++map_iter;
 		}
 	}

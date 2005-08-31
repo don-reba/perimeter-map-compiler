@@ -60,6 +60,7 @@ private:
 		TMR_CHANGE_BK,
 		TMR_DRAW_STROKE
 	};
+	typedef vector<BYTE> TempType;
 public:
 	About();
 	~About();
@@ -69,6 +70,7 @@ public:
 // message handlers
 private:
 	void OnCaptureChanged(Msg<WM_CAPTURECHANGED> &msg);
+	void OnClose         (Msg<WM_CLOSE>          &msg);
 	void OnCreate        (Msg<WM_CREATE>         &msg);
 	void OnDestroy       (Msg<WM_DESTROY>        &msg);
 	void OnEraseBkgnd    (Msg<WM_ERASEBKGND>     &msg);
@@ -89,7 +91,8 @@ private:
 // data
 private:
 	static const size_t num_bk_colours_ = 6;     // number of background colours to cycle through
-	static const size_t brush_size_ = 64;        // diameter of the brush in pixels
+	static const size_t brush_size_     = 64;    // diameter of the brush in pixels
+	static const int    border_         = 3;     // hidden border around the image, for blurring
 	HBITMAP    bk_bmp_;                          // bitmap to back the background DC
 	COLORREF   bk_colours_[num_bk_colours_];     // background colours to cycle through
 	HDC        bk_dc_;                           // background DC
@@ -103,4 +106,6 @@ private:
 	bool       parent_was_enabled_;              // whether the parent has to be reenabled at exit
 	bool       painting_;                        // determines whether DrawStroke should act or not
 	bool       quitting_;                        // flag signifying the dialog's coming demise
+	TempType   temp_buffer_;
+	SIZE       temp_dim_;
 };

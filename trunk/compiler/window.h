@@ -219,6 +219,12 @@ struct Msg<WM_CAPTURECHANGED> : Msg_
 };
 
 template <>
+struct Msg<WM_CLOSE> : Msg_
+{
+	Msg(WndMsg &msg) : Msg_(msg) {}
+};
+
+template <>
 struct Msg<WM_COMMAND> : Msg_
 {
 	Msg(WndMsg &msg) :Msg_(msg) {}

@@ -21,7 +21,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				InlineFunctionExpansion="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE;FREEIMAGE_LIB"
 				GeneratePreprocessedFile="0"
 				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
@@ -37,9 +37,10 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_debug\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Debug\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Debug\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Debug\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Debug_STL\tinyxmld_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9d.lib d3d9.lib Wininet.lib"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_debug\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Debug\libbz2.lib&quot; FreeImage\FreeImage.lib FreeImage\FreeImagePlus.lib &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Debug_STL\tinyxmld_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9d.lib d3d9.lib Wininet.lib"
 				OutputFile="$(OutDir)/Compiler.exe"
 				LinkIncremental="2"
+				IgnoreDefaultLibraryNames="LIBCMT"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile="$(OutDir)/Compiler.pdb"
 				SubSystem="2"
@@ -72,7 +73,8 @@
 			IntermediateDirectory="Release"
 			ConfigurationType="1"
 			CharacterSet="2"
-			WholeProgramOptimization="FALSE">
+			WholeProgramOptimization="TRUE"
+			ReferencesPath="">
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
@@ -83,14 +85,14 @@
 				OmitFramePointers="FALSE"
 				OptimizeForProcessor="3"
 				OptimizeForWindowsApplication="TRUE"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE;FREEIMAGE_LIB"
 				StringPooling="TRUE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="1"
 				RuntimeTypeInfo="FALSE"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="1"
 				PrecompiledHeaderThrough="stdafx.h"
 				BrowseInformation="1"
 				WarningLevel="3"
@@ -101,7 +103,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/fixed:no"
-				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_release\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Release\libbz2.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\Wrapper\FreeImagePlus\Release\FreeImagePlus.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\FreeImage\RELEASE\FreeImage.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Release_STL\tinyxml_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9dt.lib d3d9.lib Wininet.lib"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_release\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Release\libbz2.lib&quot; FreeImage\FreeImage.lib FreeImage\FreeImagePlus.lib &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Release_STL\tinyxml_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9dt.lib d3d9.lib Wininet.lib"
 				OutputFile="$(OutDir)/Compiler.exe"
 				LinkIncremental="1"
 				GenerateDebugInformation="TRUE"

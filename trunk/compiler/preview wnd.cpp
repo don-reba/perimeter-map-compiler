@@ -1106,17 +1106,9 @@ bool PreviewWnd::Marker::Highlight(bool on)
 	ColouredVertex *vertices;
 	if (FAILED(vertices_->Lock(0, 0, ri_cast<void**>(&vertices), 0L)))
 		return false;
-	if (on)
-	{
-		vertices[2].color = 0xFFFFFFFF;
-		vertices[4].color = 0xFFFFFFFF;
-	}
-	else
-	{
-		const D3DCOLOR opaque (colour_ | 0xFF000000);
-		vertices[2].color = opaque;
-		vertices[4].color = opaque;
-	}
+	const D3DCOLOR opaque(on ? 0xFFFFFFFF : (colour_ | 0xFF000000));
+	vertices[2].color = opaque;
+	vertices[4].color = opaque;
 	vertices_->Unlock();
 	highlighted_ = on;
 	return true;
@@ -1153,7 +1145,7 @@ bool PreviewWnd::Marker::Set(D3DXVECTOR2 position)
 	const FLOAT radius(4.0f);
 	const FLOAT height(512.0f);
 	const D3DCOLOR clear  (colour_ & D3DCOLOR_ARGB(0x00, 0xFF, 0xFF, 0xFF));
-	const D3DCOLOR opaque (highlighted_ ? 0xFFFFFFFF : (colour_  | D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00)));
+	const D3DCOLOR opaque (highlighted_ ? 0xFFFFFFFF : (colour_ | 0xFF000000));
 	vertices[0] = ColouredVertex(-radius,     0.0f, 0.0f,   clear);
 	vertices[1] = ColouredVertex(-radius,     0.0f, height, 0L);
 	vertices[2] = ColouredVertex(-radius / 4, 0.0f, 0.0f,   opaque);

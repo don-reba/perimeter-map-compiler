@@ -62,7 +62,7 @@ typedef std::basic_ostringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<
 using std::vector;
 // third party libraries
 #include <bzip2-1.0.2\bzlib.h>
-#include <FreeImage\Wrapper\FreeImagePlus\FreeImagePlus.h>
+#include "FreeImage\FreeImagePlus.h"
 #include <jasper\jasper.h>
 #include <tinyxml\tinyxml.h>
 // project-wide utilites
