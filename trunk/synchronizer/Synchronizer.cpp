@@ -35,14 +35,40 @@ UINT GetPRM(tstring &worlds_prm)
 	return IDOK;
 }
 
+bool Ping(LPCTSTR url)
+{
+	const struct Pinger {
+	public:
+		Pinger(LPCTSTR url)
+			:url_(url)
+		{
+			DWORD thread_id;
+			HANDLE thread(CreateThread(NULL, 0, Thread, this, 0, &thread_id));
+			if (WaitForSingleObject(thread, 5000))
+				result_ = false;
+		}
+		static DWORD WINAPI Thread(LPVOID parameter)
+		{
+			Pinger *obj(ri_cast<Pinger*>(parameter));
+			obj->result_ = (TRUE == InternetCheckConnection(obj->url_.c_str(), FLAG_ICC_FORCE_CONNECTION, 0));
+			return 0;
+		}
+		bool Result() const
+		{
+			return result_;
+		}
+	private:
+		tstring url_;
+		bool result_;
+	} pinger(_T("http://www.rul-clan.ru/map_registration/list_maps.php"));
+	return pinger.Result();
+}
+
 UINT GetMapList(tstring &map_list)
 {
 	TCHAR *error_title(_T("Map Synchronization Error"));
 	// check connection status
-	if (FALSE == InternetCheckConnection(
-		_T("http://www.rul-clan.ru/map_registration/list_maps.php"),
-		FLAG_ICC_FORCE_CONNECTION,
-		0))
+	if (!Ping(_T("http://www.rul-clan.ru/map_registration/list_maps.php")))
 		return IDIGNORE;
 	// register map
 	{
