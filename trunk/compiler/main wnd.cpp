@@ -326,10 +326,11 @@ void MainWnd::UnpackShrub(LPCTSTR path)
 
 void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
 {
-	EnableWindow(info_wnd_.hwnd_,       msg.wprm_);
-	EnableWindow(preference_wnd_.hwnd_, msg.wprm_);
-	EnableWindow(preview_wnd_.hwnd_,    msg.wprm_);
-	EnableWindow(stat_wnd_.hwnd_,       msg.wprm_);
+	BOOL is_enabled(msg.IsEnabled() ? TRUE : FALSE);
+	EnableWindow(info_wnd_.hwnd_,       is_enabled);
+	EnableWindow(preference_wnd_.hwnd_, is_enabled);
+	EnableWindow(preview_wnd_.hwnd_,    is_enabled);
+	EnableWindow(stat_wnd_.hwnd_,       is_enabled);
 }
 
 void MainWnd::OnProjectOpen(Msg<WM_USR_PROJECT_OPEN> &msg)
@@ -434,18 +435,10 @@ void MainWnd::OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg)
 {
 	// display a warning message
 	tostringstream message;
-	message << _T("Could not find the file ");
-	switch (msg.Id())
-	{
-	case RS_HARDNESS:   message << _T("hardness.bmp");   break;
-	case RS_HEIGHTMAP:  message << _T("heightmap.bmp");  break;
-	case RS_SKY:        message << _T("sky.bmp");        break;
-	case RS_SURFACE:    message << _T("surface.bmp");    break;
-	case RS_TEXTURE:    message << _T("texture.bmp");    break;
-	case RS_ZERO_LAYER: message << _T("zero layer.bmp"); break;
-	default: DebugBreak();
-	}
-	message << _T(".\nProject settings will be set to not use it.");
+	message
+		<< _T("Could not find the file:\n")
+		<< msg.Message()
+		<< _T(".\nProject settings will be set to not use it.");
 	MessageBox(hwnd_, message.str().c_str(), _T("Warning"), MB_OK | MB_ICONWARNING);
 	// alert the project manager
 	project_manager_.OnResourceNotFound(msg.Id());

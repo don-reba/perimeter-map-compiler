@@ -57,8 +57,12 @@ inline void PostToggleBusy(HWND hwnd, uint task_count) {
 	PostMessage(hwnd, WM_USR_TOGGLE_BUSY, task_count, 0L);
 }
 
-inline void PostResourceNotFound(HWND hwnd, Resource id) {
-	PostMessage(hwnd, WM_USR_RESOURCE_NOT_FOUND, id, 0L);
+inline void PostResourceNotFound(HWND hwnd, Resource id, LPCTSTR path) {
+	PostMessage(
+		hwnd,
+		WM_USR_RESOURCE_NOT_FOUND,
+		ri_cast<WPARAM>(new tstring(path)),
+		static_cast<LPARAM>(id));
 }
 
 inline void SendProjectOpen(HWND hwnd)
@@ -79,10 +83,21 @@ inline void SendResourceCreated(HWND hwnd, Resource id)
 template <>
 struct Msg<WM_USR_RESOURCE_NOT_FOUND> : Msg_
 {
-	Msg(WndMsg &msg) : Msg_(msg) {}
-	Resource Id() const {
-		return static_cast<Resource>(wprm_);
+	Msg(WndMsg &msg) : Msg_(msg), message_(*MessagePtr()) {
+		delete MessagePtr();
 	}
+	const Resource Id() const {
+		return static_cast<Resource>(lprm_);
+	}
+	const tstring &Message() const {
+		return message_;
+	}
+private:
+	string *MessagePtr() {
+		return ri_cast<tstring*>(wprm_);
+	}
+private:
+	tstring message_;
 };
 
 template <>

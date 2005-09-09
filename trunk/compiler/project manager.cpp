@@ -168,10 +168,6 @@ void ProjectManager::CreateProject(LPCTSTR folder_path, LPCTSTR map_name, SIZE m
 	MacroProjectData(ID_SP_3).y      = map_size.cy - 1 - MacroProjectData(ID_SP_1).y;
 	MacroProjectData(ID_SP_4).x      = MacroProjectData(ID_SP_1).x;
 	MacroProjectData(ID_SP_4).y      = MacroProjectData(ID_SP_3).y;
-	MacroProjectData(ID_CUSTOM_HARDNESS)   = false;
-	MacroProjectData(ID_CUSTOM_SKY)        = false;
-	MacroProjectData(ID_CUSTOM_SURFACE)    = false;
-	MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
 	TCHAR path[MAX_PATH];
 	_tcscpy(path, folder_path);
 	PathAddBackslash(path);
@@ -196,6 +192,8 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 		PathRemoveFileSpec(folder_path);
 		folder_path_ = folder_path;
 	}
+	// get the correct extensions of the already existing files
+	FindFileNames();
 	// enqueue the task of updating project data
 	{
 		LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
@@ -214,10 +212,9 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 			MacroAppData(ID_DISPLAY_HARDNESS),
 			MacroAppData(ID_DISPLAY_TEXTURE),
 			MacroAppData(ID_DISPLAY_ZERO_LAYER),
+			file_names_,
 			TaskCommon::MapInfo::LoadFromGlobal()));
 	}
-	// get the correct extensions of the already existing files
-	FindFileNames();
 	// create default files
 	if (new_project)
 		AddTask(new CreateDefaultFilesTask(error_hwnd_));
@@ -234,9 +231,9 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
 		tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SURFACE))
-	//	tracker_.SetDatum(RS_SURFACE, _T("surface.bmp"), null_last_write);
+	//	tracker_.SetDatum(RS_SURFACE, file_names_[RS_SURFACE].c_str(), null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SKY))
-	//	tracker_.SetDatum(RS_SKY, _T("sky.bmp"), null_last_write);
+	//	tracker_.SetDatum(RS_SKY, file_names_[RS_SKY].c_str(), null_last_write);
 	AddTask(new NotifyProjectOpenTask(main_hwnd));
 }
 
@@ -258,6 +255,7 @@ void ProjectManager::PackShrub()
 		MacroAppData(ID_DISPLAY_HARDNESS),
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		file_names_,
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
@@ -463,6 +461,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 			MacroAppData(ID_DISPLAY_HARDNESS),
 			MacroAppData(ID_DISPLAY_TEXTURE),
 			MacroAppData(ID_DISPLAY_ZERO_LAYER),
+			file_names_,
 			TaskCommon::MapInfo::LoadFromGlobal()));
 	}
 	// enqueue the task of unpacking the rest of the data
@@ -500,10 +499,10 @@ void ProjectManager::OnResourceCreated(Resource id)
 	switch (id)
 	{
 	case RS_HARDNESS:
-		tracker_.SetDatum(RS_HARDNESS, _T("hardness.bmp"), null_last_write);
+		tracker_.SetDatum(RS_HARDNESS, file_names_[RS_HARDNESS].c_str(), null_last_write);
 		break;
 	case RS_ZERO_LAYER:
-		tracker_.SetDatum(RS_ZERO_LAYER, _T("zero layer.bmp"), null_last_write);
+		tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
 		break;
 	}
 }
@@ -536,6 +535,7 @@ void ProjectManager::InstallMap()
 		MacroAppData(ID_DISPLAY_HARDNESS),
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		file_names_,
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
@@ -576,6 +576,7 @@ void ProjectManager::ReloadFiles(const IdsType &ids)
 		MacroAppData(ID_DISPLAY_HARDNESS),
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		file_names_,
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (project_state_ == PS_PROJECT)
 		AddTask(new LoadProjectDataTask(ids, error_hwnd_));
@@ -610,6 +611,7 @@ void ProjectManager::CreateResource(Resource id, HWND main_hwnd)
 		MacroAppData(ID_DISPLAY_HARDNESS),
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		file_names_,
 		TaskCommon::MapInfo::LoadFromGlobal()));
 }
 
@@ -635,6 +637,7 @@ void ProjectManager::UpdateSettings()
 		MacroAppData(ID_DISPLAY_HARDNESS),
 		MacroAppData(ID_DISPLAY_TEXTURE),
 		MacroAppData(ID_DISPLAY_ZERO_LAYER),
+		file_names_,
 		TaskCommon::MapInfo::LoadFromGlobal()));
 }
 
@@ -764,7 +767,7 @@ ProjectManager::FileNotFound::FileNotFound(HWND &main_hwnd)
 
 void ProjectManager::FileNotFound::operator() (Resource id, LPCTSTR path)
 {
-	PostResourceNotFound(main_hwnd_, id);
+	PostResourceNotFound(main_hwnd_, id, path);
 }
 
 //-------------------------------------------

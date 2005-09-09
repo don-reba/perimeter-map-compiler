@@ -107,6 +107,7 @@ public:
 	bool                display_hardness_;
 	bool                display_texture_;
 	bool                display_zero_layer_;
+	tstring             file_names_[resource_count];
 	TaskCommon::MapInfo map_info_;
 	CRITICAL_SECTION    section_;
 	// cached resources
@@ -331,6 +332,7 @@ public:
 		bool         display_hardness,
 		bool         display_texture,
 		bool         display_zero_layer,
+		tstring      file_names[resource_count],
 		const TaskCommon::MapInfo &map_info);
 	void operator() ();
 private:
@@ -344,6 +346,7 @@ private:
 	bool         display_hardness_;
 	bool         display_texture_;
 	bool         display_zero_layer_;
+	tstring      file_names_[resource_count];
 	TaskCommon::MapInfo map_info_;
 };
 

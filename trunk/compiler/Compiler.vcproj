@@ -21,7 +21,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				InlineFunctionExpansion="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE;FREEIMAGE_LIB"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB"
 				GeneratePreprocessedFile="0"
 				StringPooling="TRUE"
 				MinimalRebuild="TRUE"
@@ -85,19 +85,84 @@
 				OmitFramePointers="FALSE"
 				OptimizeForProcessor="3"
 				OptimizeForWindowsApplication="TRUE"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;PRE_RELEASE;FREEIMAGE_LIB"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB"
 				StringPooling="TRUE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
 				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="1"
 				RuntimeTypeInfo="FALSE"
-				UsePrecompiledHeader="1"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="stdafx.h"
-				BrowseInformation="1"
+				BrowseInformation="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="FALSE"
-				DebugInformationFormat="1"/>
+				DebugInformationFormat="0"/>
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/fixed:no"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib &quot;F:\My Files\Alexey Badalov\Programming\jasper-1.701.0\src\msvc\win32_release\libjasper.lib&quot; &quot;F:\My Files\Alexey Badalov\Programming\bzip2-1.0.2\Release\libbz2.lib&quot; FreeImage\FreeImage.lib FreeImage\FreeImagePlus.lib &quot;F:\My Files\Alexey Badalov\Programming\tinyxml\Release_STL\tinyxml_STL.lib&quot; dxerr9.lib dxguid.lib d3dx9dt.lib d3d9.lib Wininet.lib"
+				OutputFile="$(OutDir)/Compiler.exe"
+				LinkIncremental="1"
+				GenerateDebugInformation="FALSE"
+				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="1"/>
+			<Tool
+				Name="VCMIDLTool"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Pre-Release|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="2"
+			WholeProgramOptimization="FALSE"
+			ReferencesPath="">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				GlobalOptimizations="TRUE"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="TRUE"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="FALSE"
+				OptimizeForProcessor="3"
+				OptimizeForWindowsApplication="TRUE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB"
+				StringPooling="TRUE"
+				BasicRuntimeChecks="0"
+				RuntimeLibrary="0"
+				BufferSecurityCheck="FALSE"
+				EnableEnhancedInstructionSet="1"
+				RuntimeTypeInfo="FALSE"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="stdafx.h"
+				BrowseInformation="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="FALSE"
+				DebugInformationFormat="3"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -201,6 +266,12 @@
 				RelativePath=".\task common.cpp">
 				<FileConfiguration
 					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						EnableEnhancedInstructionSet="1"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Pre-Release|Win32">
 					<Tool
 						Name="VCCLCompilerTool"
 						EnableEnhancedInstructionSet="1"/>
@@ -423,6 +494,12 @@
 					<Tool
 						Name="VCCustomBuildTool"/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Pre-Release|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCustomBuildTool"/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\server side\admin\map_list_view.php">
@@ -437,6 +514,12 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
+					ExcludedFromBuild="TRUE">
+					<Tool
+						Name="VCCustomBuildTool"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Pre-Release|Win32"
 					ExcludedFromBuild="TRUE">
 					<Tool
 						Name="VCCustomBuildTool"/>

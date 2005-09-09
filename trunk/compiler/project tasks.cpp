@@ -555,24 +555,24 @@ void LoadProjectDataTask::operator() ()
 	// load
 	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
 	if (ids_[RS_HARDNESS])
-		task_data_.hardness_->Load(PathCombine(path, folder_path, _T("hardness.bmp")));
+		task_data_.hardness_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_HARDNESS].c_str()));
 	if (ids_[RS_ZERO_LAYER])
-		task_data_.zero_layer_->Load(PathCombine(path, folder_path, _T("zero layer.bmp")));
+		task_data_.zero_layer_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_ZERO_LAYER].c_str()));
 	if (ids_[RS_HEIGHTMAP])
 		task_data_.heightmap_ = LoadHeightmap(
 			task_data_.map_size_,
 			*this,
-			PathCombine(path, folder_path, _T("heightmap.bmp")),
+			PathCombine(path, folder_path, task_data_.file_names_[RS_HEIGHTMAP].c_str()),
 			ids_[RS_ZERO_LAYER] ? task_data_.zero_layer_ : NULL,
 			task_data_.map_info_.zero_level_);
 	if (ids_[RS_TEXTURE])
 		task_data_.texture_->Load(
-			PathCombine(path, folder_path, _T("texture.bmp")),
+			PathCombine(path, folder_path, task_data_.file_names_[RS_TEXTURE].c_str()),
 			task_data_.fast_quantization_);
 	if (ids_[RS_SKY])
-		task_data_.sky_->Load(PathCombine(path, folder_path, _T("sky.bmp")));
+		task_data_.sky_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SKY].c_str()));
 	if (ids_[RS_SURFACE])
-		task_data_.surface_->Load(PathCombine(path, folder_path, _T("surface.bmp")));
+		task_data_.surface_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SURFACE].c_str()));
 }
 
 //-----------------------------------------
@@ -995,6 +995,7 @@ UpdateDataTask::UpdateDataTask(
 	bool           display_hardness,
 	bool           display_texture,
 	bool           display_zero_layer,
+	tstring        file_names[resource_count],
 	const MapInfo &map_info)
 	:map_name_          (map_name)
 	,project_folder_    (project_folder)
@@ -1007,7 +1008,10 @@ UpdateDataTask::UpdateDataTask(
 	,display_texture_   (display_texture)
 	,display_zero_layer_(display_zero_layer)
 	,map_info_          (map_info)
-{}
+{
+	for (uint i(0); i != resource_count; ++i)
+		file_names_[i] = file_names[i];
+}
 
 void UpdateDataTask::operator() ()
 {
@@ -1022,6 +1026,8 @@ void UpdateDataTask::operator() ()
 	task_data_.display_texture_    = display_texture_;
 	task_data_.display_zero_layer_ = display_zero_layer_;
 	task_data_.map_info_           = map_info_;
+	for (uint i(0); i != resource_count; ++i)
+		task_data_.file_names_[i] = file_names_[i];
 }
 
 //--------------------------------

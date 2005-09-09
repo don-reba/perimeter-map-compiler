@@ -649,6 +649,8 @@ namespace TaskCommon
 			GaussianBlur<ushort, int>(&*blurred_zero_layer.begin(), zero_layer.size_);
 			GaussianBlur<ushort, int>(&*blurred_zero_layer.begin(), zero_layer.size_);
 			GaussianBlur<ushort, int>(&*blurred_zero_layer.begin(), zero_layer.size_);
+			// adjust zero_level to the higher bpp
+			zero_level *= 32;
 			// scale the heightmap
 			vector<ushort>::const_iterator  bzl_iter (blurred_zero_layer.begin());
 			WORD                           *data_iter(data_);
@@ -660,9 +662,9 @@ namespace TaskCommon
 					uint v(*bzl_iter);
 					v = (0 == (v & 0x8000)) ? 0 : 0xFF & v >> 7;
 					// scale the pixel (optimized to avoid fp ops)
-					uint scale(23);
-					uint ratio((v << scale) / 0xFF);
-					*data_iter = static_cast<BYTE>((*data_iter * ratio + zero_level * ((1 << scale) - ratio)) >> scale);
+					unsigned __int64 scale(23);
+					unsigned __int64 ratio((v << scale) / 0xFF);
+					*data_iter = static_cast<WORD>((*data_iter * ratio + zero_level * ((1 << scale) - ratio)) >> scale);
 					++data_iter;
 					++bzl_iter;
 				}
@@ -687,13 +689,15 @@ namespace TaskCommon
 				{
 					for (LONG c(0); c != map_size.cx; ++c)
 					{
-						jas_matrix_set(data, r, c, data_[index]);
+						WORD value(data_[index]);
+//						value = ((value & 0xFF) << 8) | (value >> 8);
+						jas_matrix_set(data, r, c, value);
 						mask.push_back(0 == data_[index]);
 						++index;
 					}
 					++index; // skip padding
 				}
-			}
+			} 
 			// initialize the image component structure
 			jas_image_cmptparm_t component;
 			component.width  = map_size.cx;
@@ -702,7 +706,7 @@ namespace TaskCommon
 			component.tly    = 0;
 			component.hstep  = 1;
 			component.vstep  = 1;
-			component.prec   = 16;
+			component.prec   = 13;
 			component.sgnd   = false;
 			// create the image
 			jas_image_t *image(jas_image_create(1, &component, JAS_CLRSPC_SGRAY));
@@ -853,12 +857,30 @@ namespace TaskCommon
 				// extract image data, with padding, and 0 where mask is true
 				WORD *data_ptr(data_);
 				int mask_index(0);
+				fipImage image(FIT_UINT16, static_cast<WORD>(map_size.cx), static_cast<WORD>(map_size.cy), 16);
+				WORD *image_data(ri_cast<WORD*>(image.accessPixels()));
 				for (LONG r(0); r != map_size.cy; ++r)
 				{
 					for (LONG c(0); c != map_size.cx; ++c)
-						*data_ptr++ = mask[mask_index++] ? 0 : static_cast<WORD>(jas_matrix_get(data_matrix, r, c));
+						if (0 != mask[mask_index++])
+							*data_ptr++ = 0;
+						else
+						{
+							WORD value(static_cast<WORD>(jas_matrix_get(data_matrix, r, c)));
+							/*value &= 0x1FFF;
+							if (rand() < RAND_MAX / 0x1000)
+							{
+								for (int i(0); i != 16; ++i)
+									file << ((value & 1 << (15 - i)) ? '1' : '0');
+								file << "\n";
+							}*/
+//							value = ((value & 0xFF) << 8) | (value >> 8);
+							*image_data++ = value;
+							*data_ptr++ = value;
+						}
 					*data_ptr++ = *(data_ptr - 1); // pad horizontally
 				}
+				image.save("pixels.tiff", TIFF_NONE);
 				// pad vertically
 				for (int c(0); c != map_size.cx + 1; ++c)
 					*data_ptr++ = *(data_ptr - map_size.cx - 1);
@@ -868,7 +890,12 @@ namespace TaskCommon
 
 	Heightmap16::operator TaskCommon::Heightmap8*()
 	{
-		Heightmap8 *heightmap8 = new Heightmap8(size_, *this);
+		Heightmap8 *heightmap8;
+		{
+			SIZE map_size = { size_.cx - 1, size_.cy - 1 };
+			heightmap8 = new Heightmap8(map_size, *this);
+			heightmap8->data_ = new BYTE[size_.cx * size_.cy];
+		}
 		const size_t data_size(size_.cx * size_.cy);
 		const WORD *        data16    (data_);
 		const WORD * const  data16_end(data16 + data_size);
@@ -1015,25 +1042,27 @@ namespace TaskCommon
 			size_.cy + 1 == heightmap.size_.cy);
 		switch (heightmap.GetBpp())
 		{
-		case 8:  return Create8 (heightmap);
-		case 16: return Create16(heightmap);
+		case 8:  return Create(ri_cast<const Heightmap8&> (heightmap));
+		case 16: return Create(ri_cast<const Heightmap16&>(heightmap));
 		}
 		return false;
 	}
 
-	bool Lightmap::Create8(const Heightmap &heightmap)
+	bool Lightmap::Create(const Heightmap8 &heightmap)
 	{
-		const Heightmap8 &heightmap8(ri_cast<const Heightmap8&>(heightmap));
 		// precalculate surface-sun dot products
 		BYTE surface_sun_dot[0x100];
 		{
-			const float dx(1.0f);
-			for (uint i(0); i != 0x100; ++i)
+			float normal_dy(1.0f);
+			float light_dx (1.0f / static_cast<float>(sqrt(2.0f)));
+			float light_dy (1.0f / static_cast<float>(sqrt(2.0f)));
+			for (int i(0); i != 0x100; ++i)
 			{
-				const float dy(static_cast<float>(i));
-				float length(sqrt(2 * (dx * dx + dy * dy)));
-				float dot((dx + dy) / length);
-				surface_sun_dot[i] = (BYTE)(0xFF * dot);
+				float normal_dx(static_cast<float>(i));
+				// calculate and store the cosine of the angle between the vectors
+				float normal_l(sqrt(normal_dx * normal_dx + normal_dy * normal_dy));
+				float cos_a((normal_dx * light_dx + normal_dy * light_dy) / normal_l);
+				surface_sun_dot[i] = static_cast<BYTE>(0xFF * abs(cos_a));
 			}
 		}
 		// allocate memory for the lightmap
@@ -1041,7 +1070,7 @@ namespace TaskCommon
 		_ASSERTE(NULL == data_);
 		data_ = new BYTE[data_size];
 		// calculate lighting
-		const BYTE *hi(heightmap8.data_); // heightmap iterator
+		const BYTE *hi(heightmap.data_); // heightmap iterator
 		BYTE *li(data_); // lightmap iterator
 		for (LONG r(0); r != size_.cy; ++r)
 		{
@@ -1056,9 +1085,9 @@ namespace TaskCommon
 				const ptrdiff_t point_x(high_point_x - row_i);
 				const int       point_z(*row_i);
 				if (high_point_z - point_z < point_x)
-				// if the point is unshadowed
 				{
-					*li = surface_sun_dot[point_z - row_i[1]];
+					int dy(__max(0, point_z - row_i[1]));
+					*li = surface_sun_dot[dy];
 					high_point_z = point_z;
 					high_point_x = row_i;
 				}	
@@ -1075,8 +1104,58 @@ namespace TaskCommon
 		return true;
 	}
 
-	bool Lightmap::Create16(const Heightmap &heightmap)
+	bool Lightmap::Create(const Heightmap16 &heightmap)
 	{
+		// precalculate surface-sun dot products
+		BYTE surface_sun_dot[0x400];
+		{
+			float normal_dy(4.0f);
+			float light_dx (1.0f / static_cast<float>(sqrt(2.0f)));
+			float light_dy (1.0f / static_cast<float>(sqrt(2.0f)));
+			for (int i(0); i != 0x400; ++i)
+			{
+				float normal_dx(static_cast<float>(i));
+				// calculate and store the cosine of the angle between the vectors
+				float normal_l(sqrt(normal_dx * normal_dx + normal_dy * normal_dy));
+				float cos_a((normal_dx * light_dx + normal_dy * light_dy) / normal_l);
+				surface_sun_dot[i] = static_cast<BYTE>(0xFF * abs(cos_a));
+			}
+		}
+		// allocate memory for the lightmap
+		const size_t data_size(size_.cx * size_.cy);
+		_ASSERTE(NULL == data_);
+		data_ = new BYTE[data_size];
+		// calculate lighting
+		const WORD * hi(heightmap.data_); // heightmap iterator
+		BYTE       * li(data_); // lightmap iterator
+		for (LONG r(0); r != size_.cy; ++r)
+		{
+			const WORD * row_i(hi + size_.cx);
+			int          high_point_z(*row_i);
+			const WORD * high_point_x(row_i);
+			li += size_.cx;
+			while (row_i != hi)
+			{
+				--li;
+				--row_i;
+				const ptrdiff_t point_x(high_point_x - row_i);
+				const int       point_z(*row_i);
+				if ((high_point_z - point_z) / 0x20 < point_x)
+				{
+					int dy((point_z - row_i[1]) >> 3);
+					dy = __max(0, dy);
+					*li = surface_sun_dot[dy];
+					high_point_z = point_z;
+					high_point_x = row_i;
+				}	
+				else
+					*li = 0x00;
+			}
+			li += size_.cx;
+			hi += size_.cx + 1;
+		}
+		// blur the lightmap (fake soft shadows :) )
+		GaussianBlur<BYTE, ushort>(data_, size_);
 		return true;
 	}
 
@@ -2212,8 +2291,24 @@ namespace TaskCommon
 		{
 		case 8:
 			{
-				const Heightmap8 &heightmap8(ri_cast<const Heightmap8&>(heightmap));
-				const BYTE *heightmap_ptr(heightmap8.data_);
+				const Heightmap8 &heightmap(ri_cast<const Heightmap8&>(heightmap));
+				const BYTE *heightmap_ptr(heightmap.data_);
+				BYTE *image_data(image.accessPixels());
+				for (LONG r(0); r != img_size.cy; ++r)
+				{
+					for (int c(0); c != img_size.cx; ++c)
+					{
+						if (0 == *heightmap_ptr++)
+							image_data[0] = image_data[1] = image_data[2] = 0;
+						image_data +=3;
+					}
+					++heightmap_ptr;
+				}
+			} break;
+		case 16:
+			{
+				const Heightmap16 &heightmap(ri_cast<const Heightmap16&>(heightmap));
+				const WORD *heightmap_ptr(heightmap.data_);
 				BYTE *image_data(image.accessPixels());
 				for (LONG r(0); r != img_size.cy; ++r)
 				{
@@ -2451,12 +2546,32 @@ namespace TaskCommon
 				++heightmap_iter;
 			}
 			heightmap_iter = heightmap.data_;
-			for (LONG r(0); r != map_size.cy; ++r)
+			if (NULL != zero_layer)
 			{
-				for (LONG c(0); c != map_size.cx; ++c)
-					*vmp_iter++ = static_cast<BYTE>(*heightmap_iter++ && 0x1F);
-				++heightmap_iter;
+				const ZeroLayer &zero_layer_ref(*zero_layer);
+				size_t index(0);
+				for (LONG r(0); r != map_size.cy; ++r)
+				{
+					for (LONG c(0); c != map_size.cx; ++c)
+					{
+						*vmp_iter =
+							zero_layer_ref.data_[index]
+								?static_cast<BYTE>(*heightmap_iter & 0x1F)
+								:0x80;
+						++vmp_iter;
+						++index;
+						++heightmap_iter;
+					}
+					++heightmap_iter;
+				}
 			}
+			else
+				for (LONG r(0); r != map_size.cy; ++r)
+				{
+					for (LONG c(0); c != map_size.cx; ++c)
+						*vmp_iter++ = static_cast<BYTE>(*heightmap_iter++ && 0x1F);
+					++heightmap_iter;
+				}
 		}
 		// record the texture
 		{
@@ -2477,23 +2592,231 @@ namespace TaskCommon
 	{
 		switch (heightmap.GetBpp())
 		{
-		case 8:  return AverageColour(texture, ri_cast<const Heightmap8&> (heightmap));
-//		case 16: return AverageColour(texture, ri_cast<const Heightmap16&>(heightmap));
+		case 8:  return AverageColour8 (texture, ri_cast<const Heightmap8&> (heightmap));
+		case 16: return AverageColour16(texture, ri_cast<const Heightmap16&>(heightmap));
 		}
 		return 0;
+	}
+
+	COLORREF AverageColour8(const Texture &texture, const Heightmap8 &heightmap)
+	{
+		const BYTE *texture_iter;
+		const BYTE *heightmap_iter;
+		const size_t num_colors(256);
+		int color_count[num_colors];
+		const int *color_iter;
+		uint half_size(0);
+		uint sum;
+		LONG r, c; // row, column
+		// count the number of non-null pixels of the heightmap
+		heightmap_iter = heightmap.data_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+				if (0 != *heightmap_iter++)
+					++half_size;
+			++heightmap_iter;
+		}
+		half_size /= 2;
+		// count the number of occurences of each value of blue
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetBValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median blue
+		BYTE median_b;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_b = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetGValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median green
+		BYTE median_g;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_g = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetRValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median red
+		BYTE median_r;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_r = static_cast<BYTE>(color_iter - color_count);
+		return RGB(median_r, median_g, median_b);
+	}
+
+	COLORREF AverageColour16(const Texture &texture, const Heightmap16 &heightmap)
+	{
+		const BYTE *texture_iter;
+		const WORD *heightmap_iter;
+		const size_t num_colors(256);
+		int color_count[num_colors];
+		const int *color_iter;
+		uint half_size(0);
+		uint sum;
+		LONG r, c; // row, column
+		// count the number of non-null pixels of the heightmap
+		heightmap_iter = heightmap.data_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+				if (0 != *heightmap_iter++)
+					++half_size;
+			++heightmap_iter;
+		}
+		half_size /= 2;
+		// count the number of occurences of each value of blue
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetBValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median blue
+		BYTE median_b;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_b = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetGValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median green
+		BYTE median_g;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_g = static_cast<BYTE>(color_iter - color_count);
+		// count the number of occurences of each value of green
+		ZeroMemory(color_count, num_colors * sizeof(int));
+		heightmap_iter = heightmap.data_;
+		texture_iter = texture.indices_;
+		for (r = 0; r != texture.size_.cy; ++r)
+		{
+			for (c = 0; c != texture.size_.cx; ++c)
+			{
+				if (0 != *heightmap_iter)
+					++color_count[GetRValue(texture.palette_[*texture_iter])];
+				++heightmap_iter;
+				++texture_iter;
+			}
+			++heightmap_iter;
+		}
+		// find the median red
+		BYTE median_r;
+		sum = 0;
+		color_iter = color_count;
+		do
+		{
+			_ASSERTE(color_iter != color_count + num_colors);
+			sum += *color_iter;
+			++color_iter;
+		} while (sum < half_size);
+		--color_iter;
+		median_r = static_cast<BYTE>(color_iter - color_count);
+		return RGB(median_r, median_g, median_b);
 	}
 
 	float AverageHeight(const Heightmap &heightmap)
 	{
 		switch(heightmap.GetBpp())
 		{
-		case 8:  return AverageHeight(ri_cast<const Heightmap8&> (heightmap));
-//		case 16: return AverageHeight(ri_cast<const Heightmap16&>(heightmap));
+		case 8:  return AverageHeight8 (ri_cast<const Heightmap8&> (heightmap));
+		case 16: return AverageHeight16(ri_cast<const Heightmap16&>(heightmap));
 		}
 		return 0.0f;
 	}
 
-	float AverageHeight(const Heightmap8 &heightmap)
+	float AverageHeight8(const Heightmap8 &heightmap)
 	{
 		double sum(0);
 		int n(0);
@@ -2513,7 +2836,7 @@ namespace TaskCommon
 		return static_cast<float>(sum);
 	}
 
-	/*float AverageHeight(const Heightmap16 &heightmap)
+	float AverageHeight16(const Heightmap16 &heightmap)
 	{
 		double sum(0);
 		int n(0);
@@ -2531,7 +2854,7 @@ namespace TaskCommon
 			sum /= n * 32;
 		_ASSERTE(sum < 256);
 		return static_cast<float>(sum);
-	}*/
+	}
 
 	// calculate the CRC32 checksum for the data
 	// if Perimeter was at all popular, MD5 might have been worth consideration

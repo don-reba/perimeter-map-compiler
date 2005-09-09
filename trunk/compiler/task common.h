@@ -150,8 +150,8 @@ namespace TaskCommon
 		~Lightmap();
 		bool Create(const Heightmap &heightmap);
 	private:
-		bool Create8 (const Heightmap &heightmap);
-		bool Create16(const Heightmap &heightmap);
+		bool Create(const Heightmap8  &heightmap);
+		bool Create(const Heightmap16 &heightmap);
 	public:
 		BYTE *data_;
 		SIZE size_;
@@ -362,10 +362,12 @@ namespace TaskCommon
 	// "incredible math" (Lithium Flower)
 	//-----------------------------------
 
-	COLORREF AverageColour(const Texture &texture, const Heightmap &heightmap);
-	float    AverageHeight(const Heightmap   &heightmap);
-	float    AverageHeight(const Heightmap8  &heightmap);
-//	float    AverageHeight(const Heightmap16 &heightmap);
+	COLORREF AverageColour  (const Texture &texture, const Heightmap   &heightmap);
+	COLORREF AverageColour8 (const Texture &texture, const Heightmap8  &heightmap);
+	COLORREF AverageColour16(const Texture &texture, const Heightmap16 &heightmap);
+	float    AverageHeight  (const Heightmap   &heightmap);
+	float    AverageHeight8 (const Heightmap8  &heightmap);
+	float    AverageHeight16(const Heightmap16 &heightmap);
 	DWORD    CalculateChecksum(BYTE *data, size_t size, DWORD seed);
 	void     CreateTextures(
 		const Texture     &texture,

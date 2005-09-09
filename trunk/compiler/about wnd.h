@@ -84,28 +84,28 @@ private:
 protected:
 	void ProcessMessage(WndMsg &msg);
 private:
-	void ChangeBackground();
-	void Destroy();
-	void DrawStroke();
-	void RenderLines(uint first_line, uint line_count);
+	void        ChangeBackground();
+	const BYTE *ComputeLightmapLookup();
+	void        Destroy();
+	void        DrawStroke();
+	void        RenderLines(uint first_line, uint line_count);
 // data
 private:
 	static const size_t num_bk_colours_ = 6;     // number of background colours to cycle through
 	static const size_t brush_size_     = 64;    // diameter of the brush in pixels
 	static const int    border_         = 3;     // hidden border around the image, for blurring
-	HBITMAP    bk_bmp_;                          // bitmap to back the background DC
-	COLORREF   bk_colours_[num_bk_colours_];     // background colours to cycle through
-	HDC        bk_dc_;                           // background DC
-	SIZE       bmp_size_;                        // dimensions of the map, excluding padding
-	float      brush_[brush_size_][brush_size_]; // probability that a pixel under the brush will be painted
-	size_t     current_bk_colour_;               // index of the current stroke colour
-	POINT      cursor_pos_;                      // position of the cursor for painting
-	MapType    map_;                             // the array containing map data
-	HWND       parent_hwnd_;
-	SIZE       map_size_;                        // dimensions of the map, including padding
-	bool       parent_was_enabled_;              // whether the parent has to be reenabled at exit
-	bool       painting_;                        // determines whether DrawStroke should act or not
-	bool       quitting_;                        // flag signifying the dialog's coming demise
-	TempType   temp_buffer_;
-	SIZE       temp_dim_;
+	HBITMAP     bk_bmp_;                          // bitmap to back the background DC
+	COLORREF    bk_colours_[num_bk_colours_];     // background colours to cycle through
+	HDC         bk_dc_;                           // background DC
+	SIZE        bmp_size_;                        // dimensions of the map, excluding padding
+	float       brush_[brush_size_][brush_size_]; // probability that a pixel under the brush will be painted
+	size_t      current_bk_colour_;               // index of the current stroke colour
+	POINT       cursor_pos_;                      // position of the cursor for painting
+	MapType     map_;                             // the array containing map data
+	SIZE        map_size_;                        // dimensions of the map, including padding
+	bool        painting_;                        // determines whether DrawStroke should act or not
+	bool        quitting_;                        // flag signifying the dialog's coming demise
+	const BYTE *lightmap_lookup_;                 // lookup table for lighting calculations
+	TempType    temp_buffer_;                     // buffer for redrawing changed rows
+	SIZE        temp_dim_;                        // dimensions of temp_buffer_
 };

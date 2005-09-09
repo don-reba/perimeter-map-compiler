@@ -46,6 +46,7 @@
 About::About()
 	:painting_(false)
 	,current_bk_colour_(0)
+	,lightmap_lookup_(ComputeLightmapLookup())
 {
 	// set initial mouse coordinate records
 	cursor_pos_.x = cursor_pos_.y = 0;
@@ -66,14 +67,12 @@ About::About()
 
 About::~About()
 {
+	delete [] lightmap_lookup_;
 }
 
 INT_PTR About::DoModal(HWND parent_wnd)
 {
-	parent_hwnd_ = GetAncestor(parent_wnd, GA_ROOT);
 	HINSTANCE hinstance(GetModuleHandle(NULL));
-	// disable the parent
-	parent_was_enabled_ = EnableWindow(parent_hwnd_, FALSE) == FALSE;
 	// register window class
 	WNDCLASSEX window_class = { sizeof(window_class) };
 	{
@@ -94,25 +93,28 @@ INT_PTR About::DoModal(HWND parent_wnd)
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
-		parent_hwnd_,
+		parent_wnd,
 		NULL,
 		hinstance,
 		this);
 	if (NULL == hwnd_)
-	{
-		// enable the parent
-		if (parent_was_enabled_)
-			EnableWindow(parent_hwnd_, TRUE);
 		return IDCANCEL;
-	}
+	// disable the parent
+	bool parent_was_enabled(EnableWindow(parent_wnd, FALSE) == FALSE);
 	// enter the message loop
 	MSG msg = {};
 	quitting_ = false;
-	while (!quitting_ && GetMessage(&msg, NULL, 0, 0)) 
+	while (!quitting_ && GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+	if (parent_was_enabled)
+	{
+		EnableWindow(parent_wnd, TRUE);
+		SetFocus(parent_wnd);
+	}
+	DestroyWindow(hwnd_);
 	if (WM_QUIT == msg.message)
 		PostQuitMessage(static_cast<int>(msg.wParam));
 	return IDOK;
@@ -205,8 +207,6 @@ void About::OnDestroy(Msg<WM_DESTROY> &msg)
 	// destroy the background dc
 	DeleteDC(bk_dc_);
 	DeleteObject(bk_bmp_);
-	// set the modal loop to stop
-	quitting_ = true;
 }
 
 void About::OnEraseBkgnd(Msg<WM_ERASEBKGND> &msg)
@@ -328,6 +328,23 @@ void About::ChangeBackground()
 	current_bk_colour_ = (current_bk_colour_ + 1) % num_bk_colours_;
 }
 
+const BYTE *About::ComputeLightmapLookup()
+{
+	BYTE *lightmap_lookup(new BYTE[0x1FF]);
+	float normal_dy(1.0f);
+	float light_dx (1.0f / static_cast<float>(sqrt(2.0f)));
+	float light_dy (1.0f / static_cast<float>(sqrt(2.0f)));
+	for (int i(0); i != 0x1FF; ++i)
+	{
+		float normal_dx(-static_cast<float>(i - 0xFF));
+		// calculate and store the cosine of the angle between the vectors
+		float normal_l(sqrt(normal_dx * normal_dx + normal_dy * normal_dy));
+		float cos_a((normal_dx * light_dx + normal_dy * light_dy) / normal_l);
+		lightmap_lookup[i] = static_cast<BYTE>(0xFF * abs(cos_a));
+	}
+	return lightmap_lookup;
+}
+
 void About::DrawStroke()
 {
 	if (!painting_)
@@ -390,27 +407,13 @@ void About::DrawStroke()
 
 void About::Destroy()
 {
-	if (parent_was_enabled_)
-		EnableWindow(parent_hwnd_, TRUE);
-	DestroyWindow(hwnd_);
+	quitting_ = true;
 }
 
 void About::RenderLines(uint first_line, uint line_count)
 {
-	// precalculate surface-sun dot products
-	BYTE surface_sun_dot[0x100];
-	{
-		const float dx(1.0f);
-		for (uint i(0); i != 0x100; ++i)
-		{
-			const float dy(static_cast<float>(i));
-			float length(sqrt(2 * (dx * dx + dy * dy)));
-			float dot((dx + dy) / length);
-			surface_sun_dot[i] = (BYTE)(0xFF * dot);
-		}
-	}
 	// calculate adjusted first_line and line_count, for borders
-	const uint first_line_e(__max(0, (int)first_line - border_));
+	const uint first_line_e(__max(0, static_cast<int>(first_line) - border_));
 	const uint temp_offset (border_ + first_line_e - first_line);
 	const uint line_count_e(__min(
 		line_count + border_ * 2 - temp_offset,
@@ -420,42 +423,39 @@ void About::RenderLines(uint first_line, uint line_count)
 		TempType::iterator      temp_iter(temp_buffer_.begin() + temp_dim_.cx * temp_offset);
 		MapType::const_iterator map_iter (map_.begin() + map_size_.cx * first_line_e);
 		MapType::const_iterator row_iter;
-		MapType::const_iterator high_point_x;
-		int                     high_point_z;
+		MapType::const_iterator peak_x;
+		uint                    peak_y;
 		for (uint y(0); y != line_count_e; ++y)
 		{
-			row_iter     = map_iter + bmp_size_.cx; // end of the row
-			high_point_x = row_iter;                // location of the nearest peak
-			high_point_z = row_iter->heightmap;     // hight of the nearest peak
+			row_iter = map_iter + bmp_size_.cx; // end of the row
+			peak_x  = row_iter;                // location of the nearest peak
+			peak_y  = row_iter->heightmap;     // height of the nearest peak
 			temp_iter += bmp_size_.cx + border_;    // move to the end of the row
 			while (row_iter != map_iter)
 			{
 				--temp_iter;
 				--row_iter;
-				const ptrdiff_t point_x(&*high_point_x - &*row_iter); // distance to the nearest peak
-				const int       point_z(row_iter->heightmap);         // height of the current point
+				_ASSERTE(temp_iter - temp_buffer_.begin() < static_cast<ptrdiff_t>(temp_buffer_.size()));
+				const uint dx(&*peak_x - &*row_iter); // distance to the peak
+				const uint y (row_iter->heightmap);   // current height
 				// if the point is unshadowed, dot surface slope with the sun, othewise set to zero
-				if (high_point_z - point_z < point_x * 2)
+				// the sun vector is presumed to be (1,1)
+				if (peak_y < y || peak_y - y < dx * 2) // shadows are shortened twofold
 				{
-					// multiply the texture by ratio (using integer arithmetic)
-					_ASSERTE(temp_iter - temp_buffer_.begin() < static_cast<int>(temp_buffer_.size()));
-					*temp_iter = surface_sun_dot[point_z - row_iter[1].heightmap];
+					// carry out the projection table lookup
+					const int dy(row_iter[1].heightmap - static_cast<int>(y));
+					*temp_iter = lightmap_lookup_[dy + 0xFF];
 					// shift the highest point to this one
-					high_point_z = point_z;
-					high_point_x = row_iter;
+					peak_y = y;
+					peak_x = row_iter;
 				}
 				else
-					*temp_iter = 0x30;
+					*temp_iter = 0x00; // shadow lightness
 			}
 			temp_iter += temp_dim_.cx - border_;
 			map_iter  += map_size_.cx;
 		}
 	}
-	// mirror the bottom border
-	/*{
-		TempType::iterator temp_iter(temp_buffer_.begin() + temp_dim_.cx * (bmp_size_.cx + border));
-		for (int i(0); i != border; ++i)
-	}*/
 	// blur the buffer
 	TaskCommon::GaussianBlur<BYTE, ushort>(&temp_buffer_[0], temp_dim_);
 	// merge the buffer with the bitmap
@@ -471,7 +471,7 @@ void About::RenderLines(uint first_line, uint line_count)
 				const COLORREF colour(map_iter->heightmap ? map_iter->top_texture : map_iter->bottom_texture);
 				// compute the lighting ratio * 0x100
 				const uint factor(0x101); // precision (odd to avoid bit shifts)
-				const uint i_light(((*temp_iter + 0x80) * factor) / 0x100);
+				const uint i_light(((*temp_iter + 0x80) * factor) / 0xFF);
 				SetPixelV(bk_dc_, x, y, RGB(
 					__min(0xFF, (GetRValue(colour) * i_light) / factor),
 					__min(0xFF, (GetGValue(colour) * i_light) / factor),

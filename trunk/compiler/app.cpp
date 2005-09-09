@@ -109,7 +109,7 @@ bool App::Initialize(HINSTANCE instance, LPCTSTR cmd_line)
 	// show the main window
 	ShowWindow(main_wnd_.hwnd_, SW_SHOW);
 	SetForegroundWindow(main_wnd_.hwnd_);
-	// parse the command line, and carry out appropriate axions
+	// parse the command line, and carry out appropriate actions
 	{
 		vector<TCHAR> path_vector(MAX_PATH);
 		TCHAR *path(&path_vector[0]);
