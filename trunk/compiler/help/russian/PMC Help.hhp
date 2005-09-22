@@ -1,0 +1,23 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=PMC Help.chm
+Contents file=Table of Contents.hhc
+Default topic=home.htm
+Display compile progress=No
+Language=0x419 Russian
+Title=Компилятор Карт Периметра 1.2 - Руководство Пользователя
+
+
+[FILES]
+home.htm
+new features.htm
+description.htm
+installation.htm
+online.htm
+creation.htm
+shrubs.htm
+content.htm
+interface.htm
+
+[INFOTYPES]
+

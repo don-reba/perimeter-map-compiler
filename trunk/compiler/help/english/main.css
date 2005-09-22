@@ -1,0 +1,37 @@
+body, td, th {
+	font-family: Verdana, arial, Helvetica, sans-serif;
+	font-size: 12px;
+}
+
+h1 {
+	font: bolder 20px Verdana, arial, Helvetica, sans-serif
+}
+
+h2 {
+	font: bolder 16px Verdana, arial, Helvetica, sans-serif
+}
+
+a {
+	font-weight: bolder
+}
+
+li {
+	list-style-type: square
+}
+
+.code {
+	font: normal 13px "Courier New", monospace
+}
+
+.fixed {
+	font-family: Courier New, monospace
+}
+
+.quote {
+	font: italic 13px Courier New, monospace
+}
+
+.quote .c {
+	font-style: normal;
+	margin-left: 16px
+}
