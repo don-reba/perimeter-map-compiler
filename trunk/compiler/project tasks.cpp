@@ -40,6 +40,7 @@
 #include "resource.h"
 #include "resource management.h"
 #include "stat wnd.h"
+#include "xml creator.h"
 
 #include <algorithm>
 #include <fstream>
@@ -181,6 +182,35 @@ void FreeProjectDataTask::operator() ()
 	task_data_.surface_    = NULL;
 	task_data_.texture_    = NULL;
 	task_data_.zero_layer_ = NULL;
+}
+
+//--------------------------------
+// ImportScriptTask implementation
+//--------------------------------
+
+ImportScriptTask::ImportScriptTask(LPCTSTR script_path, LPCTSTR xml_path)
+	:script_(script_path)
+	,xml_   (xml_path)
+{}
+
+void ImportScriptTask::operator() ()
+{
+	XmlCreator xml_creator;
+	if (!xml_creator.LoadFromFile(script_.c_str()))
+		throw TaskException("Script could not be imported.");
+	std::ofstream file(xml_.c_str());
+	if (!file)
+	{
+		vector<TCHAR> buffer_v(MAX_PATH);
+		TCHAR *buffer(&buffer_v[0]);
+		_tcscpy(buffer, xml_.c_str());
+		PathStripPath(buffer);
+		tstring error_message("Script could not be imported.\nFailed to create \"");
+		error_message += buffer;
+		error_message += "\".";
+		throw TaskException(error_message.c_str());
+	}
+	xml_creator.Read(file);
 }
 
 //--------------------------------

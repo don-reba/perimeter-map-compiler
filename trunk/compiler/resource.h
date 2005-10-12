@@ -128,6 +128,7 @@
 #define ID_PANEL_WND_0                  32801
 #define ID_PANEL_WND_1                  32802
 #define ID_PANEL_WND_2                  32803
+#define ID_TOOLS_IMPORTSCRIPT           32803
 #define ID_PANEL_WND_3                  32804
 #define ID_PANEL_WND_4                  32805
 #define IDC_STATIC                      -1
@@ -138,7 +139,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        204
-#define _APS_NEXT_COMMAND_VALUE         32803
+#define _APS_NEXT_COMMAND_VALUE         32804
 #define _APS_NEXT_CONTROL_VALUE         1050
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

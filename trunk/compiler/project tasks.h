@@ -78,6 +78,7 @@ enum Resource
 {
 	RS_HARDNESS = 0,
 	RS_HEIGHTMAP,
+	RS_SCRIPT,
 	RS_SKY,
 	RS_SURFACE,
 	RS_TEXTURE,
@@ -204,6 +205,20 @@ class FreeProjectDataTask : public Task
 {
 public:
 	void operator() ();
+};
+
+//----------------------------------------
+// converts the given script file into XML
+//----------------------------------------
+
+class ImportScriptTask : public Task
+{
+public:
+	ImportScriptTask(LPCTSTR script_path, LPCTSTR xml_path);
+	void operator() ();
+private:
+	tstring script_;
+	tstring xml_;
 };
 
 //-----------------

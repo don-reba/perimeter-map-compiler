@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html>
 <head>
-<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <link rel="stylesheet" type="text/css" href="main.css">
 <title>Interface</title>
 </head>
@@ -12,5 +12,82 @@
 <p>Note that the panels take time to generate the information they display. The <span class="code">Preview</span> panel is the most expensive one, followed by the <span class="code">Statistics</span> panel. Hiding a panel may speed up loading.</p>
 <p>Perimeter Map Compiler uses a special architecture to respond faster to your actions. When you give it a command, such as to load a shrub, it pauses very briefly to extract the essential information you may need to make further actions, and then continues to do the time-consuming work in the background. You can safely continue carrying out any further actions while the application is working. The icon on the right side of the main window turns from green to orange when the application is busy.</p>
 <p>If you keep Perimeter Map Compiler running while editing the map images, the application will watch the images, and update its panels when any of the images change. This allows you to see the result while working. Note that you have to save the image for the application to see the changes.</p>
+<h1>Menu</h1>
+<ul>
+	<li>
+		File
+		<ul>
+			<li>
+				<i>New Project:</i> begin <a href="creation.htm">creation</a> of a new map
+			</li>
+			<li>
+				<i>Open Project:</i> open a started map creation project
+			</li>
+			<li>
+				<i>Pack Shrub:</i> create and register a finished map
+			</li>
+			<li>
+				<i>Unpack Shrub:</i> open a finished map, to possible then install it
+			</li>
+			<li>
+				<i>Install Map:</i> <a href="installation.htm">install</a> a project or a shrub
+			</li>
+			<li>
+				<i>Manage Maps:</i> installed maps list
+			</li>
+			<li>
+				<i>Project Settings:</i> this is where <a href="content.htm">additional content</a> can be toggled
+			</li>
+			<li>
+				<i>Exit</i>
+			</li>
+		</ul>
+	</li>
+	<li>
+		Tools
+		<ul>
+			<li>
+				<i>Preferences:</i> affect quality of the Preview, as well as Shrub generation
+				<ul>
+					<li>
+						<i>Texture colour tradeoff:</i> The compiler can generate the texture either quickly, or well. This option affects shrub generation!
+					</li>
+					<li>
+						<i>Mesh tolerance:</i> The preview model can be created with different precision. The lower the tolerance, the more precise the model, but the more power a computer is needed to show it.
+					</li>
+					<li>
+						<i>Zero-level colour:</i> The zero-level is shown in the preview as a translucent square overlaying the map. This is its caolour.
+					</li>
+					<li>
+						<i>Zero-level opacity:</i> See above.
+					</li>
+					<li>
+						<i>Shadows and lighting:</i> Calculations of shadows and lighting significantly affects loading speed. Therefore, it can sometimes be better to disable them.
+					</li>
+					<li>
+						<i>Display as map texture:</i> The Compiler can show preview of different data - texture, zero-layer, or hardness.
+					</li>
+				</ul>
+			</li>
+			<li>
+				<i>Save Thumbnail:</i> save a view of the map from above.
+			</li>
+		</ul>
+	</li>
+	<li>
+		Help
+		<ul>
+			<li>
+				<i>Help (Russian):</i> others are reading this
+			</li>
+			<li>
+				<i>Help (English):</i> this is what you are reading right now
+			</li>
+			<li>
+				<i>About:</i> to all Vanger fans devoted...
+			</li>
+		</ul>
+	</li>
+</ul>
 </body>
 </html>

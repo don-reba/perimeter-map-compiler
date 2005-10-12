@@ -102,10 +102,11 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "E&xit\tAlt-F4",               IDM_EXIT
     END
-    POPUP "Tools"
+    POPUP "&Tools"
     BEGIN
-        MENUITEM "Preferences\tF10",            ID_TOOLS_PREFERENCES
-        MENUITEM "Save Thumbnail",              ID_TOOLS_SAVETHUMBNAIL
+        MENUITEM "&Preferences\tF10",           ID_TOOLS_PREFERENCES
+        MENUITEM "Save &Thumbnail",             ID_TOOLS_SAVETHUMBNAIL
+        MENUITEM "Import &Script",              ID_TOOLS_IMPORTSCRIPT
     END
     POPUP "&Help"
     BEGIN

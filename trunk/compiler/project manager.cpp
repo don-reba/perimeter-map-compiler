@@ -620,6 +620,15 @@ void ProjectManager::DisableResource(Resource id)
 	tracker_.EnableDatum(id, false);
 }
 
+void ProjectManager::ImportScript(LPCTSTR script_path, HWND main_hwnd)
+{
+	vector<TCHAR> buffer_v(MAX_PATH);
+	TCHAR *buffer(&buffer_v[0]);
+	PathCombine(buffer, folder_path_.c_str(), file_names_[RS_SCRIPT].c_str());
+	AddTask(new ImportScriptTask(script_path, buffer));
+	AddTask(new NotifyResourceCreatedTask(RS_SCRIPT, main_hwnd));
+}
+
 void ProjectManager::UpdateSettings()
 {
 	SIZE map_size = {
@@ -716,44 +725,56 @@ void ProjectManager::AddTask(Task *task)
 
 void ProjectManager::FindFileNames()
 {
-	// define a buffer for path operations
-	vector<TCHAR> buffer_v(MAX_PATH);
-	TCHAR *buffer(&buffer_v[0]);
-	// set name bases
-	file_names_[RS_HARDNESS]   = _T("hardness");
-	file_names_[RS_HEIGHTMAP]  = _T("heightmap");
-	file_names_[RS_SKY]        = _T("sky");
-	file_names_[RS_SURFACE]    = _T("surface");
-	file_names_[RS_TEXTURE]    = _T("texture");
-	file_names_[RS_ZERO_LAYER] = _T("zero layer");
-	// declare valid extensions
-	const size_t extension_count(4);
-	tstring extensions[extension_count] = {
-		_T(".bmp"), _T(".png"), _T(".tiff"), _T(".tga")
-	};
-	// check which of the extensions is valid for each file name
-	tstring *names_iter     (file_names_);
-	tstring *names_end      (names_iter + resource_count);
-	tstring *extensions_iter(extensions);
-	tstring *extensions_end (extensions_iter + extension_count);
-	for (; names_iter != names_end; ++names_iter)
+	// create a name for the script file
+	file_names_[RS_SCRIPT] = _T("script.xml");
+	// find correct extensions for the bitmap resources
 	{
-		for (; extensions_iter != extensions_end; ++extensions_iter)
+		// allocate a buffer for path operations
+		vector<TCHAR> buffer_v(MAX_PATH);
+		TCHAR *buffer(&buffer_v[0]);
+		// create a list of bitmap resources
+		vector<Resource> bmp_ids;
+		bmp_ids.push_back(RS_HARDNESS);
+		bmp_ids.push_back(RS_HEIGHTMAP);
+		bmp_ids.push_back(RS_SKY);
+		bmp_ids.push_back(RS_SURFACE);
+		bmp_ids.push_back(RS_TEXTURE);
+		bmp_ids.push_back(RS_ZERO_LAYER);
+		// set file name bases
+		file_names_[RS_HARDNESS]   = _T("hardness");
+		file_names_[RS_HEIGHTMAP]  = _T("heightmap");
+		file_names_[RS_SKY]        = _T("sky");
+		file_names_[RS_SURFACE]    = _T("surface");
+		file_names_[RS_TEXTURE]    = _T("texture");
+		file_names_[RS_ZERO_LAYER] = _T("zero layer");
+		// declare valid extensions
+		const size_t extension_count(4);
+		tstring extensions[extension_count] = {
+			_T(".bmp"), _T(".png"), _T(".tiff"), _T(".tga")
+		};
+		// check which of the extensions is valid for each file name
+		tstring *extensions_iter(extensions);
+		tstring *extensions_end (extensions_iter + extension_count);
+		foreach (Resource id, bmp_ids)
 		{
-			PathCombine(buffer, folder_path_.c_str(), names_iter->c_str());
-			PathAddExtension(buffer, extensions_iter->c_str());
-			if (TRUE == PathFileExists(buffer))
+			tstring &name(file_names_[id]);
+			for (; extensions_iter != extensions_end; ++extensions_iter)
 			{
-				_tcscpy(buffer, names_iter->c_str());
+				PathCombine(buffer, folder_path_.c_str(), name.c_str());
 				PathAddExtension(buffer, extensions_iter->c_str());
-				*names_iter = buffer;
-				break;
+				if (TRUE == PathFileExists(buffer))
+				{
+					_tcscpy(buffer, name.c_str());
+					PathAddExtension(buffer, extensions_iter->c_str());
+					name = buffer;
+					break;
+				}
 			}
+			// default to .bmp
+			_tcscpy(buffer, name.c_str());
+			PathAddExtension(buffer, _T(".bmp"));
+			name = buffer;
 		}
-		// default to .bmp
-		_tcscpy(buffer, names_iter->c_str());
-		PathAddExtension(buffer, _T(".bmp"));
-		*names_iter = buffer;
 	}
 }
 

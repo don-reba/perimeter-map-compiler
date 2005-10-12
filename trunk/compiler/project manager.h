@@ -111,6 +111,7 @@ public:
 	// data management
 	void CreateResource(Resource id, HWND main_hwnd);
 	void DisableResource(Resource id);
+	void ImportScript(LPCTSTR script_path, HWND main_hwnd);
 	void ReloadFiles(const IdsType &ids);
 	// settings
 	void UpdateSettings();

@@ -457,6 +457,7 @@ void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	case ID_FILE_PACKSHRUB:       OnPackShrub      (msg); break;
 	case ID_FILE_PROJECTSETTINGS: OnProjectSettings(msg); break;
 	case ID_FILE_UNPACKSHRUB:     OnUpackShrub     (msg); break;
+	case ID_TOOLS_IMPORTSCRIPT:   OnImportScript   (msg); break;
 	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
 	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
 	}
@@ -509,6 +510,14 @@ void MainWnd::OnAbout(Msg<WM_COMMAND> &msg)
 void MainWnd::OnExit(Msg<WM_COMMAND> &msg)
 {
 	DestroyWindow(hwnd_);
+}
+
+void MainWnd::OnImportScript(Msg<WM_COMMAND> &msg)
+{
+	tstring script_path(GetFilePathDlg(
+		_T("Import Script"),
+		_T("Perimeter Script (*.spg)\0*.spg\0All Files\0*\0")));
+	project_manager_.ImportScript(script_path.c_str(), hwnd_);
 }
 
 void MainWnd::OnInstallShrub(Msg<WM_COMMAND> &msg)
@@ -770,6 +779,7 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 	items[ID_FILE_PACKSHRUB]       = false;
 	items[ID_FILE_PROJECTSETTINGS] = false;
 	items[ID_FILE_UNPACKSHRUB]     = true;
+	items[ID_TOOLS_IMPORTSCRIPT]   = false;
 	items[ID_TOOLS_PREFERENCES]    = true;
 	items[ID_TOOLS_SAVETHUMBNAIL]  = false;
 	// optionally enabled items
@@ -783,6 +793,7 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 		on_items.push_back(ID_FILE_PACKSHRUB);
 		on_items.push_back(ID_FILE_PROJECTSETTINGS);
 		on_items.push_back(ID_TOOLS_SAVETHUMBNAIL);
+		on_items.push_back(ID_TOOLS_IMPORTSCRIPT);
 		break;
 	case MS_SHRUB:
 		on_items.push_back(ID_FILE_INSTALLSHRUB);
