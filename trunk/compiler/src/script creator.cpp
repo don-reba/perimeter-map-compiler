@@ -5,16 +5,14 @@
 
 #include <vector>
 
-using namespace std;
-
 ScriptCreator::ScriptCreator()
-	:out_   (cout)
+	:out_   (std::cout)
 	,inline_(false)
 {
 	InitializeFMap();
 }
 
-ScriptCreator::ScriptCreator(ostream &out)
+ScriptCreator::ScriptCreator(std::ostream &out)
 	:out_   (out)
 	,inline_(false)
 {

@@ -29,7 +29,7 @@
 				RuntimeLibrary="1"
 				RuntimeTypeInfo="TRUE"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderThrough="stdafx.h"
+				PrecompiledHeaderThrough="src/stdafx.h"
 				WarningLevel="4"
 				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="3"/>
@@ -206,79 +206,70 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
-				RelativePath=".\about wnd.cpp">
+				RelativePath=".\src\about wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\app.cpp">
+				RelativePath=".\src\app.cpp">
 			</File>
 			<File
-				RelativePath=".\btdb.cpp">
+				RelativePath=".\src\btdb.cpp">
 			</File>
 			<File
-				RelativePath=".\error handler.cpp">
+				RelativePath=".\src\error handler.cpp">
 			</File>
 			<File
-				RelativePath=".\file tracker.cpp">
+				RelativePath=".\src\file tracker.cpp">
 			</File>
 			<File
-				RelativePath=".\info wnd.cpp">
+				RelativePath=".\src\info wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\main wnd.cpp">
+				RelativePath=".\src\main wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\map manager.cpp">
+				RelativePath=".\src\map manager.cpp">
 			</File>
 			<File
-				RelativePath=".\panel wnd.cpp">
+				RelativePath=".\src\panel wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\pmc wnd.cpp">
+				RelativePath=".\src\pmc wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\preference wnd.cpp">
+				RelativePath=".\src\preference wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\preview wnd.cpp">
+				RelativePath=".\src\preview wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\project create wnd.cpp">
+				RelativePath=".\src\project create wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\project manager.cpp">
+				RelativePath=".\src\project manager.cpp">
 			</File>
 			<File
-				RelativePath=".\project settings wnd.cpp">
+				RelativePath=".\src\project settings wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\project tasks.cpp">
+				RelativePath=".\src\project tasks.cpp">
 			</File>
 			<File
-				RelativePath=".\resource management.cpp">
+				RelativePath=".\src\resource management.cpp">
 			</File>
 			<File
-				RelativePath=".\stat wnd.cpp">
+				RelativePath=".\src\script creator.cpp">
 			</File>
 			<File
-				RelativePath=".\stdafx.cpp">
+				RelativePath=".\src\stat wnd.cpp">
 			</File>
 			<File
-				RelativePath=".\task common.cpp">
-				<FileConfiguration
-					Name="Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						EnableEnhancedInstructionSet="1"/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Pre-Release|Win32">
-					<Tool
-						Name="VCCLCompilerTool"
-						EnableEnhancedInstructionSet="1"/>
-				</FileConfiguration>
+				RelativePath=".\src\stdafx.cpp">
 			</File>
 			<File
-				RelativePath=".\xml creator.cpp">
+				RelativePath=".\src\task common.cpp">
+			</File>
+			<File
+				RelativePath=".\src\xml creator.cpp">
 			</File>
 		</Filter>
 		<Filter
@@ -286,94 +277,97 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
-				RelativePath=".\about wnd.h">
+				RelativePath=".\src\about wnd.h">
 			</File>
 			<File
-				RelativePath=".\app data.h">
+				RelativePath=".\src\app data.h">
 			</File>
 			<File
-				RelativePath=".\app.h">
+				RelativePath=".\src\app.h">
 			</File>
 			<File
-				RelativePath=".\btdb.h">
+				RelativePath=".\src\btdb.h">
 			</File>
 			<File
-				RelativePath=".\error handler.h">
+				RelativePath=".\src\error handler.h">
 			</File>
 			<File
-				RelativePath=".\file tracker.h">
+				RelativePath=".\src\file tracker.h">
 			</File>
 			<File
-				RelativePath=".\foreach.h">
+				RelativePath=".\src\foreach.h">
 			</File>
 			<File
-				RelativePath=".\info wnd.h">
+				RelativePath=".\src\info wnd.h">
 			</File>
 			<File
-				RelativePath=".\main wnd.h">
+				RelativePath=".\src\main wnd.h">
 			</File>
 			<File
-				RelativePath=".\map manager.h">
+				RelativePath=".\src\map manager.h">
 			</File>
 			<File
-				RelativePath=".\map settings.h">
+				RelativePath=".\src\map settings.h">
 			</File>
 			<File
-				RelativePath=".\panel wnd.h">
+				RelativePath=".\src\panel wnd.h">
 			</File>
 			<File
-				RelativePath=".\pmc wnd.h">
+				RelativePath=".\src\pmc wnd.h">
 			</File>
 			<File
-				RelativePath=".\preference wnd.h">
+				RelativePath=".\src\preference wnd.h">
 			</File>
 			<File
-				RelativePath=".\preview wnd.h">
+				RelativePath=".\src\preview wnd.h">
 			</File>
 			<File
-				RelativePath=".\project create wnd.h">
+				RelativePath=".\src\project create wnd.h">
 			</File>
 			<File
-				RelativePath=".\project data.h">
+				RelativePath=".\src\project data.h">
 			</File>
 			<File
-				RelativePath=".\project manager.h">
+				RelativePath=".\src\project manager.h">
 			</File>
 			<File
-				RelativePath=".\project settings wnd.h">
+				RelativePath=".\src\project settings wnd.h">
 			</File>
 			<File
-				RelativePath=".\project tasks.h">
+				RelativePath=".\src\project tasks.h">
 			</File>
 			<File
-				RelativePath=".\resource management.h">
+				RelativePath=".\src\resource management.h">
 			</File>
 			<File
-				RelativePath=".\resource.h">
+				RelativePath=".\src\resource.h">
 			</File>
 			<File
-				RelativePath=".\script grammar.h">
+				RelativePath=".\src\script creator.h">
 			</File>
 			<File
-				RelativePath=".\stat wnd.h">
+				RelativePath=".\src\script grammar.h">
 			</File>
 			<File
-				RelativePath=".\static serializer.h">
+				RelativePath=".\src\stat wnd.h">
 			</File>
 			<File
-				RelativePath=".\stdafx.h">
+				RelativePath=".\src\static serializer.h">
 			</File>
 			<File
-				RelativePath=".\task common.h">
+				RelativePath=".\src\stdafx.h">
 			</File>
 			<File
-				RelativePath=".\util.h">
+				RelativePath=".\src\task common.h">
 			</File>
 			<File
-				RelativePath=".\window.h">
+				RelativePath=".\src\util.h">
 			</File>
 			<File
-				RelativePath=".\xml creator.h">
+				RelativePath=".\src\window.h">
+			</File>
+			<File
+				RelativePath=".\src\xml creator.h">
 			</File>
 		</Filter>
 		<Filter
