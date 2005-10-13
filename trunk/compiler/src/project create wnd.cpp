@@ -31,7 +31,7 @@
 
 #include "StdAfx.h"
 
-#include "resource.h"
+#include "../resource.h"
 #include "resource management.h"
 #include "project create wnd.h"
 #include "task common.h"

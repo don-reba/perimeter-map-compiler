@@ -37,7 +37,7 @@
 #include "preview wnd.h"
 #include "project manager.h"
 #include "project tasks.h"
-#include "resource.h"
+#include "../resource.h"
 #include "resource management.h"
 #include "stat wnd.h"
 #include "xml creator.h"

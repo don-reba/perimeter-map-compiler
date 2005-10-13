@@ -36,7 +36,7 @@
 #include "map manager.h"
 #include "project create wnd.h"
 #include "project settings wnd.h"
-#include "resource.h"
+#include "../resource.h"
 
 #include <map>
 #include <shlobj.h>

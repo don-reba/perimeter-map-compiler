@@ -31,7 +31,7 @@
 
 #include "StdAfx.h"
 
-#include "resource.h"
+#include "../resource.h"
 #include "stat wnd.h"
 
 //--------------------------------

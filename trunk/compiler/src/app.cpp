@@ -33,7 +33,7 @@
 
 #include "app.h"
 #include "app data.h"
-#include "resource.h"
+#include "../resource.h"
 
 #include <shlobj.h>
 

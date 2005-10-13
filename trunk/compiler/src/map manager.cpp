@@ -34,7 +34,7 @@
 #include "app data.h"
 #include "btdb.h"
 #include "map manager.h"
-#include "resource.h"
+#include "../resource.h"
 #include "resource management.h"
 #include "task common.h"
 

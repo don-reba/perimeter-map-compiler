@@ -32,9 +32,11 @@
 #include "StdAfx.h"
 
 #include "about wnd.h"
-#include "resource.h"
+#include "../resource.h"
 #include "resource management.h"
 #include "task common.h"
+
+#include "gaussian blur.ipp"
 
 #include <cmath>
 #include <fstream>
@@ -457,7 +459,7 @@ void About::RenderLines(uint first_line, uint line_count)
 		}
 	}
 	// blur the buffer
-	TaskCommon::GaussianBlur<BYTE, ushort>(&temp_buffer_[0], temp_dim_);
+	GaussianBlur<BYTE, ushort>(&temp_buffer_[0], temp_dim_);
 	// merge the buffer with the bitmap
 	{
 		TempType::const_iterator temp_iter(temp_buffer_.begin() + temp_dim_.cx * border_);
