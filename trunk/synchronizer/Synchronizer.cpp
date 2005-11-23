@@ -1,3 +1,4 @@
+#include "foreach.h"
 #include "resource.h"
 #include <algorithm>
 #include <crtdbg.h>
@@ -7,6 +8,7 @@
 #include <string>
 #include <shlwapi.h>
 #include <tchar.h>
+#include <vector>
 #include <windows.h>
 #include <Wininet.h>
 using namespace std;
@@ -14,8 +16,6 @@ using namespace std;
 typedef basic_string<TCHAR> tstring;
 
 #define ri_cast reinterpret_cast
-
-const int default_map_count(38);
 
 //---------------------------
 // application implementation
@@ -26,12 +26,27 @@ UINT Error(TCHAR *message, TCHAR *title)
 	return MessageBox(NULL, message, title, MB_ABORTRETRYIGNORE | MB_ICONERROR);
 }
 
-UINT GetPRM(tstring &worlds_prm)
+UINT GetPRM(vector<tstring> &worlds_prm)
 {
-	HRSRC resource_info(FindResource(NULL, MAKEINTRESOURCE(IDR_WORLD_LIST), "TEXT"));
+	// get the executable's file name
+	TCHAR file_name[MAX_PATH];
+	GetModuleFileName(NULL, file_name, MAX_PATH);
+	PathStripPath(file_name);
+	// load the resource
+	HRSRC resource_info;
+	if (0 == strcmp("Perimeter.exe", file_name))
+		resource_info = FindResource(NULL, MAKEINTRESOURCE(IDR_WORLD_LIST), "TEXT");
+	else if (0 == strcmp("PerimeterET.exe", file_name))
+		resource_info = FindResource(NULL, MAKEINTRESOURCE(IDR_WORLD_LIST_ET), "TEXT");
+	else
+		return IDABORT;
 	HGLOBAL resource(LoadResource(NULL, resource_info));
 	char *text(ri_cast<char*>(LockResource(resource)));
-	worlds_prm = text;
+	istringstream text_stream(text);
+	copy(
+		istream_iterator<tstring>(text_stream),
+		istream_iterator<tstring>(),
+		inserter(worlds_prm, worlds_prm.begin()));
 	return IDOK;
 }
 
@@ -60,12 +75,13 @@ bool Ping(LPCTSTR url)
 	private:
 		tstring url_;
 		bool result_;
-	} pinger(_T("http://www.rul-clan.ru/map_registration/list_maps.php"));
+	} pinger(url);
 	return pinger.Result();
 }
 
-UINT GetMapList(tstring &map_list)
+UINT GetMapList(vector<tstring> &map_list)
 {
+	tstring map_list_string;
 	TCHAR *error_title(_T("Map Synchronization Error"));
 	// check connection status
 	if (!Ping(_T("http://www.rul-clan.ru/map_registration/list_maps.php")))
@@ -118,7 +134,7 @@ UINT GetMapList(tstring &map_list)
 				}
 				buffer[bytes_read] = _T('\0');
 				if (0 != bytes_read)
-					map_list += buffer;
+					map_list_string += buffer;
 				else
 					break;
 			}
@@ -128,33 +144,31 @@ UINT GetMapList(tstring &map_list)
 		InternetCloseHandle(wi_handle);
 	}
 	// process result
-	if (map_list.c_str() == _T("falure"))
+	if (map_list_string.c_str() == _T("falure"))
 		return Error(_T("Map could not be registered."), error_title);
+	istringstream text_stream(map_list_string);
+	copy(
+		istream_iterator<tstring>(text_stream),
+		istream_iterator<tstring>(),
+		inserter(map_list, map_list.begin()));
 	return IDOK;
 }
 
-UINT SavePRM(const tstring &worlds_prm, const tstring &map_list)
+UINT SavePRM(const vector<tstring> &worlds_prm, const vector<tstring> &map_list)
 {
 	TCHAR *error_title(_T("Map Synchronization Error"));
 	// open WORLDS.PRM
 	ofstream worlds_prm_file(_T("RESOURCE\\Worlds\\WORLDS.PRM"));
 	if (!worlds_prm_file.is_open())
 		return Error(_T("Could not open WORLDS.PRM."), error_title);
-	// count the number of maps in map_list
-	// ASSUME: each map name is followed by a newline simbol
-	int new_map_count(static_cast<int>(count(map_list.begin(), map_list.end(), _T('\n'))));
-	// output new data
-	worlds_prm_file << (128 + new_map_count) << endl << endl;
-	worlds_prm_file << worlds_prm;
-	for (int i(0); i != 128 - default_map_count; ++i)
-		worlds_prm_file << setw(0) << "*" << setw(24) << "*" << endl;
-	istringstream map_list_stream(map_list);
-	tstring line;
-	for (int i(0); i != new_map_count; ++i)
-	{
-		getline(map_list_stream, line);
-		worlds_prm_file << setw(0) << line << setw(24) << line << endl;
-	}
+	// output data
+	worlds_prm_file << (128 + map_list.size()) << "\n\n";
+	foreach (const tstring &world, worlds_prm)
+		worlds_prm_file << setw(0) << world << setw(24) << world << "\n";
+	for (int i(0); i != 128 - worlds_prm.size(); ++i)
+		worlds_prm_file << setw(0) << "*" << setw(24) << "*" << "\n";
+	foreach (const tstring &world, map_list)
+		worlds_prm_file << setw(0) << world << setw(24) << world << "\n";
 	return IDOK;
 }
 
@@ -162,7 +176,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	UINT result;
 	// get WORLDS.PRM
-	tstring worlds_prm;
+	vector<tstring> worlds_prm;
 	do
 	{
 		worlds_prm.clear();
@@ -171,7 +185,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (IDABORT == result)
 		return 0;
 	// get the list of maps
-	tstring map_list;
+	vector<tstring> map_list;
 	if (IDIGNORE != result)
 	{
 		do

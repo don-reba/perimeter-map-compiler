@@ -66,7 +66,20 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_CAN
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDI_SYNCHRONIZER        ICON                    "Perimeter2.ico"
+#if defined(APSTUDIO_INVOKED) || defined(PERIMETER_ET)
+#if defined(APSTUDIO_INVOKED)
+IDI_PERIMETER_ET$(PERIMETER_ET) ICON                    "PerimeterET.ico"
+#else
+IDI_PERIMETER_ET        ICON                    "PerimeterET.ico"
+#endif
+#endif
+#if defined(APSTUDIO_INVOKED) || defined(PERIMETER)
+#if defined(APSTUDIO_INVOKED)
+IDI_PERIMETER$(PERIMETER) ICON                    "Perimeter.ico"
+#else
+IDI_PERIMETER           ICON                    "Perimeter.ico"
+#endif
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -74,6 +87,7 @@ IDI_SYNCHRONIZER        ICON                    "Perimeter2.ico"
 //
 
 IDR_WORLD_LIST          TEXT                    "worlds_list.txt"
+IDR_WORLD_LIST_ET       TEXT                    "worlds_list_et.txt"
 #endif    // English (Canada) resources
 /////////////////////////////////////////////////////////////////////////////
 

@@ -32,7 +32,7 @@
 				UsePrecompiledHeader="0"
 				BrowseInformation="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="TRUE"
+				Detect64BitPortabilityProblems="FALSE"
 				DebugInformationFormat="4"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -87,7 +87,6 @@
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="TRUE"
 				DebugInformationFormat="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -113,7 +112,8 @@
 			<Tool
 				Name="VCPreLinkEventTool"/>
 			<Tool
-				Name="VCResourceCompilerTool"/>
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="PERIMETER_ET"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
@@ -208,7 +208,13 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
 			<File
+				RelativePath=".\Perimeter.ico">
+			</File>
+			<File
 				RelativePath=".\Perimeter2.ico">
+			</File>
+			<File
+				RelativePath=".\PerimeterET.ico">
 			</File>
 			<File
 				RelativePath=".\Synchronizer.rc">
@@ -219,6 +225,9 @@
 		</File>
 		<File
 			RelativePath=".\worlds_list.txt">
+		</File>
+		<File
+			RelativePath=".\worlds_list_et.txt">
 		</File>
 	</Files>
 	<Globals>
