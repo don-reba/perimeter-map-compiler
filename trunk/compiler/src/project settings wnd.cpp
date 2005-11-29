@@ -108,25 +108,28 @@ void ProjectSettingsWnd::Apply()
 			SetWindowText(main_wnd_.hwnd_, map_name);
 		}
 	}
-	// custom resources
-	MacroProjectData(ID_CUSTOM_HARDNESS)   = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_HARDNESS));
-	MacroProjectData(ID_CUSTOM_ZERO_LAYER) = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_ZERO_LAYER));
-	MacroProjectData(ID_CUSTOM_SURFACE)    = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SURFACE));
-	MacroProjectData(ID_CUSTOM_SKY)        = (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SKY));
-	if (MacroProjectData(ID_CUSTOM_HARDNESS))
+	// get states
+	bool custom_hardness_on  (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_HARDNESS));
+	bool custom_zero_layer_on(BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_ZERO_LAYER));
+	bool custom_surface_on   (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SURFACE));
+	bool custom_sky_on       (BST_CHECKED == IsDlgButtonChecked(hwnd_, IDC_CUSTOM_SKY));
+	// check for changes
+	bool custom_hardness_chaged  (MacroProjectData(ID_CUSTOM_HARDNESS)   != custom_hardness_on);
+	bool custom_zero_layer_chaged(MacroProjectData(ID_CUSTOM_ZERO_LAYER) != custom_zero_layer_on);
+	bool custom_surface_chaged   (MacroProjectData(ID_CUSTOM_SURFACE)    != custom_surface_on);
+	bool custom_sky_chaged       (MacroProjectData(ID_CUSTOM_SKY)        != custom_sky_on);
+	// set project data
+	MacroProjectData(ID_CUSTOM_HARDNESS)   = custom_hardness_on;
+	MacroProjectData(ID_CUSTOM_ZERO_LAYER) = custom_zero_layer_on;
+	MacroProjectData(ID_CUSTOM_SURFACE)    = custom_surface_on;
+	MacroProjectData(ID_CUSTOM_SKY)        = custom_sky_on;
+	// react to changes
+	if (MacroProjectData(ID_CUSTOM_HARDNESS) && custom_hardness_chaged)
 		project_manager_.CreateResource(RS_HARDNESS, main_wnd_.hwnd_);
-	else
-		project_manager_.DisableResource(RS_HARDNESS);
-	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
+	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER) && custom_zero_layer_chaged)
 		project_manager_.CreateResource(RS_ZERO_LAYER, main_wnd_.hwnd_);
-	else
-		project_manager_.DisableResource(RS_ZERO_LAYER);
-	if (MacroProjectData(ID_CUSTOM_SURFACE))
+	if (MacroProjectData(ID_CUSTOM_SURFACE) && custom_surface_chaged)
 		project_manager_.CreateResource(RS_SURFACE, main_wnd_.hwnd_);
-	else
-		project_manager_.DisableResource(RS_SURFACE);
-	if (MacroProjectData(ID_CUSTOM_SKY))
+	if (MacroProjectData(ID_CUSTOM_SKY) && custom_sky_chaged)
 		project_manager_.CreateResource(RS_SKY, main_wnd_.hwnd_);
-	else
-		project_manager_.DisableResource(RS_SKY);
 }

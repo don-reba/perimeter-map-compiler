@@ -114,6 +114,7 @@ public:
 	// cached resources
 	TaskCommon::Hardness  *hardness_;
 	TaskCommon::Heightmap *heightmap_;
+	TaskCommon::Script    *script_;
 	TaskCommon::Sky       *sky_;
 	TaskCommon::Surface   *surface_;
 	TaskCommon::Texture   *texture_;

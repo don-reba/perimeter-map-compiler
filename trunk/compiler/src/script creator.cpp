@@ -153,6 +153,30 @@ void ScriptCreator::ParseValue(const TiXmlElement *node, uint depth)
 	out_ << GetValue(node);
 }
 
+void ScriptCreator::ParseVector(const TiXmlElement *node, uint depth)
+{
+	// start the vector
+	const string name(GetName(node));
+	out_ << Offset(depth);
+	if (!name.empty())
+		out_ << name << " = ";
+	out_ << "{\n";
+	// process the vector's values
+	{
+		std::vector<const TiXmlElement*> children;
+		for (const TiXmlNode *child(node->FirstChild()); child; child = child->NextSibling())
+			children.push_back(child->ToElement());
+		const TiXmlElement *last_child = children.back();
+		children.pop_back();
+		out_ << Offset(depth + 1);
+		foreach (const TiXmlElement *child, children)
+			out_ << GetValue(child) << ' ';
+		out_ << GetValue(last_child) << '\n';
+	}
+	// end the vector
+	out_ << Offset(depth) << '}';
+}
+
 string ScriptCreator::GetCode(const TiXmlElement *node)
 {
 	const char * code_string(node->Attribute("code"));
@@ -184,6 +208,7 @@ void ScriptCreator::InitializeFMap()
 	f_map_["set"]         = &ScriptCreator::ParseSet;
 	f_map_["string"]      = &ScriptCreator::ParseString;
 	f_map_["value"]       = &ScriptCreator::ParseValue;
+	f_map_["vector"]      = &ScriptCreator::ParseVector;
 }
 
 string ScriptCreator::Offset(uint depth)

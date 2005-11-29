@@ -21,6 +21,7 @@ private:
 	void ParseSet        (const TiXmlElement *node, uint depth);
 	void ParseString     (const TiXmlElement *node, uint depth);
 	void ParseValue      (const TiXmlElement *node, uint depth);
+	void ParseVector     (const TiXmlElement *node, uint depth);
 	// XML manipulation
 	string GetCode(const TiXmlElement *node);
 	string GetName(const TiXmlElement *node);

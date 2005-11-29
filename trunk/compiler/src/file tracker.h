@@ -45,9 +45,6 @@ public:
 	struct FileUpdated {
 		virtual void operator() (const IdsType &ids) = 0;
 	};
-	struct FileNotFound {
-		virtual void operator() (Resource id, LPCTSTR path) = 0;
-	};
 private:
 	struct FileDatum {
 		FileDatum() : active_(false) {}
@@ -57,7 +54,7 @@ private:
 	};
 // construction/destruction
 public:
-	FileTracker(HWND &hwnd, FileUpdated &file_updated, FileNotFound &file_not_found);
+	FileTracker(HWND &hwnd, FileUpdated &file_updated);
 	~FileTracker();
 //interface
 public:
@@ -80,5 +77,4 @@ private:
 	CRITICAL_SECTION  tracker_section_;
 	tstring           folder_path_;
 	FileUpdated      *file_updated_;
-	FileNotFound     *file_not_found_;
 };

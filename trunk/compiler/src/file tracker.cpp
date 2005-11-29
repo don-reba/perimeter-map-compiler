@@ -37,10 +37,9 @@
 // FileTracker implementation
 //---------------------------
 
-FileTracker::FileTracker(HWND &hwnd, FileUpdated &file_updated, FileNotFound &file_not_found)
+FileTracker::FileTracker(HWND &hwnd, FileUpdated &file_updated)
 	:ErrorHandler   (hwnd)
 	,file_updated_  (&file_updated)
-	,file_not_found_(&file_not_found)
 	,is_valid_      (true)
 	,tracker_thread_(NULL)
 {
@@ -180,31 +179,9 @@ bool FileTracker::WasUpdated(FileDatum &datum, Resource id)
 	// create the full path to the file
 	TCHAR path[MAX_PATH];
 	PathCombine(path, folder_path_.c_str(), datum.file_name_.c_str());
-	// open the file
+	// get file attributes
 	WIN32_FILE_ATTRIBUTE_DATA attributes;
-	bool attributes_valid(false);
-	const DWORD retry_interval(1000); // milliseconds
-	const uint  try_count(8);
-	uint try_num(0);
-	for (; try_num != try_count; ++try_num)
-	{
-		Sleep(retry_interval);
-		if (FALSE == GetFileAttributesEx(path, GetFileExInfoStandard, &attributes))
-		{
-			DWORD error(GetLastError());
-			if (ERROR_FILE_NOT_FOUND == error)
-			{
-				(*file_not_found_)(id, path);
-				return false;
-			}
-		}
-		else
-		{
-			attributes_valid = true;
-			break;
-		}
-	}
-	if (!attributes_valid)
+	if (FALSE == GetFileAttributesEx(path, GetFileExInfoStandard, &attributes))
 		return false;
 	// check if the file has been written to since the last write
 	bool was_updated(0 > CompareFileTime(&datum.last_write_, &attributes.ftLastWriteTime));

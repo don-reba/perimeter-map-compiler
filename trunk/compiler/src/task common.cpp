@@ -285,7 +285,7 @@ namespace TaskCommon
 		spg_out << result;
 	}
 
-	// v 1.02 beta
+	// v 2.00
 	void SaveSPG2(
 		MapInfo      &map_info,
 		LPCTSTR       path,

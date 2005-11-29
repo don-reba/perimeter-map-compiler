@@ -32,11 +32,14 @@
 #include "stdafx.h"
 
 #include "../resource.h"
-#include "task resources.h"
 #include "project data.h"
 #include "resource management.h"
+#include "task resources.h"
+#include "xml creator.h"
 
 #include "gaussian blur.ipp"
+
+#include <sstream>
 
 using namespace RsrcMgmt;
 
@@ -843,7 +846,7 @@ namespace TaskCommon
 				MakeDefault();
 				return;
 			}
-			_ASSERTE(16 == image->cmpts_[0]->prec_);
+			_ASSERTE(8 < image->cmpts_[0]->prec_);
 			// extract image data
 			{
 				// get the data matrix
@@ -878,7 +881,6 @@ namespace TaskCommon
 						}
 					*data_ptr++ = *(data_ptr - 1); // pad horizontally
 				}
-				image.save("pixels.tiff", TIFF_NONE);
 				// pad vertically
 				for (int c(0); c != map_size.cx + 1; ++c)
 					*data_ptr++ = *(data_ptr - map_size.cx - 1);
@@ -1346,9 +1348,45 @@ namespace TaskCommon
 		return name;
 	}
 
-	//-----------------------
+	//----------------------
+	// Script implementation
+	//----------------------
+
+	Script::Script(HWND &error_hwnd)
+		:ErrorHandler(error_hwnd)
+	{}
+
+	bool Script::Load(LPCTSTR path)
+	{
+		if (false == doc_.LoadFile(path))
+			return false;
+		return true;
+	}
+
+	void Script::Pack(TiXmlNode &node) const
+	{
+		node.InsertEndChild(*doc_.RootElement());
+	}
+
+	void Script::Save(LPCTSTR path) const
+	{
+		doc_.SaveFile(path);
+	}
+
+	bool Script::Unpack(TiXmlNode &node)
+	{
+		doc_.Clear();
+		TiXmlElement *script(node.FirstChildElement());
+		if (NULL == script)
+			return false;
+		else
+			doc_.InsertEndChild(*script);
+		return true;
+	}
+
+	//-------------------
 	// Sky implementation
-	//-----------------------
+	//-------------------
 
 	const SIZE Sky::size_ = { 0x200, 0x200 };
 

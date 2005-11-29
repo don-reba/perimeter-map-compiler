@@ -54,9 +54,8 @@ ProjectManager::ProjectManager(
 	,preview_wnd_       (preview_wnd)
 	,project_state_     (PS_INACTIVE)
 	,stat_wnd_          (stat_wnd)
-	,tracker_           (main_wnd.hwnd_, file_updated_, file_not_found_)
+	,tracker_           (main_wnd.hwnd_, file_updated_)
 	,file_updated_      (*this)
-	,file_not_found_    (main_wnd.hwnd_)
 	,zero_level_changed_(*this)
 {
 	InitializeCriticalSection(&processor_section_);
@@ -224,12 +223,11 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	//  in a way that would schedule the files for immediate update
 	FILETIME null_last_write;
 	ZeroMemory(&null_last_write, sizeof(null_last_write)); // set to January 1, 1601 (UTC)
-	tracker_.SetDatum(RS_HEIGHTMAP, file_names_[RS_HEIGHTMAP].c_str(), null_last_write);
-	tracker_.SetDatum(RS_TEXTURE,   file_names_[RS_TEXTURE].c_str(),   null_last_write);
-	if (MacroProjectData(ID_CUSTOM_HARDNESS))
-		tracker_.SetDatum(RS_HARDNESS, file_names_[RS_HARDNESS].c_str(), null_last_write);
-	if (MacroProjectData(ID_CUSTOM_ZERO_LAYER))
-		tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
+	tracker_.SetDatum(RS_HEIGHTMAP,  file_names_[RS_HEIGHTMAP].c_str(),  null_last_write);
+	tracker_.SetDatum(RS_TEXTURE,    file_names_[RS_TEXTURE].c_str(),    null_last_write);
+	tracker_.SetDatum(RS_HARDNESS,   file_names_[RS_HARDNESS].c_str(),   null_last_write);
+	tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
+	tracker_.SetDatum(RS_SCRIPT,     file_names_[RS_SCRIPT].c_str(),     null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SURFACE))
 	//	tracker_.SetDatum(RS_SURFACE, file_names_[RS_SURFACE].c_str(), null_last_write);
 	//if (MacroProjectData(ID_CUSTOM_SKY))
@@ -507,16 +505,6 @@ void ProjectManager::OnResourceCreated(Resource id)
 	}
 }
 
-void ProjectManager::OnResourceNotFound(Resource id)
-{
-	switch (id)
-	{
-	case RS_HARDNESS:   MacroProjectData(ID_CUSTOM_HARDNESS)   = false;
-	case RS_ZERO_LAYER: MacroProjectData(ID_CUSTOM_ZERO_LAYER) = false;
-	};
-	tracker_.EnableDatum(id, false);
-}
-
 void ProjectManager::InstallMap()
 {
 	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
@@ -753,10 +741,10 @@ void ProjectManager::FindFileNames()
 			_T(".bmp"), _T(".png"), _T(".tiff"), _T(".tga")
 		};
 		// check which of the extensions is valid for each file name
-		tstring *extensions_iter(extensions);
-		tstring *extensions_end (extensions_iter + extension_count);
+		const tstring *extensions_end (extensions + extension_count);
 		foreach (Resource id, bmp_ids)
 		{
+			tstring *extensions_iter(extensions);
 			tstring &name(file_names_[id]);
 			for (; extensions_iter != extensions_end; ++extensions_iter)
 			{
@@ -770,25 +758,15 @@ void ProjectManager::FindFileNames()
 					break;
 				}
 			}
-			// default to .bmp
-			_tcscpy(buffer, name.c_str());
-			PathAddExtension(buffer, _T(".bmp"));
-			name = buffer;
+			if (extensions_end == extensions_iter)
+			{
+				// default to .bmp
+				_tcscpy(buffer, name.c_str());
+				PathAddExtension(buffer, _T(".bmp"));
+				name = buffer;
+			}
 		}
 	}
-}
-
-//--------------------------------------------
-// ProjectManager::FileNotFound implementation
-//--------------------------------------------
-
-ProjectManager::FileNotFound::FileNotFound(HWND &main_hwnd)
-	:main_hwnd_(main_hwnd)
-{}
-
-void ProjectManager::FileNotFound::operator() (Resource id, LPCTSTR path)
-{
-	PostResourceNotFound(main_hwnd_, id, path);
 }
 
 //-------------------------------------------

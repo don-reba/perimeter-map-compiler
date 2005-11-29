@@ -418,7 +418,6 @@ void MainWnd::ProcessMessage(WndMsg &msg)
 		&MainWnd::OnProjectOpen,
 		&MainWnd::OnProjectUnpacked,
 		&MainWnd::OnResourceCreated,
-		&MainWnd::OnResourceNotFound,
 		&MainWnd::OnSysColorChange,
 		&MainWnd::OnToggleBusy
 	};
@@ -429,19 +428,6 @@ void MainWnd::ProcessMessage(WndMsg &msg)
 void MainWnd::OnResourceCreated(Msg<WM_USR_RESOURCE_CREATED> &msg)
 {
 	project_manager_.OnResourceCreated(msg.Id());
-}
-
-void MainWnd::OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg)
-{
-	// display a warning message
-	tostringstream message;
-	message
-		<< _T("Could not find the file:\n")
-		<< msg.Message()
-		<< _T(".\nProject settings will be set to not use it.");
-	MessageBox(hwnd_, message.str().c_str(), _T("Warning"), MB_OK | MB_ICONWARNING);
-	// alert the project manager
-	project_manager_.OnResourceNotFound(msg.Id());
 }
 
 void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)

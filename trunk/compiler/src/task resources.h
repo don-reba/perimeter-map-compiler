@@ -175,8 +175,23 @@ namespace TaskCommon
 		POINT    sps_[5];
 		bool     custom_hardness_;
 		bool     custom_sky_;
+		bool     custom_script_;
 		bool     custom_surface_;
 		bool     custom_zero_layer_;
+	};
+
+	//----------------------
+	// custom mission script
+	//----------------------
+
+	struct Script : public ErrorHandler
+	{
+		Script(HWND &error_hwnd);
+		bool Load(LPCTSTR path);
+		void Pack(TiXmlNode &node) const;
+		void Save(LPCTSTR path) const;
+		bool Unpack(TiXmlNode &node);
+		TiXmlDocument doc_;
 	};
 
 	//---------------------------------

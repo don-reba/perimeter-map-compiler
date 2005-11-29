@@ -113,6 +113,8 @@
 #define IDC_CUSTOM_SKY                  1046
 #define IDC_DISPLAY_TEXTURE             1047
 #define IDC_DISPLAY_HARDNESS            1048
+#define IDC_CUSTOM_SKY2                 1048
+#define IDC_CUSTOM_SCRIPT               1048
 #define IDC_DISPLAY_ZERO_LAYER          1049
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773

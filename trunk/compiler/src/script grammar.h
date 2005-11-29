@@ -70,7 +70,8 @@ public:
 		ScriptId,
 		SetId,
 		SetNameId,
-		ValueId
+		ValueId,
+		VectorId
 	};
 // grammar interface
 public:
@@ -91,7 +92,7 @@ public:
 				= value_ % no_node_d[ch_p('|')];
 			field_
 				=	!(field_name_ >> no_node_d[ch_p('=')])
-					>> root_node_d[array_ | set_ | float_ | int_ | q_string_ | disjunction_];
+					>> root_node_d[array_ | set_ | float_ | int_ | q_string_ | disjunction_| vector_];
 			field_name_
 				= leaf_node_d[+(chset_p("A-Za-z0-9_"))];
 			float_
@@ -105,7 +106,7 @@ public:
 						>> no_node_d[ch_p('\"')]
 					];
 			script_
-				=	*(field_ >> no_node_d[ch_p(';')]);
+				=	*(field_ >> ch_p(';'));
 			set_
 				=	!set_name_
 					>> ch_p('{')
@@ -117,6 +118,14 @@ public:
 					>> no_node_d[ch_p('\"')];
 			value_
 				=	leaf_node_d[+chset_p("A-Za-zР-пр-џ0-9\"\\_.-")];
+			vector_
+				=	no_node_d[ch_p('{')]
+					>> +int_p
+					>> no_node_d[ch_p('}')]
+					|
+					no_node_d[ch_p('{')]
+					>> +strict_real_p
+					>> no_node_d[ch_p('}')];
 			// debugging directives
 			BOOST_SPIRIT_DEBUG_RULE(array_);
 			BOOST_SPIRIT_DEBUG_RULE(disjunction_);
@@ -129,6 +138,7 @@ public:
 			BOOST_SPIRIT_DEBUG_RULE(set_);
 			BOOST_SPIRIT_DEBUG_RULE(set_name_);
 			BOOST_SPIRIT_DEBUG_RULE(value_);
+			BOOST_SPIRIT_DEBUG_RULE(vector_);
 		}
 		rule<ScannerT, parser_context<>, parser_tag<ScriptId> > const& start() const
 		{
@@ -146,6 +156,7 @@ public:
 		MacroGrammarRule(SetId)         set_;
 		MacroGrammarRule(SetNameId)     set_name_;
 		MacroGrammarRule(ValueId)       value_;
+		MacroGrammarRule(VectorId)      vector_;
 	};
 };
 

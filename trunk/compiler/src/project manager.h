@@ -56,16 +56,8 @@ public:
 	struct TasksLeft {
 		virtual void operator() (uint task_count) = 0;
 	};
-// FileTracker callback implementations
+// callback implementations
 private:
-	class FileNotFound : public FileTracker::FileNotFound
-	{
-	public:
-		FileNotFound(HWND &main_hwnd);
-		void operator() (Resource id, LPCTSTR path);
-	private:
-		HWND &main_hwnd_;
-	};
 	struct FileUpdated : FileTracker::FileUpdated
 	{
 		FileUpdated(ProjectManager &project_manager);
@@ -102,7 +94,6 @@ public:
 	void UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd);
 	void OnProjectOpen(HWND main_hwnd);
 	void OnProjectUnpacked(HWND main_hwnd);
-	void OnResourceNotFound(Resource id);
 	void OnResourceCreated(Resource id);
 	// map management
 	void InstallMap();
@@ -138,8 +129,7 @@ private:
 	tstring file_names_[resource_count];
 // callback implementation instances
 private:
-	FileUpdated      file_updated_;
-	FileNotFound     file_not_found_;
+	FileUpdated file_updated_;
 public:
 	ZeroLevelChanged zero_level_changed_;
 // callbacks

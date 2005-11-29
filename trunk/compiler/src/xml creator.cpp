@@ -43,31 +43,45 @@ XmlCreator::XmlCreator()
 	:doc_cursor_(NULL)
 {}
 
-bool XmlCreator::LoadFromFile(const char *file_name)
+XmlCreator::LoadResult XmlCreator::LoadFromFile(const char *file_name)
 {
+	LoadResult result;
+	result.success_ = false;
+	result.chars_consumed_ = 0;
 	// open the file
 	std::ifstream file(file_name);
 	if (!file)
-		return false;
+		return result;
 	file.seekg(0, std::ios_base::end);
 	const int file_size(file.tellg());
 	if (-1 == file_size)
-		return false;
+		return result;
 	file.seekg(0, std::ios_base::beg);
 	// read the file
 	string file_string;
 	file_string.resize(file_size);
 	file.read(&file_string[0], file_size);
-	// parse the file
+	// parse
+	return LoadFromString(file_string.c_str());
+}
+
+XmlCreator::LoadResult XmlCreator::LoadFromString(const char *data)
+{
+	LoadResult result;
+	// parse
 	ScriptGrammar grammar;
 	tree_parse_info<> info(ast_parse(
-		file_string.c_str(),
+		data,
 		grammar,
 		space_p));
+	result.chars_consumed_ = info.match ? info.length : 0;
+	if (!info.full)
+		return result;
 	doc_.InsertEndChild(TiXmlDeclaration("1.0", "windows-1251", "no"));
 	foreach (const tree_node_t &node, info.trees)
 		ParseNode(node);
-	return true;
+	result.success_ = true;
+	return result;
 }
 
 void XmlCreator::Read(std::ostream &out) const
@@ -90,6 +104,7 @@ void XmlCreator::ParseNode(const tree_node_t &node)
 	case ScriptGrammar::SetId:         ParseSet        (node); break;
 	case ScriptGrammar::SetNameId:     ParseSetName    (node); break;
 	case ScriptGrammar::ValueId:       ParseValue      (node); break;
+	case ScriptGrammar::VectorId:      ParseVector     (node); break;
 	}
 }
 
@@ -173,6 +188,24 @@ void XmlCreator::ParseValue(const tree_node_t &node)
 	SetValue(value.c_str());
 	foreach (const tree_node_t &child, node.children)
 		ParseNode(child);
+	EndNode();
+}
+
+void XmlCreator::ParseVector(const tree_node_t &node)
+{
+	StartNode("vector");
+	foreach (const tree_node_t &child, node.children)
+	{
+		string value(child.value.begin(), child.value.end());
+		if (ScriptGrammar::FieldNameId == child.value.id().to_long())
+			SetAttribute("name", value.c_str());
+		else
+		{
+			StartNode("val");
+			SetValue(value.c_str());
+			EndNode();
+		}
+	}
 	EndNode();
 }
 

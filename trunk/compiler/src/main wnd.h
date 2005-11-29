@@ -49,7 +49,6 @@ enum
 	WM_USR_PROJECT_OPEN = WM_APP + 32,
 	WM_USR_PROJECT_UNPACKED,
 	WM_USR_RESOURCE_CREATED,
-	WM_USR_RESOURCE_NOT_FOUND,
 	WM_USR_TOGGLE_BUSY
 };
 
@@ -57,13 +56,6 @@ inline void PostToggleBusy(HWND hwnd, uint task_count) {
 	PostMessage(hwnd, WM_USR_TOGGLE_BUSY, task_count, 0L);
 }
 
-inline void PostResourceNotFound(HWND hwnd, Resource id, LPCTSTR path) {
-	PostMessage(
-		hwnd,
-		WM_USR_RESOURCE_NOT_FOUND,
-		ri_cast<WPARAM>(new tstring(path)),
-		static_cast<LPARAM>(id));
-}
 
 inline void SendProjectOpen(HWND hwnd)
 {
@@ -79,26 +71,6 @@ inline void SendResourceCreated(HWND hwnd, Resource id)
 {
 	SendMessage(hwnd, WM_USR_RESOURCE_CREATED, id, 0L);
 }
-
-template <>
-struct Msg<WM_USR_RESOURCE_NOT_FOUND> : Msg_
-{
-	Msg(WndMsg &msg) : Msg_(msg), message_(*MessagePtr()) {
-		delete MessagePtr();
-	}
-	const Resource Id() const {
-		return static_cast<Resource>(lprm_);
-	}
-	const tstring &Message() const {
-		return message_;
-	}
-private:
-	string *MessagePtr() {
-		return ri_cast<tstring*>(wprm_);
-	}
-private:
-	tstring message_;
-};
 
 template <>
 struct Msg<WM_USR_RESOURCE_CREATED> : Msg_
@@ -191,7 +163,6 @@ private:
 	void OnEnabled         (Msg<WM_ENABLE>                 &msg);
 	void OnProjectOpen     (Msg<WM_USR_PROJECT_OPEN>       &msg);
 	void OnProjectUnpacked (Msg<WM_USR_PROJECT_UNPACKED>   &msg);
-	void OnResourceNotFound(Msg<WM_USR_RESOURCE_NOT_FOUND> &msg);
 	void OnResourceCreated (Msg<WM_USR_RESOURCE_CREATED>   &msg);
 	void OnSysColorChange  (Msg<WM_SYSCOLORCHANGE>         &msg);
 	void OnToggleBusy      (Msg<WM_USR_TOGGLE_BUSY>        &msg);

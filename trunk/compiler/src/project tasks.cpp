@@ -31,14 +31,15 @@
 
 #include "stdafx.h"
 
+#include "../resource.h"
 #include "btdb.h"
 #include "info wnd.h"
 #include "main wnd.h"
 #include "preview wnd.h"
 #include "project manager.h"
 #include "project tasks.h"
-#include "../resource.h"
 #include "resource management.h"
+#include "script creator.h"
 #include "stat wnd.h"
 #include "xml creator.h"
 
@@ -66,6 +67,13 @@ TaskData Task::task_data_;
 //----------------------------------------
 
 TaskData::TaskData()
+	:hardness_  (NULL)
+	,heightmap_ (NULL)
+	,script_    (NULL)
+	,sky_       (NULL)
+	,surface_   (NULL)
+	,texture_   (NULL)
+	,zero_layer_(NULL)
 {
 	InitializeCriticalSection(&section_);
 }
@@ -172,12 +180,14 @@ void FreeProjectDataTask::operator() ()
 {
 	delete task_data_.hardness_;
 	delete task_data_.heightmap_;
+	delete task_data_.script_;
 	delete task_data_.sky_;
 	delete task_data_.surface_;
 	delete task_data_.texture_;
 	delete task_data_.zero_layer_;
 	task_data_.hardness_   = NULL;
 	task_data_.heightmap_  = NULL;
+	task_data_.script_     = NULL;
 	task_data_.sky_        = NULL;
 	task_data_.surface_    = NULL;
 	task_data_.texture_    = NULL;
@@ -196,8 +206,16 @@ ImportScriptTask::ImportScriptTask(LPCTSTR script_path, LPCTSTR xml_path)
 void ImportScriptTask::operator() ()
 {
 	XmlCreator xml_creator;
-	if (!xml_creator.LoadFromFile(script_.c_str()))
-		throw TaskException("Script could not be imported.");
+	{
+		XmlCreator::LoadResult result(xml_creator.LoadFromFile(script_.c_str()));
+		if (!result.success_)
+		{
+			tstringstream stream;
+			stream << _T("Script could not be imported.\n");
+			stream << _T("Only ") << result.chars_consumed_ << _T(" characters have been read.");
+			throw TaskException(stream.str().c_str());
+		}
+	}
 	std::ofstream file(xml_.c_str());
 	if (!file)
 	{
@@ -526,7 +544,14 @@ void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool surviva
 	// create the ".spg" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".spg"));
-	SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
+	if (NULL != task_data_.script_)
+	{
+		std::ofstream spg_file(str);
+		ScriptCreator script_creator(spg_file);
+		script_creator.Create(task_data_.script_->doc_);
+	}
+	else
+		SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
 	// create the ".sph" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".sph"));
@@ -548,7 +573,14 @@ void InstallMapTask::SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool surviv
 	// create the ".spg" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".spg"));
-	SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
+	if (NULL != task_data_.script_)
+	{
+		std::ofstream spg_file(str);
+		ScriptCreator script_creator(spg_file);
+		script_creator.Create(task_data_.script_->doc_);
+	}
+	else
+		SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
 }
 
 //-----------------------------------
@@ -571,38 +603,60 @@ void LoadProjectDataTask::operator() ()
 	// preconditions
 	_ASSERTE(NULL == task_data_.hardness_);
 	_ASSERTE(NULL == task_data_.heightmap_);
+	_ASSERTE(NULL == task_data_.script_);
+	_ASSERTE(NULL == task_data_.sky_);
+	_ASSERTE(NULL == task_data_.surface_);
 	_ASSERTE(NULL == task_data_.texture_);
 	_ASSERTE(NULL == task_data_.zero_layer_);
-	// allocate data
-	task_data_.hardness_   = new Hardness (task_data_.map_size_, error_hwnd_);
-	task_data_.heightmap_  = NULL;
-	task_data_.sky_        = new Sky      (error_hwnd_);
-	task_data_.surface_    = new Surface  (error_hwnd_);
-	task_data_.texture_    = new Texture  (task_data_.map_size_, error_hwnd_);
-	task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
 	// locals
 	TCHAR path[MAX_PATH];
 	// load
 	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
-	if (ids_[RS_HARDNESS])
-		task_data_.hardness_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_HARDNESS].c_str()));
 	if (ids_[RS_ZERO_LAYER])
+	{
+		task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
 		task_data_.zero_layer_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_ZERO_LAYER].c_str()));
+	}
+	if (ids_[RS_HARDNESS])
+	{
+		task_data_.hardness_ = new Hardness(task_data_.map_size_, error_hwnd_);
+		task_data_.hardness_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_HARDNESS].c_str()));
+	}
 	if (ids_[RS_HEIGHTMAP])
+	{
 		task_data_.heightmap_ = LoadHeightmap(
 			task_data_.map_size_,
 			*this,
 			PathCombine(path, folder_path, task_data_.file_names_[RS_HEIGHTMAP].c_str()),
 			ids_[RS_ZERO_LAYER] ? task_data_.zero_layer_ : NULL,
 			task_data_.map_info_.zero_level_);
+	}
+	if (ids_[RS_SCRIPT])
+	{
+		task_data_.script_ = new Script(error_hwnd_);
+		if (!task_data_.script_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SCRIPT].c_str())))
+		{
+			delete task_data_.script_;
+			task_data_.script_ = NULL;
+		}
+	}
+	if (ids_[RS_SKY])
+	{
+		task_data_.sky_ = new Sky(error_hwnd_);
+		task_data_.sky_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SKY].c_str()));
+	}
+	if (ids_[RS_SURFACE])
+	{
+		task_data_.surface_ = new Surface(error_hwnd_);
+		task_data_.surface_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SURFACE].c_str()));
+	}
 	if (ids_[RS_TEXTURE])
+	{
+		task_data_.texture_ = new Texture(task_data_.map_size_, error_hwnd_);
 		task_data_.texture_->Load(
 			PathCombine(path, folder_path, task_data_.file_names_[RS_TEXTURE].c_str()),
 			task_data_.fast_quantization_);
-	if (ids_[RS_SKY])
-		task_data_.sky_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SKY].c_str()));
-	if (ids_[RS_SURFACE])
-		task_data_.surface_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SURFACE].c_str()));
+	}
 }
 
 //-----------------------------------------
@@ -713,6 +767,26 @@ void PackShrubTask::operator() ()
 			size = hardness.size_.cx * hardness.size_.cy;
 			checksum = CalculateChecksum(data, size, checksum);
 		}
+		// map info
+		{
+			task_data_.map_info_.GetRawData(&data, &size);
+			checksum = CalculateChecksum(data, size, checksum);
+			delete [] data;
+			// register the map
+			if (!RegisterMap(task_data_.map_name_.c_str(), checksum, *this))
+				return;
+		}
+		// script
+		if (NULL != task_data_.script_)
+		{
+			Script &script(*task_data_.script_);
+			std::stringstream stream;
+			stream << script.doc_;
+			string str(stream.str());
+			data = ri_cast<BYTE*>(&str[0]);
+			size = str.size();
+			checksum = CalculateChecksum(data, size, checksum);
+		}
 		// sky
 		if (custom_sky_)
 		{
@@ -738,13 +812,6 @@ void PackShrubTask::operator() ()
 			size = zero_layer.data_.size() / 8;
 			checksum = CalculateChecksum(data, size, checksum);
 		}
-		// map info
-		task_data_.map_info_.GetRawData(&data, &size);
-		checksum = CalculateChecksum(data, size, checksum);
-		delete [] data;
-		// register the map
-		if (!RegisterMap(task_data_.map_name_.c_str(), checksum, *this))
-			return;
 	}
 	// initialise an XML metadata document
 	TiXmlDocument doc;
@@ -769,11 +836,13 @@ void PackShrubTask::operator() ()
 		buffer_size = std::accumulate(sizes.begin(), sizes.end(), 0);
 	}
 	BYTE *buffer(new BYTE[buffer_size]);
-	// add heightmap, texture and map information
+	// add packed data
 	{
 		BYTE *buffer_iter(buffer);
 		vector<bool> mask;
 		task_data_.map_info_.Pack(*content_node->InsertEndChild(TiXmlElement("map_info")));
+		if (NULL != task_data_.script_)
+			task_data_.script_->Pack(*content_node->InsertEndChild(TiXmlElement("script")));
 		buffer_iter += heightmap.Pack(
 			*content_node->InsertEndChild(TiXmlElement("heightmap")),
 			buffer_iter,
@@ -810,6 +879,10 @@ void PackShrubTask::operator() ()
 	}
 	// augment the buffer with metadata
 	{
+		{
+			std::ofstream dbg_file("shrub xml.xml");
+			dbg_file << doc;
+		}
 		// output the XML metadata into a string
 		string xml_string;
 		xml_string << doc;
@@ -954,6 +1027,21 @@ void UnpackShrubTask::operator() ()
 			task_data_.hardness_ = new Hardness(task_data_.map_size_, error_hwnd_);
 			Hardness &hardness(*task_data_.hardness_);
 			hardness.Unpack(node, buffer_, mask);
+		}
+	}
+	// unpack the script
+	{
+		_ASSERTE(NULL == task_data_.script_);
+		TiXmlElement *node(content_node->FirstChildElement("script"));
+		if (NULL != node)
+		{
+			task_data_.script_ = new Script(error_hwnd_);
+			Script &script(*task_data_.script_);
+			if (!script.Unpack(*node))
+			{
+				delete task_data_.script_;
+				task_data_.script_ = NULL;
+			}
 		}
 	}
 	// unpack the sky texture

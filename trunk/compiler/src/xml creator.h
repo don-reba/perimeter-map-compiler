@@ -37,6 +37,12 @@
 
 class XmlCreator
 {
+public:
+	struct LoadResult
+	{
+		int  chars_consumed_;
+		bool success_;
+	};
 private:
 	typedef const char *                      iter_t;
 	typedef boost::spirit::tree_match<iter_t> match_t;
@@ -44,8 +50,9 @@ private:
 	typedef match_t::node_t                   tree_node_t;
 public:
 	XmlCreator();
-	bool LoadFromFile(const char *file_name);
-	void Read(std::ostream &out) const;
+	LoadResult LoadFromFile(const char *file_name);
+	LoadResult LoadFromString(const char *data);
+	void       Read(std::ostream &out) const;
 private:
 	void Create(const tree_iter_t &iter);
 private:
@@ -61,6 +68,7 @@ private:
 	void ParseSet        (const tree_node_t &node);
 	void ParseSetName    (const tree_node_t &node);
 	void ParseValue      (const tree_node_t &node);
+	void ParseVector     (const tree_node_t &node);
 	// XML manipulation
 	void StartNode(const char *name);
 	void EndNode();
