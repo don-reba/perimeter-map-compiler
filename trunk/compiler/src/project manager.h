@@ -91,12 +91,12 @@ public:
 	void OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_project = false);
 	// shrub management
 	void PackShrub();
-	void UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd);
+	bool UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd);
 	void OnProjectOpen(HWND main_hwnd);
 	void OnProjectUnpacked(HWND main_hwnd);
 	void OnResourceCreated(Resource id);
 	// map management
-	void InstallMap();
+	void InstallMap(LPCTSTR install_path, uint version);
 	// miscellaneous
 	void SaveThumbnail();
 	// data management

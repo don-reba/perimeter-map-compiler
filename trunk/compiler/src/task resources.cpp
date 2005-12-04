@@ -868,13 +868,6 @@ namespace TaskCommon
 						else
 						{
 							WORD value(static_cast<WORD>(jas_matrix_get(data_matrix, r, c)));
-							/*value &= 0x1FFF;
-							if (rand() < RAND_MAX / 0x1000)
-							{
-								for (int i(0); i != 16; ++i)
-									file << ((value & 1 << (15 - i)) ? '1' : '0');
-								file << "\n";
-							}*/
 //							value = ((value & 0xFF) << 8) | (value >> 8);
 							*image_data++ = value;
 							*data_ptr++ = value;

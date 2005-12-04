@@ -235,10 +235,11 @@ void ImportScriptTask::operator() ()
 // InstallShrubTask implementation
 //--------------------------------
 
-InstallMapTask::InstallMapTask(HWND &hwnd, tstring &perimeter_path)
-	:ErrorHandler   (hwnd)
-	,hwnd_          (hwnd)
-	,perimeter_path_(perimeter_path)
+InstallMapTask::InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version)
+	:ErrorHandler (hwnd)
+	,hwnd_        (hwnd)
+	,install_path_(install_path)
+	,version_     (version)
 {}
 
 void InstallMapTask::operator() ()
@@ -249,35 +250,7 @@ void InstallMapTask::operator() ()
 	Texture   &texture   (*task_data_.texture_);
 	TCHAR      str        [MAX_PATH];
 	TCHAR      folder_path[MAX_PATH];
-	tstring    install_path;
 	bool       overwriting(false);
-	uint       version(1);
-	// get install path
-	{
-		DWORD attributes(GetFileAttributes(perimeter_path_.c_str()));
-		if (INVALID_FILE_ATTRIBUTES == attributes)
-		{
-			if (!GetInstallPath(install_path, *this))
-				return;
-		}
-		else
-		{
-			if (perimeter_path_.size() >= MAX_PATH)
-			{
-				MacroDisplayError(_T("The installation path is too long."));
-				return;
-			}
-			if (0 == (FILE_ATTRIBUTE_DIRECTORY | attributes))
-			{
-				_tcscpy(str, perimeter_path_.c_str());
-				PathRemoveFileSpec(str);
-				install_path = str;
-			}
-			else
-				install_path = perimeter_path_;
-			version = 2;
-		}
-	}
 	// get the name to use for stuff that needs a name
 	// this is the map name for a registered map, and "UNREGISTERED" otherwise
 	// ASSUME shrubs are registered
@@ -285,7 +258,7 @@ void InstallMapTask::operator() ()
 	// create a directory for the map
 	{
 		// create path
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Worlds"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Worlds"));
 		PathCombine(folder_path, folder_path, folder_name.c_str());
 		// create directory
 		int result(SHCreateDirectoryEx(hwnd_, folder_path, NULL));
@@ -333,7 +306,7 @@ void InstallMapTask::operator() ()
 		tstring language;
 		// get the language of the distribution
 		{
-			PathCombine(str, install_path.c_str(), "Perimeter.ini");
+			PathCombine(str, install_path_.c_str(), "Perimeter.ini");
 			std::ifstream ini(str);
 			if (!ini.is_open())
 			{
@@ -354,14 +327,14 @@ void InstallMapTask::operator() ()
 			}
 		}
 		//GetPrivateProfileString("Game", "DefaultLanguage", "Russian--", language, language_size, str);
-		PathCombine(str, install_path.c_str(), "RESOURCE\\LocData");
+		PathCombine(str, install_path_.c_str(), "RESOURCE\\LocData");
 		PathCombine(str, str, language.c_str());
 		PathCombine(str, str, "Text\\Texts.btdb");
 		AppendBTDB(str, folder_name.c_str());
 	}
 	// append WORLDS.PRM
-	PathCombine(str, install_path.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
-	AppendWorldsPrm(str, folder_name.c_str(), version);
+	PathCombine(str, install_path_.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
+	AppendWorldsPrm(str, folder_name.c_str(), version_);
 	// save up.tga
 	PathCombine(str, folder_path, _T("up.tga"));
 	if (NULL != task_data_.sky_)
@@ -389,27 +362,27 @@ void InstallMapTask::operator() ()
 		SaveHardness(str, task_data_.hardness_->data_, task_data_.map_size_, *this);
 	}
 	// generate mission files
-	switch (version)
+	switch (version_)
 	{
 	case 1:
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission(folder_path, folder_name.c_str(), false);
 		break;
 	case 2:
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission2(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Multiplayer"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission2(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
 		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
 		SaveMission2(folder_path, folder_name.c_str(), false);
 		break;
@@ -548,7 +521,8 @@ void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool surviva
 	{
 		std::ofstream spg_file(str);
 		ScriptCreator script_creator(spg_file);
-		script_creator.Create(task_data_.script_->doc_);
+		if (!script_creator.Create(task_data_.script_->doc_))
+			SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
 	}
 	else
 		SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
@@ -577,10 +551,11 @@ void InstallMapTask::SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool surviv
 	{
 		std::ofstream spg_file(str);
 		ScriptCreator script_creator(spg_file);
-		script_creator.Create(task_data_.script_->doc_);
+		if (!script_creator.Create(task_data_.script_->doc_))
+			SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
 	}
 	else
-		SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
+		SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
 }
 
 //-----------------------------------

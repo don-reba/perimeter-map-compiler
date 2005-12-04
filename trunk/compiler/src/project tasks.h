@@ -230,7 +230,7 @@ class InstallMapTask : public Task, public ErrorHandler
 {
 // construction/destruction
 public:
-	InstallMapTask(HWND &hwnd, tstring &perimeter_path);
+	InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version);
 // Task interface
 public:
 	void operator() ();
@@ -242,8 +242,9 @@ private:
 	void SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool survival);
 // data
 private:
-	HWND    hwnd_;
-	tstring perimeter_path_;
+	HWND          hwnd_;
+	const tstring install_path_;
+	const uint    version_;
 };
 
 //------------

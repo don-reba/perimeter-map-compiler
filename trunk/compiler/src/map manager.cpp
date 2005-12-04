@@ -38,21 +38,21 @@
 #include "resource management.h"
 #include "task common.h"
 
-#include <algorithm>
 #include <commctrl.h>
+#include <shellapi.h>
+
+#include <algorithm>
 #include <fstream>
 #include <iterator>
 #include <set>
-#include <shellapi.h>
 #include <sstream>
 
 using namespace RsrcMgmt;
 
-INT_PTR MapManager::DoModal(HWND parent_wnd)
+INT_PTR MapManager::DoModal(HWND parent_wnd, const char *install_path)
 {
 	// get installation path
-	if (!GetInstallPath(install_path_))
-		return IDCANCEL;
+	install_path_ = install_path;
 	// run dialog
 	return DialogBoxParam(
 		GetModuleHandle(NULL),
@@ -116,10 +116,6 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 		// get the list of folders in "RESOURCE\Worlds"
 		std::set<tstring> prm_list;
 		{
-			// get the installation path
-			tstring install_path_;
-			if (!GetInstallPath(install_path_))
-				return;
 			// get the "RESOURCE\Worlds" path
 			TCHAR path[MAX_PATH];
 			PathCombine(path, install_path_.c_str(), _T("RESOURCE\\Worlds\\*"));
@@ -188,7 +184,7 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 			reserved_list.end(),
 			std::inserter(map_list, map_list.begin()));
 	}
-	// set up the map list control
+	// set up the map list
 	{
 		HWND map_list_ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));
 		ListView_SetExtendedListViewStyleEx(map_list_ctrl, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
@@ -446,33 +442,6 @@ void MapManager::GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool rec
 	PathCombine(path, path, map_name);
 	PathAddExtension(path, _T(".sph"));
 	AddExisting(path);
-}
-
-bool MapManager::GetInstallPath(string &install_path_)
-{
-	TCHAR path[MAX_PATH];
-	DWORD attributes(GetFileAttributes(MacroAppData(ID_PERIMETER_PATH).c_str()));
-	if (INVALID_FILE_ATTRIBUTES == attributes)
-	{
-		return TaskCommon::GetInstallPath(install_path_, *this);
-	}
-	else
-	{
-		if (MacroAppData(ID_PERIMETER_PATH).size() >= MAX_PATH)
-		{
-			MacroDisplayError(_T("The installation path is too long."));
-			return false;
-		}
-		if (0 == (FILE_ATTRIBUTE_DIRECTORY | attributes))
-		{
-			_tcscpy(path, MacroAppData(ID_PERIMETER_PATH).c_str());
-			PathRemoveFileSpec(path);
-			install_path_ = path;
-		}
-		else
-			install_path_ = MacroAppData(ID_PERIMETER_PATH);
-	}
-	return true;
 }
 
 tstring MapManager::GetMapFilesSize(LPCTSTR map_name)

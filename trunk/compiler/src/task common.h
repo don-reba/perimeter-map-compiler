@@ -152,7 +152,6 @@ namespace TaskCommon
 	// other
 	//------
 
-	bool GetInstallPath(tstring &install_path, ErrorHandler &error_handler);
 	bool RegisterMap(LPCTSTR map_name, DWORD checksum, ErrorHandler &error_handler);
 }
 

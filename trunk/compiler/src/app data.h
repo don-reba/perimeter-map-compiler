@@ -62,6 +62,7 @@ public:
 		ID_FAST_TEXTURE_QUANTIZATION,
 		ID_ENABLE_LIGHTING,
 		ID_PERIMETER_PATH,
+		ID_PERIMETER_VERSION,
 		count_
 	};
 protected:
@@ -91,7 +92,8 @@ protected:
 			_T("enable swap"),
 			_T("fast texture quantization"),
 			_T("enable lighting"),
-			_T("perimeter path")
+			_T("perimeter path"),
+			_T("perimeter version")
 		};
 		return keys_table[i];
 	}
@@ -119,6 +121,7 @@ protected:
 			_T("Map Preview Settings"),
 			_T("Project Settings"),
 			_T("Project Settings"),
+			_T("Miscelleneous"),
 			_T("Miscelleneous")
 		};	
 		return sections_table[i];
@@ -143,6 +146,7 @@ protected:
 	MacroSSVar (ID_FAST_TEXTURE_QUANTIZATION, bool, true);
 	MacroSSVar (ID_ENABLE_LIGHTING, bool, true);
 	MacroSSVar (ID_PERIMETER_PATH, tstring, _T(""));
+	MacroSSVar (ID_PERIMETER_VERSION, int, 0);
 };
 
 typedef StaticSerializer<ApplicationData> SSAppData;

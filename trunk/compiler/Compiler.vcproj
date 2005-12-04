@@ -82,10 +82,10 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
-				OmitFramePointers="FALSE"
+				OmitFramePointers="TRUE"
 				OptimizeForProcessor="3"
 				OptimizeForWindowsApplication="TRUE"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB;PRE_RELEASE"
 				StringPooling="TRUE"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="0"
@@ -275,6 +275,9 @@
 				RelativePath=".\src\task resources.cpp">
 			</File>
 			<File
+				RelativePath=".\src\version detector.cpp">
+			</File>
+			<File
 				RelativePath=".\src\xml creator.cpp">
 			</File>
 		</Filter>
@@ -349,6 +352,9 @@
 				RelativePath=".\src\resource.h">
 			</File>
 			<File
+				RelativePath=".\resource.h">
+			</File>
+			<File
 				RelativePath=".\src\script creator.h">
 			</File>
 			<File
@@ -373,6 +379,9 @@
 				RelativePath=".\src\util.h">
 			</File>
 			<File
+				RelativePath=".\src\version detector.h">
+			</File>
+			<File
 				RelativePath=".\src\window.h">
 			</File>
 			<File
@@ -387,19 +396,19 @@
 				RelativePath=".\resource\bz23.bin">
 			</File>
 			<File
-				RelativePath=".\Compiler.ico">
+				RelativePath=".\resource\compiler.ico">
 			</File>
 			<File
-				RelativePath=".\resource\compiler.ico">
+				RelativePath=".\Compiler.ico">
 			</File>
 			<File
 				RelativePath=".\Compiler.rc">
 			</File>
 			<File
-				RelativePath=".\resource\details window.ico">
+				RelativePath=".\details window.ico">
 			</File>
 			<File
-				RelativePath=".\details window.ico">
+				RelativePath=".\resource\details window.ico">
 			</File>
 			<File
 				RelativePath=".\resource\details.bmp">
@@ -423,10 +432,10 @@
 				RelativePath=".\resource\img1.bin">
 			</File>
 			<File
-				RelativePath=".\resource\preview window.ico">
+				RelativePath=".\preview window.ico">
 			</File>
 			<File
-				RelativePath=".\preview window.ico">
+				RelativePath=".\resource\preview window.ico">
 			</File>
 			<File
 				RelativePath=".\resource\preview.bmp">
@@ -435,10 +444,10 @@
 				RelativePath=".\resource\preview.ico">
 			</File>
 			<File
-				RelativePath=".\red light.ico">
+				RelativePath=".\resource\red light.ico">
 			</File>
 			<File
-				RelativePath=".\resource\red light.ico">
+				RelativePath=".\red light.ico">
 			</File>
 			<File
 				RelativePath=".\shrub(grayscale).bmp">
@@ -447,25 +456,25 @@
 				RelativePath=".\shrub(small grayscale).ico">
 			</File>
 			<File
-				RelativePath=".\shrub.ico">
-			</File>
-			<File
 				RelativePath=".\resource\shrub.ico">
 			</File>
 			<File
-				RelativePath=".\shrub2.ico">
+				RelativePath=".\shrub.ico">
 			</File>
 			<File
 				RelativePath=".\resource\shrub2.ico">
 			</File>
 			<File
+				RelativePath=".\shrub2.ico">
+			</File>
+			<File
 				RelativePath=".\small.ico">
 			</File>
 			<File
-				RelativePath=".\stat window.ico">
+				RelativePath=".\resource\stat window.ico">
 			</File>
 			<File
-				RelativePath=".\resource\stat window.ico">
+				RelativePath=".\stat window.ico">
 			</File>
 			<File
 				RelativePath=".\resource\stats.bmp">
@@ -477,10 +486,10 @@
 				RelativePath=".\Triangle.bmp">
 			</File>
 			<File
-				RelativePath=".\triangle.ico">
+				RelativePath=".\resource\triangle.ico">
 			</File>
 			<File
-				RelativePath=".\resource\triangle.ico">
+				RelativePath=".\triangle.ico">
 			</File>
 		</Filter>
 		<Filter
@@ -554,10 +563,10 @@
 			RelativePath=".\readme.txt">
 		</File>
 		<File
-			RelativePath=".\resource\spg.bz2">
+			RelativePath=".\spg.bz2">
 		</File>
 		<File
-			RelativePath=".\spg.bz2">
+			RelativePath=".\resource\spg.bz2">
 		</File>
 		<File
 			RelativePath=".\resource\spg2.bz2">
@@ -578,10 +587,10 @@
 			RelativePath=".\resource\up.bz2">
 		</File>
 		<File
-			RelativePath=".\resource\world.ini">
+			RelativePath=".\world.ini">
 		</File>
 		<File
-			RelativePath=".\world.ini">
+			RelativePath=".\resource\world.ini">
 		</File>
 		<File
 			RelativePath=".\Worlds.prm">
@@ -590,10 +599,10 @@
 			RelativePath=".\resource\worlds_list.bz2">
 		</File>
 		<File
-			RelativePath=".\worlds_list.txt">
+			RelativePath=".\resource\worlds_list.txt">
 		</File>
 		<File
-			RelativePath=".\resource\worlds_list.txt">
+			RelativePath=".\worlds_list.txt">
 		</File>
 		<File
 			RelativePath=".\resource\worlds_list2.bz2">

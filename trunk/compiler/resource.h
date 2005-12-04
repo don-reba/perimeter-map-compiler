@@ -52,6 +52,7 @@
 #define IDR_SURFACE_TX                  201
 #define IDR_SKY_TX                      202
 #define IDR_EVMP                        203
+#define IDD_VERSION_CHOOSER             204
 #define IDC_COMBO1                      1000
 #define IDC_MAP_SIZE                    1000
 #define IDC_LIGHTING                    1000
@@ -113,9 +114,9 @@
 #define IDC_CUSTOM_SKY                  1046
 #define IDC_DISPLAY_TEXTURE             1047
 #define IDC_DISPLAY_HARDNESS            1048
-#define IDC_CUSTOM_SKY2                 1048
-#define IDC_CUSTOM_SCRIPT               1048
 #define IDC_DISPLAY_ZERO_LAYER          1049
+#define IDC_REMEMBER_CHOICE             1051
+#define IDC_CHOICE_LIST                 1052
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -133,6 +134,10 @@
 #define ID_TOOLS_IMPORTSCRIPT           32803
 #define ID_PANEL_WND_3                  32804
 #define ID_PANEL_WND_4                  32805
+#define ID_HELP_D                       32806
+#define ID_HELP_                        32807
+#define ID_HELP_RU                      32808
+#define ID_HELP_EN                      32809
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -140,9 +145,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        204
-#define _APS_NEXT_COMMAND_VALUE         32804
-#define _APS_NEXT_CONTROL_VALUE         1050
+#define _APS_NEXT_RESOURCE_VALUE        205
+#define _APS_NEXT_COMMAND_VALUE         32810
+#define _APS_NEXT_CONTROL_VALUE         1053
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

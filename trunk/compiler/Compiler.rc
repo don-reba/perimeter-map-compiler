@@ -110,6 +110,9 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
+        MENUITEM "Help (Russian)",              ID_HELP_RU
+        MENUITEM "Help (English",               ID_HELP_EN
+        MENUITEM SEPARATOR
         MENUITEM "&About",                      IDM_ABOUT
     END
 END
@@ -282,6 +285,22 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,61,81,10
 END
 
+IDD_VERSION_CHOOSER DIALOGEX 0, 0, 251, 95
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "Choose Perimeter Version"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,194,58,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,194,74,50,14
+    CONTROL         "Remember my choice\nand do not ask again",
+                    IDC_REMEMBER_CHOICE,"Button",BS_AUTOCHECKBOX | 
+                    BS_MULTILINE | WS_TABSTOP,7,60,128,20
+    CONTROL         "",IDC_CHOICE_LIST,"SysListView32",LVS_REPORT | 
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | 
+                    LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,7,7,237,47
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -355,6 +374,14 @@ BEGIN
         RIGHTMARGIN, 106
         TOPMARGIN, 7
         BOTTOMMARGIN, 91
+    END
+
+    IDD_VERSION_CHOOSER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 244
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 88
     END
 END
 #endif    // APSTUDIO_INVOKED

@@ -10,7 +10,7 @@ private:
 public:
 	ScriptCreator();
 	ScriptCreator(std::ostream &out);
-	void Create(const TiXmlDocument &doc);
+	bool Create(const TiXmlDocument &doc);
 private:
 	// node parsing
 	void ParseNode       (const TiXmlElement *node, uint depth);

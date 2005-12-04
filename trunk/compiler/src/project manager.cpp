@@ -228,10 +228,10 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	tracker_.SetDatum(RS_HARDNESS,   file_names_[RS_HARDNESS].c_str(),   null_last_write);
 	tracker_.SetDatum(RS_ZERO_LAYER, file_names_[RS_ZERO_LAYER].c_str(), null_last_write);
 	tracker_.SetDatum(RS_SCRIPT,     file_names_[RS_SCRIPT].c_str(),     null_last_write);
-	//if (MacroProjectData(ID_CUSTOM_SURFACE))
-	//	tracker_.SetDatum(RS_SURFACE, file_names_[RS_SURFACE].c_str(), null_last_write);
-	//if (MacroProjectData(ID_CUSTOM_SKY))
-	//	tracker_.SetDatum(RS_SKY, file_names_[RS_SKY].c_str(), null_last_write);
+//	if (MacroProjectData(ID_CUSTOM_SURFACE))
+//		tracker_.SetDatum(RS_SURFACE, file_names_[RS_SURFACE].c_str(), null_last_write);
+//	if (MacroProjectData(ID_CUSTOM_SKY))
+//		tracker_.SetDatum(RS_SKY, file_names_[RS_SKY].c_str(), null_last_write);
 	AddTask(new NotifyProjectOpenTask(main_hwnd));
 }
 
@@ -275,7 +275,7 @@ void ProjectManager::PackShrub()
 	if (NULL != text_node)                                                                         \
 		MacroProjectData(ID_SP_##num).y = atoi(text_node->Value())
 
-void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
+bool ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 {
 	Close();
 	// TODO: move the following into a task
@@ -302,7 +302,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 		{
 			MacroDisplayError("the file is not a valid shrub");
 			delete [] compressed_buffer;
-			return;
+			return false;
 		}
 		// check the compression format
 		CopyMemory(word, compressed_buffer + 4, 3);
@@ -310,7 +310,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 		{
 			MacroDisplayError("the shrub has an unfamiliar format");
 			delete [] compressed_buffer;
-			return;
+			return false;
 		}
 	}
 	// read in the size of the buffer and allocate memory
@@ -350,7 +350,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 			};
 			delete [] buffer;
 			delete [] compressed_buffer;
-			return;
+			return false;
 		}
 	}
 	delete [] compressed_buffer;
@@ -364,7 +364,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 	{
 		MacroDisplayError("The shrub has an unfamiliar format.");
 		delete [] buffer;
-		return;
+		return false;
 	}
 	// set project state
 	project_state_ = PS_SHRUB;
@@ -395,7 +395,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 	{
 		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
-		return;
+		return false;
 	}
 	// power x
 	text_node = node_handle.FirstChildElement("map_power_x").FirstChild().Text();
@@ -405,7 +405,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 	{
 		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
-		return;
+		return false;
 	}
 	// power y
 	text_node = node_handle.FirstChildElement("map_power_y").FirstChild().Text();
@@ -415,7 +415,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 	{
 		MacroDisplayError(_T("The shrub has an unfamiliar format."));
 		delete [] buffer;
-		return;
+		return false;
 	}
 	// zero_plast
 	text_node = node_handle.FirstChildElement("zero_plast").FirstChild().Text();
@@ -478,6 +478,7 @@ void ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 		stat_wnd_,
 		*this,
 		error_hwnd_));
+	return true;
 }
 
 void ProjectManager::OnProjectOpen(HWND main_hwnd)
@@ -505,7 +506,7 @@ void ProjectManager::OnResourceCreated(Resource id)
 	}
 }
 
-void ProjectManager::InstallMap()
+void ProjectManager::InstallMap(LPCTSTR install_path, uint version)
 {
 	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
 	SIZE map_size = {
@@ -527,7 +528,7 @@ void ProjectManager::InstallMap()
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
-	AddTask(new InstallMapTask(error_hwnd_, MacroAppData(ID_PERIMETER_PATH)));
+	AddTask(new InstallMapTask(error_hwnd_, install_path, version));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
 }

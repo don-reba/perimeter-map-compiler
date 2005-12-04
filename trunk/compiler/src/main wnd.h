@@ -169,6 +169,8 @@ private:
 	// command
 	void OnAbout          (Msg<WM_COMMAND> &msg);
 	void OnExit           (Msg<WM_COMMAND> &msg);
+	void OnHelpEn         (Msg<WM_COMMAND> &msg);
+	void OnHelpRu         (Msg<WM_COMMAND> &msg);
 	void OnImportScript   (Msg<WM_COMMAND> &msg);
 	void OnInstallShrub   (Msg<WM_COMMAND> &msg);
 	void OnManageMaps     (Msg<WM_COMMAND> &msg);

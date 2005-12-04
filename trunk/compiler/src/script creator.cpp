@@ -19,16 +19,43 @@ ScriptCreator::ScriptCreator(std::ostream &out)
 	InitializeFMap();
 }
 
-void ScriptCreator::Create(const TiXmlDocument &doc)
+bool ScriptCreator::Create(const TiXmlDocument &doc)
 {
+	const TiXmlNode *node(doc.RootElement());
+	// simple check for document validity
+	{
+		// go to root
+		node = doc.RootElement();
+		if (NULL == node)
+			return false;
+		// go to <set name="MissionDescriptionPrm">
+		for (node = node->FirstChild(); NULL != node; node = node->NextSibling())
+		{
+			const TiXmlElement *e(node->ToElement());
+			if (e->ValueStr() == "set" && GetName(e) == "MissionDescriptionPrm")
+					break;
+		}
+		if (NULL == node)
+			return false;
+		// go to <string name="worldName">
+		for (node = node->FirstChild(); NULL != node; node = node->NextSibling())
+		{
+			const TiXmlElement *e(node->ToElement());
+			if (e->ValueStr() == "string" && GetName(e) == "worldName")
+					break;
+		}
+		if (NULL == node)
+			return false;
+	}
 	// process the document
 	for (const TiXmlElement *node(doc.RootElement()->FirstChild()->ToElement());
-		  node;
+		  NULL != node;
 		  node = node->NextSibling()->ToElement())
 	{
 		ParseNode(node, 0);
 		out_ << ";\n";
 	}
+	return true;
 }
 
 void ScriptCreator::ParseNode(const TiXmlElement *node, uint depth)

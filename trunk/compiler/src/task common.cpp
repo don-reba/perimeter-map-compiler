@@ -578,9 +578,9 @@ namespace TaskCommon
 			null_pixels   = new bool[heightmap_data_size];
 			// set iterators
 					int  *       int_heightmap_iter(int_heightmap);
-					bool *       null_pixels_iter(null_pixels);
-			const BYTE *       heightmap_iter(heightmap.data_);
-			const BYTE * const heightmap_end(heightmap_iter + heightmap_data_size);
+					bool *       null_pixels_iter  (null_pixels);
+			const BYTE *       heightmap_iter    (heightmap.data_);
+			const BYTE * const heightmap_end     (heightmap_iter + heightmap_data_size);
 			// main loop
 			while (heightmap_iter != heightmap_end)
 			{
@@ -592,8 +592,20 @@ namespace TaskCommon
 			}
 		}
 		// interpolate heightmap
-		GaussianBlur(int_heightmap, map_size);
-		GaussianBlur(int_heightmap, map_size);
+		GaussianBlur(int_heightmap, heightmap.size_);
+		GaussianBlur(int_heightmap, heightmap.size_);
+		{
+			fipImage img(FIT_UINT16, (WORD)map_size.cy, (WORD)map_size.cx, 16);
+			WORD *img_iter((WORD*)img.accessPixels());
+			int *ihm_iter(int_heightmap);
+			for (LONG r(0); r != map_size.cy; ++r)
+			{
+				for (LONG c(0); c != map_size.cx; ++c)
+					*img_iter++ = *ihm_iter++ << 3;
+				++ihm_iter;
+			}
+			img.save("pre_blur.tiff", TIFF_NONE);
+		}
 		// fill the second layer with the heightmap
 		{
 			const int  *int_heightmap_iter(int_heightmap);
@@ -726,7 +738,7 @@ namespace TaskCommon
 				for (LONG r(0); r != map_size.cy; ++r)
 				{
 					for (LONG c(0); c != map_size.cx; ++c)
-						*vmp_iter++ = static_cast<BYTE>(*heightmap_iter++ && 0x1F);
+						*vmp_iter++ = static_cast<BYTE>(*heightmap_iter++ & 0x1F);
 					++heightmap_iter;
 				}
 		}
@@ -1773,123 +1785,6 @@ namespace TaskCommon
 	//------
 	// other
 	//------
-
-	// get Perimeter installation path from the registry
-	bool GetInstallPath(tstring &install_path, ErrorHandler &error_handler)
-	{
-		// check the registry for necessary information
-		HKEY perimeter_key;
-		// open Perimeter's registry key
-		if (ERROR_SUCCESS != RegOpenKeyEx(
-			HKEY_LOCAL_MACHINE,
-			_T("SOFTWARE\\Codemasters\\Perimeter"),
-			0,
-			KEY_READ,
-			&perimeter_key))
-		{
-			error_handler.MacroDisplayError(_T("Please make sure you have Perimeter installed."));
-			return false;
-		}
-		// verify Perimeter version
-		{
-			DWORD version;
-			DWORD version_length;
-			DWORD version_type;
-			bool russian(true);
-			if (ERROR_SUCCESS != RegQueryValueEx(
-				perimeter_key,
-				_T("Version"),
-				NULL,
-				&version_type,
-				NULL,
-				&version_length))
-			{
-				russian = false;
-			}
-			if (russian)
-			{
-				if (version_length != 4 || version_type != REG_DWORD)
-				{
-					RegCloseKey(perimeter_key);
-					error_handler.MacroDisplayError(_T("Wrong Version type."));
-					return false;
-				}
-				if (ERROR_SUCCESS != RegQueryValueEx(
-					perimeter_key,
-					_T("Version"),
-					NULL,
-					NULL,
-					ri_cast<BYTE*>(&version),
-					&version_length))
-				{
-					RegCloseKey(perimeter_key);
-					error_handler.MacroDisplayError(_T("RegQueryValueEx failed"));
-					return false;
-				}
-				if (version != 101)
-				{
-					RegCloseKey(perimeter_key);
-					error_handler.MacroDisplayError(_T("Incompatible Perimeter version. Please make sure you have version 1.01."));
-					return false;
-				}
-			}
-			else
-			{
-				HKEY patch_key;
-				if (ERROR_SUCCESS != RegOpenKeyEx(
-					HKEY_LOCAL_MACHINE,
-					_T("SOFTWARE\\Codemasters\\Perimeter Patch 1.01"),
-					0,
-					KEY_READ,
-					&patch_key))
-				{
-					RegCloseKey(perimeter_key);
-					error_handler.MacroDisplayError(_T("Incompatible Perimeter version. Please make sure you have version 1.01."));
-					return false;
-				}
-				RegCloseKey(patch_key);
-			}
-		}
-		// get path to Perimeter's installation folder
-		{
-			DWORD install_path_type;
-			DWORD install_path_length;
-			if (ERROR_SUCCESS != RegQueryValueEx(
-				perimeter_key,
-				_T("INSTALL_PATH"),
-				NULL,
-				&install_path_type,
-				NULL,
-				&install_path_length))
-			{
-				RegCloseKey(perimeter_key);
-				error_handler.MacroDisplayError(_T("RegQueryValueEx failed"));
-				return false;
-			}
-			if (REG_SZ != install_path_type)
-			{
-				RegCloseKey(perimeter_key);
-				error_handler.MacroDisplayError(_T("Wrong Install_Path type."));
-				return false;
-			}
-			TCHAR install_path_temp[MAX_PATH];
-			if (ERROR_SUCCESS != RegQueryValueEx(
-				perimeter_key,
-				_T("Install_Path"),
-				NULL,
-				NULL,
-				ri_cast<BYTE*>(install_path_temp),
-				&install_path_length))
-			{
-				RegCloseKey(perimeter_key);
-				error_handler.MacroDisplayError(_T("RegQueryValueEx failed"));
-				return false;
-			}
-			install_path = install_path_temp;
-		}
-		RegCloseKey(perimeter_key);
-		return true;
-	}
 
 	bool RegisterMap(LPCTSTR map_name, DWORD checksum, ErrorHandler &error_handler)
 	{

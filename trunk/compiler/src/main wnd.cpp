@@ -37,8 +37,10 @@
 #include "project create wnd.h"
 #include "project settings wnd.h"
 #include "../resource.h"
+#include "version detector.h"
 
 #include <map>
+#include <shellapi.h>
 #include <shlobj.h>
 #include <sstream>
 #include <windowsx.h>
@@ -319,9 +321,11 @@ void MainWnd::OpenProject(LPCTSTR path)
 
 void MainWnd::UnpackShrub(LPCTSTR path)
 {
-	project_manager_.UnpackShrub(path, hwnd_);
-	SetMenuState(MS_SHRUB);
-	ToggleStateIcon(MS_SHRUB);
+	if (project_manager_.UnpackShrub(path, hwnd_))
+	{
+		SetMenuState(MS_SHRUB);
+		ToggleStateIcon(MS_SHRUB);
+	}
 }
 
 void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
@@ -443,6 +447,8 @@ void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	case ID_FILE_PACKSHRUB:       OnPackShrub      (msg); break;
 	case ID_FILE_PROJECTSETTINGS: OnProjectSettings(msg); break;
 	case ID_FILE_UNPACKSHRUB:     OnUpackShrub     (msg); break;
+	case ID_HELP_EN:              OnHelpEn         (msg); break;
+	case ID_HELP_RU:              OnHelpRu         (msg); break;
 	case ID_TOOLS_IMPORTSCRIPT:   OnImportScript   (msg); break;
 	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
 	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
@@ -498,23 +504,40 @@ void MainWnd::OnExit(Msg<WM_COMMAND> &msg)
 	DestroyWindow(hwnd_);
 }
 
+void MainWnd::OnHelpEn(Msg<WM_COMMAND> &msg)
+{
+	ShellExecute(hwnd_, _T("open"), _T("help (english).chm"), NULL, NULL, SW_MAXIMIZE);
+}
+
+void MainWnd::OnHelpRu(Msg<WM_COMMAND> &msg)
+{
+	ShellExecute(hwnd_, _T("open"), _T("help (russian).chm"), NULL, NULL, SW_MAXIMIZE);
+}
+
 void MainWnd::OnImportScript(Msg<WM_COMMAND> &msg)
 {
 	tstring script_path(GetFilePathDlg(
 		_T("Import Script"),
 		_T("Perimeter Script (*.spg)\0*.spg\0All Files\0*\0")));
-	project_manager_.ImportScript(script_path.c_str(), hwnd_);
+	if (!script_path.empty())
+		project_manager_.ImportScript(script_path.c_str(), hwnd_);
 }
 
 void MainWnd::OnInstallShrub(Msg<WM_COMMAND> &msg)
 {
-	project_manager_.InstallMap();
+	VersionDetector detector;
+	if (!detector.ShowSelectDialog(hwnd_))
+		return;
+	project_manager_.InstallMap(detector.GetPath().c_str(), detector.GetVersion());
 }
 
 void MainWnd::OnManageMaps(Msg<WM_COMMAND> &msg)
 {
+	VersionDetector detector;
+	if (!detector.ShowSelectDialog(hwnd_))
+		return;
 	MapManager map_manager;
-	map_manager.DoModal(hwnd_);
+	map_manager.DoModal(hwnd_, detector.GetPath().c_str());
 }
 
 void MainWnd::OnNewProject(Msg<WM_COMMAND> &msg)

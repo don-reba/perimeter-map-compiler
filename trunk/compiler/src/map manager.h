@@ -36,7 +36,7 @@ class MapManager : public PMCWindow
 {
 // interface
 public:
-	INT_PTR DoModal(HWND parent_wnd);
+	INT_PTR DoModal(HWND parent_wnd, const char *install_path);
 // message handlers
 private:
 	// window
@@ -53,7 +53,6 @@ private:
 	static void FilesInDir(LPCTSTR dir, vector<tstring> &files, size_t depth = 0);
 private:
 	void    GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool recurse = true);
-	bool    GetInstallPath(string &install_path);
 	tstring GetMapFilesSize(LPCTSTR map_name);
 // data
 	tstring install_path_;
