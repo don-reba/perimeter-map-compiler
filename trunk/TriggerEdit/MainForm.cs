@@ -5,6 +5,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Xml;
 using System.Windows.Forms;
@@ -13,9 +14,7 @@ namespace TriggerEdit
 {
 	public class MainForm : System.Windows.Forms.Form
 	{
-		/// <summary>
 		// nested types
-		/// </summary>
 
 		struct Cell
 		{
@@ -25,6 +24,7 @@ namespace TriggerEdit
 			public Property  action;
 			public Property  condition;
 			public ArrayList links;
+			public Brush     color_;
 			public struct Link
 			{
 				public int   target;
@@ -47,7 +47,6 @@ namespace TriggerEdit
 			}
 
 			#endregion
-
 		}
 
 
@@ -55,17 +54,18 @@ namespace TriggerEdit
 		/// Required designer variable.
 		/// </summary>
 		private System.ComponentModel.Container components = null;
-		private System.Windows.Forms.Panel display_pnl_;
+		private GraphicsPanel display_pnl_;
 		private System.Windows.Forms.Splitter splitter1;
 		private System.Windows.Forms.TreeView property_tree_;
 		private System.Windows.Forms.Panel property_panel_;
 		private System.Windows.Forms.Label property_label_;
 
-		/// <summary>
 		/// data
-		/// </summary>
-		private Cell[] cells_;
-		private Size   grid_size_;
+		private Cell[]   cells_;
+		private Size     grid_size_;
+		private Bitmap   bmp_;
+		private Graphics gfx_;
+		private int      selection_ = -1;
 
 		private void GetStats()
 		{
@@ -154,6 +154,7 @@ namespace TriggerEdit
 				for (int i = 0; i != positions.Count; ++i)
 				{
 					XmlNode position = positions[i];
+					cells_[i].color_ = Brushes.Orange;
 					// read coordinates
 					cells_[i].X = int.Parse(position.SelectSingleNode(
 						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
@@ -247,7 +248,7 @@ namespace TriggerEdit
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.display_pnl_ = new System.Windows.Forms.Panel();
+			this.display_pnl_ = new GraphicsPanel();
 			this.property_panel_ = new System.Windows.Forms.Panel();
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_label_ = new System.Windows.Forms.Label();
@@ -341,6 +342,12 @@ namespace TriggerEdit
 		}
 		#endregion
 
+		private void InitGraphics()
+		{
+			bmp_ = new Bitmap(display_pnl_.Width, display_pnl_.Height);
+			gfx_ = Graphics.FromImage(bmp_);
+		}
+
 		private Rectangle GetRectAtCoords(int x, int y)
 		{
 			Size dimensions = display_pnl_.Size;
@@ -378,17 +385,18 @@ namespace TriggerEdit
 
 		private void display_pnl_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
 		{
-			e.Graphics.SmoothingMode = SmoothingMode.None;
+			if (null == gfx_)
+				InitGraphics();
+			gfx_.SmoothingMode = SmoothingMode.None;
 			Pen   grid_pen   = new Pen(Color.Yellow);
 			Pen   arrow_pen  = new Pen(Color.Red);
-			Brush cell_brush = new SolidBrush(Color.Orange);
 			arrow_pen.StartCap = LineCap.RoundAnchor;
 			arrow_pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
 			// gill the surface
-			e.Graphics.Clear(Color.Black);
+			gfx_.Clear(Color.Black);
 			// draw cells
 			foreach (Cell cell in cells_)
-				e.Graphics.FillRectangle(cell_brush, GetRectAtCoords(cell.X, cell.Y));
+				gfx_.FillRectangle(cell.color_, GetRectAtCoords(cell.X, cell.Y));
 			// draw horizontal lines
 			if (0 != grid_size_.Height)
 			{
@@ -397,7 +405,7 @@ namespace TriggerEdit
 				for (int i = 1; i != grid_size_.Height; ++i)
 				{
 					s.Y = f.Y = display_pnl_.Height * i / grid_size_.Height;
-					e.Graphics.DrawLine(grid_pen, s, f);
+					gfx_.DrawLine(grid_pen, s, f);
 				}
 			}
 			// draw vertical lines
@@ -408,11 +416,11 @@ namespace TriggerEdit
 				for (int i = 1; i != grid_size_.Width; ++i)
 				{
 					s.X = f.X = display_pnl_.Width * i / grid_size_.Width;
-					e.Graphics.DrawLine(grid_pen, s, f);
+					gfx_.DrawLine(grid_pen, s, f);
 				}
 			}
 			// draw dependency arrows
-			e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+			gfx_.SmoothingMode = SmoothingMode.AntiAlias;
 			foreach (Cell cell in cells_)
 			{
 				Point start = Center(GetRectAtCoords(cell.X, cell.Y));
@@ -420,24 +428,26 @@ namespace TriggerEdit
 				{
 					arrow_pen.Color = link.color;
 					Cell target = cells_[link.target];
-					e.Graphics.DrawLine(
+					gfx_.DrawLine(
 						arrow_pen,
 						start,
 						Center(GetRectAtCoords(target.X, target.Y)));
 				}
 			}
-			e.Graphics.SmoothingMode = SmoothingMode.None;
+			gfx_.SmoothingMode = SmoothingMode.None;
 			// draw labels
 			foreach (Cell cell in cells_)
-				e.Graphics.DrawString(
+				gfx_.DrawString(
 					cell.name,
 					display_pnl_.Font,
 					SystemBrushes.WindowText,
 					GetRectAtCoords(cell.X, cell.Y).Location);
+			e.Graphics.DrawImage(bmp_, 0, 0);
 		}
 
 		private void display_pnl_Resize(object sender, System.EventArgs e)
 		{
+			InitGraphics();
 			display_pnl_.Invalidate();
 		}
 
@@ -448,9 +458,12 @@ namespace TriggerEdit
 			dummy.X = hit.X;
 			dummy.Y = hit.Y;
 			int index = Array.BinarySearch(cells_, dummy, new CellComparer());
+			if (index == selection_)
+				return;
 			if (index < 0)
 				return;
 			Cell cell = cells_[index];
+			// display cell info in the property tree
 			property_label_.Text = cell.name;
 			property_tree_.Nodes.Clear();
 			if (null != cell.action)
@@ -458,6 +471,26 @@ namespace TriggerEdit
 			if (null != cell.condition)
 				property_tree_.Nodes.Add(cell.condition.GetTreeNode());
 			property_tree_.ExpandAll();
+			// unhighlight the previous cell and its children
+			if (selection_ >= 0)
+			{
+				cells_[selection_].color_ = Brushes.Orange;
+				display_pnl_.Invalidate(GetRectAtCoords(cells_[selection_].X, cells_[selection_].Y));
+				foreach (Cell.Link link in cells_[selection_].links)
+				{
+					cells_[link.target].color_ = Brushes.Orange;
+					display_pnl_.Invalidate(GetRectAtCoords(cells_[link.target].X, cells_[link.target].Y));
+				}
+			}
+			// highlight the selected cell and its children
+			cells_[index].color_ = Brushes.Yellow;
+			display_pnl_.Invalidate(GetRectAtCoords(cell.X, cell.Y));
+			foreach (Cell.Link link in cell.links)
+			{
+				cells_[link.target].color_ = Brushes.Gold;
+				display_pnl_.Invalidate(GetRectAtCoords(cells_[link.target].X, cells_[link.target].Y));
+			}
+			selection_ = index;
 		}
 	}
 }
