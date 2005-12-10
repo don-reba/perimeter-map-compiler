@@ -1,0 +1,139 @@
+struct Action
+	int: internalColor_
+struct ActionActivateAllSpots
+	int: internalColor_
+struct ActionActivateObjectByLabel
+	int: internalColor_
+	string: label
+struct ActionAttackBySpecialWeapon
+	int: internalColor_
+	value: onlyIfAi
+	value: weapon
+	array: unitsToAttack
+	disjunction: unitClassToAttack
+struct ActionDeactivateAllSpots
+	int: internalColor_
+struct ActionDeactivateObjectByLabel
+	int: internalColor_
+	string: label
+struct ActionDefeat
+	int: internalColor_
+struct ActionDelay
+	int: internalColor_
+	int: delay
+	value: showTimer
+	value: scaleByDifficulty
+	set: timer
+struct ActionHoldBuilding
+	int: internalColor_
+	value: onlyIfAi
+	value: building
+struct ActionInstallFrame
+	int: internalColor_
+	value: onlyIfAi
+struct ActionKillObject
+	int: internalColor_
+	value: object
+struct ActionMessage
+	int: internalColor_
+	string: messageID
+	string: message
+	int: delay
+	int: duration
+	value: syncroBySound
+	set: delayTimer
+	set: durationTimer
+struct ActionOrderBuilding
+	int: internalColor_
+	value: onlyIfAi
+	value: building
+	value: placementStrategy
+	float: energyReserve
+	int: buildDurationMax
+	int: priority
+struct ActionOscillateCamera
+	int: internalColor_
+	int: duration
+	float: factor
+struct ActionRepareObjectByLabel
+	int: internalColor_
+	string: label
+struct ActionSellBuilding
+	int: internalColor_
+	value: onlyIfAi
+	value: building
+	value: sellFactor
+	float: damagePercent
+struct ActionSetCamera
+	int: internalColor_
+	string: cameraSplineName
+	float: stepTime
+	int: cycles
+	value: smoothTransition
+struct ActionSetCameraAtObject
+	int: internalColor_
+	value: object
+	value: playerType
+	int: transitionTime
+	value: setFollow
+	int: turnTime
+struct ActionSetControls
+	int: internalColor_
+	array: controls
+struct ActionSetInterface
+	int: internalColor_
+	value: enableInterface
+struct ActionSquadAttack
+	int: internalColor_
+	value: onlyIfAi
+	value: chooseSquadID
+	value: attackByType
+	array: unitsToAttack
+	disjunction: unitClassToAttack
+	value: offensive
+	int: unitsNumber
+	int: soldiers
+	int: officers
+	int: technics
+	int: attackTime
+	int: remutateCounter
+	value: holdProduction
+	float: squadFollowDistance
+	value: squadToFollowBy
+	value: ignoreLastTarget
+	value: returnToBase
+	value: interruptable
+	set: attackTimer
+struct ActionSquadOrderUnits
+	int: internalColor_
+	value: onlyIfAi
+	value: chooseSquadID
+	int: soldiers
+	int: officers
+	int: technics
+	float: energyReserve
+struct ActionSwitchFieldOn
+	int: internalColor_
+	value: onlyIfAi
+	int: duration
+	float: energyReserve
+	value: allCores
+	value: onlyIfCoreDamaged
+	set: timer
+struct ActionSwitchGuns
+	int: internalColor_
+	value: onlyIfAi
+	value: mode
+	value: gunID
+struct ActionTask
+	int: internalColor_
+	value: type
+	string: taskID
+	int: duration
+	value: syncroBySound
+	value: showTips
+	set: durationTimer
+struct ActionTeleportationOut
+	int: internalColor_
+struct ActionVictory
+	int: internalColor_

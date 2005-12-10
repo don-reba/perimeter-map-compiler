@@ -1,0 +1,165 @@
+struct ConditionActivateSpot
+	value: state_
+	int: internalColor_
+	disjunction: type
+struct ConditionBuildingNearBuilding
+	value: state_
+	int: internalColor_
+	float: distance
+	value: playerType1
+	value: playerType2
+struct ConditionCaptureBuilding
+	value: state_
+	int: internalColor_
+	value: object
+	value: playerType
+struct ConditionCheckBelligerent
+	value: state_
+	int: internalColor_
+	value: belligerent
+struct ConditionClickOnButton
+	value: state_
+	int: internalColor_
+	value: controlID
+	int: counter
+struct ConditionCorridorOmegaUpgraded
+	value: state_
+	int: internalColor_
+struct ConditionCutSceneWasSkipped
+	value: state_
+	int: internalColor_
+	int: timeMax
+struct ConditionDifficultyLevel
+	value: state_
+	int: internalColor_
+	value: difficulty
+struct ConditionEnegyLevelLowerReserve
+	value: state_
+	int: internalColor_
+	float: energyReserve
+struct ConditionEnegyLevelUpperReserve
+	value: state_
+	int: internalColor_
+	float: energyReserve
+struct ConditionFrameState
+	value: state_
+	int: internalColor_
+	value: state
+	value: playerType
+	int: spiralChargingPercent
+struct ConditionIsFieldOn
+	value: state_
+	int: internalColor_
+struct ConditionKillObject
+	value: state_
+	int: internalColor_
+	value: object
+	int: counter
+	value: playerType
+struct ConditionKillObjectByLabel
+	value: state_
+	int: internalColor_
+	string: label
+struct ConditionMutationEnabled
+	value: state_
+	int: internalColor_
+	value: unitType
+struct ConditionNumberOfBuildingByCoresCapacity
+	value: state_
+	int: internalColor_
+	value: building
+	float: factor
+	value: compareOp
+	value: building2
+	value: playerType
+struct ConditionObjectByLabelExists
+	value: state_
+	int: internalColor_
+	string: label
+struct ConditionObjectExists
+	value: state_
+	int: internalColor_
+	value: object
+	int: counter
+	value: playerType
+	value: constructedAndConstructing
+struct ConditionObjectNearObjectByLabel
+	value: state_
+	int: internalColor_
+	string: label
+	value: object
+	value: objectConstructed
+	value: playerType
+	float: distance
+struct ConditionOnlyMyClan
+	value: state_
+	int: internalColor_
+struct ConditionOutOfEnergyCapacity
+	value: state_
+	int: internalColor_
+	float: chargingPercent
+struct ConditionPlayerState
+	value: state_
+	int: internalColor_
+	value: playerState
+struct ConditionSetSquadWayPoint
+	value: state_
+	int: internalColor_
+struct ConditionSkipCutScene
+	value: state_
+	int: internalColor_
+struct ConditionSquadGoingToAttack
+	value: state_
+	int: internalColor_
+	value: chooseSquadID
+struct ConditionSquadSufficientUnits
+	value: state_
+	int: internalColor_
+	value: playerType
+	value: chooseSquadID
+	value: unitType
+	value: compareOperator
+	int: unitsNumber
+	int: soldiers
+	int: officers
+	int: technics
+struct ConditionSwitcher
+	value: state_
+	int: internalColor_
+	value: type
+	array: conditions
+struct ConditionTeleportation
+	value: state_
+	int: internalColor_
+	value: teleportationType
+	value: playerType
+struct ConditionTerrainLeveledNearObjectByLabel
+	value: state_
+	int: internalColor_
+	string: label
+	int: radius
+struct ConditionTimeMatched
+	value: state_
+	int: internalColor_
+	int: time
+struct ConditionToolzerSelectedNearObjectByLabel
+	value: state_
+	int: internalColor_
+	string: label
+	int: radius
+struct ConditionUnitClassIsGoingToBeAttacked
+	value: state_
+	int: internalColor_
+	disjunction: victimUnitClass
+	disjunction: agressorUnitClass
+struct ConditionUnitClassUnderAttack
+	value: state_
+	int: internalColor_
+	disjunction: victimUnitClass
+	int: damagePercent
+	disjunction: agressorUnitClass
+	value: playerType
+struct ConditionWeaponIsFiring
+	value: state_
+	int: internalColor_
+	value: gun
