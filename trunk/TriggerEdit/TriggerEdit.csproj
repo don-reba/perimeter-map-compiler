@@ -103,11 +103,6 @@
                     BuildAction = "Compile"
                 />
                 <File
-                    RelPath = "GraphicsPanel.cs"
-                    SubType = "Component"
-                    BuildAction = "Compile"
-                />
-                <File
                     RelPath = "MainForm.cs"
                     SubType = "Form"
                     BuildAction = "Compile"
@@ -121,6 +116,21 @@
                     RelPath = "Property.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "Trigger.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "TriggerDisplay.cs"
+                    SubType = "Component"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "TriggerDisplay.resx"
+                    DependentUpon = "TriggerDisplay.cs"
+                    BuildAction = "EmbeddedResource"
                 />
             </Include>
         </Files>

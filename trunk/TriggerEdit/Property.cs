@@ -32,7 +32,20 @@ namespace TriggerEdit
 			TreeNode node = new TreeNode(name_);
 			ArrayList children = (ArrayList)strings_[name_];
 			for (int i = 0; i != fields_.Length; ++i)
-				node.Nodes.Add(children[i] + ": " + fields_[i]);
+				if (null != fields_[i])
+					node.Nodes.Add(children[i] + ": " + fields_[i]);
+			if (switch_)
+			{
+				TreeNode conditions = new TreeNode("conditions:");
+				if (conditions_.Count != 0)
+				{
+					foreach (Property condition in conditions_)
+						conditions.Nodes.Add(condition.GetTreeNode());
+				}
+				else
+					conditions.Nodes.Add("none");
+				node.Nodes.Add(conditions);
+			}
 			return node;
 		}
 
@@ -41,7 +54,23 @@ namespace TriggerEdit
 			ArrayList children = (ArrayList)strings_[name_];
 			fields_ = new string[children.Count];
 			for (int i = 0; i != fields_.Length; ++i)
-				fields_[i] = node.SelectSingleNode("*[@name=\"" + children[i] + "\"]").InnerText;
+			{
+				if ("internalColor_" == (string)children[i])
+					continue;
+				string name = node.SelectSingleNode("*[@name=\"" + children[i] + "\"]").InnerText;
+				if ((string)children[i] != "conditions")
+					fields_[i] = name;
+				else
+				{
+					switch_ = true;
+					XmlNodeList conditions = node.SelectNodes(
+						"array[@name=\"conditions\"]" +
+						"/set"                        +
+						"/set[@name=\"condition\"]");
+					foreach (XmlNode condition in conditions)
+						conditions_.Add(new Property(condition));
+				}
+			}
 		}
 
 		private void InitializeStrings()
@@ -51,9 +80,7 @@ namespace TriggerEdit
 
 			strings_ = new Hashtable();
 
-			//-----------
-			// conditions
-			//-----------
+			#region conditions
 
 			// ConditionActivateSpot
 			key = "ConditionActivateSpot";
@@ -323,9 +350,9 @@ namespace TriggerEdit
 			val.Add("gun");
 			strings_.Add(key, val);
 
-			//--------
-			// actions
-			//--------
+			#endregion
+
+			#region actions
 
 			// Action
 			key = "Action";
@@ -547,11 +574,15 @@ namespace TriggerEdit
 			val = new ArrayList();
 			val.Add("internalColor_");
 			strings_.Add(key, val);
+
+			#endregion
 		}
 
 		// data
 		private static Hashtable strings_;
-		private string name_;
-		private string[] fields_;
+		private string    name_;
+		private string[]  fields_;
+		private ArrayList conditions_ = new ArrayList();
+		private bool      switch_;
 	}
 }

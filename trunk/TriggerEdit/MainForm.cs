@@ -4,8 +4,6 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Xml;
 using System.Windows.Forms;
@@ -14,58 +12,106 @@ namespace TriggerEdit
 {
 	public class MainForm : System.Windows.Forms.Form
 	{
-		// nested types
+		#region interface
 
-		struct Cell
+		public MainForm(string[] args)
 		{
-			public int       X;
-			public int       Y;
-			public string    name;
-			public Property  action;
-			public Property  condition;
-			public ArrayList links;
-			public Brush     color_;
-			public struct Link
+			// Required for Windows Form Designer support
+			InitializeComponent();
+			//GetStats();
+			// get path
+			string path;
+			if (0 != args.Length)
+				path = args[0];
+			else
 			{
-				public int   target;
-				public Color color;
-			};
-		}
-
-		class CellComparer : IComparer
-		{
-			#region IComparer Members
-
-			public int Compare(object x, object y)
-			{
-				Cell cell1 = (Cell)x;
-				Cell cell2 = (Cell)y;
-				if (cell1.X == cell2.X)
-					return cell1.Y - cell2.Y;
-				else
-					return cell1.X - cell2.X;
+				OpenFileDialog dlg = new OpenFileDialog();
+				dlg.Filter = "trigger file (xml made from scr)|*xml";
+				if (dlg.ShowDialog() != DialogResult.OK)
+					throw new Exception();
+				this.BringToFront();
+				this.Focus();
+				path = dlg.FileName;
 			}
+			// load the XML file
+			XmlTextReader reader = new XmlTextReader(path);
+			XmlDocument doc = new XmlDocument();
+			doc.Load(reader);
+			reader.Close();
+			// extract data
+			{
+				XmlNodeList trigger_nodes = doc.SelectNodes(
+					"//script"                     +
+					"/set[@name=\"TriggerChain\"]" +
+					"/array[@name=\"triggers\"]"   +
+					"/set");
+				triggers_ = new Trigger[trigger_nodes.Count];
+				Hashtable names = new Hashtable();
+				for (int i = 0; i != trigger_nodes.Count; ++i)
+				{
+					XmlNode position = trigger_nodes[i];
+					triggers_[i].color_ = Brushes.Orange;
+					// read coordinates
+					triggers_[i].X = int.Parse(position.SelectSingleNode(
+						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
+					triggers_[i].Y = int.Parse(position.SelectSingleNode(
+						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
+					// reda name
+					triggers_[i].name = position.SelectSingleNode(
+						"string[@name=\"name\"]").InnerText;
+					// read action
+					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
+					if (null != action)
+						triggers_[i].action = new Property(action);
+					// read condition
+					XmlNode condition = position.SelectSingleNode("set[@name=\"condition\"]");
+					if (null != condition)
+						triggers_[i].condition = new Property(condition);
+					names.Add(triggers_[i].name, i);
+				}
+				// add links
+				for (int i = 0; i != trigger_nodes.Count; ++i)
+				{
+					XmlNodeList link_nodes = trigger_nodes[i].SelectNodes(
+						"array[@name=\"outcomingLinks\"]/set");
+					triggers_[i].links = new ArrayList();
+					foreach (XmlNode node in link_nodes)
+					{
+						Trigger.Link link = new Trigger.Link();
+						// target
+						link.target = (int)names[node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
+						// color
+						XmlNode color_node = node.SelectSingleNode("value[@name=\"color\"]");
+						if (null != color_node)
+							switch (color_node.InnerText)
+							{
+								case "STRATEGY_BLUE":    link.color = Color.Blue;   break;
+								case "STRATEGY_COLOR_0": link.color = Color.Black;  break;
+								case "STRATEGY_GREEN":   link.color = Color.Green;  break;
+								case "STRATEGY_RED":     link.color = Color.Red;    break;
+								case "STRATEGY_YELLOW":  link.color = Color.Yellow; break;
+								default:                 link.color = Color.Cyan;   break;
 
-			#endregion
+							}
+						else
+							link.color = Color.Cyan;
+						// active
+						XmlNode is_active_node = node.SelectSingleNode("value[@name=\"active_\"]");
+						if (null != is_active_node && "true" == is_active_node.InnerText)
+							link.is_active = true;
+						triggers_[i].links.Add(link);
+					}
+				}
+				Array.Sort(triggers_, new TriggerComparer());
+			}
+			display_pnl_.SetTriggers(ref triggers_);
+			BringToFront();
+			Focus();
 		}
 
+		#endregion
 
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.Container components = null;
-		private GraphicsPanel display_pnl_;
-		private System.Windows.Forms.Splitter splitter1;
-		private System.Windows.Forms.TreeView property_tree_;
-		private System.Windows.Forms.Panel property_panel_;
-		private System.Windows.Forms.Label property_label_;
-
-		/// data
-		private Cell[]   cells_;
-		private Size     grid_size_;
-		private Bitmap   bmp_;
-		private Graphics gfx_;
-		private int      selection_ = -1;
+		#region internal implementation
 
 		private void GetStats()
 		{
@@ -118,114 +164,6 @@ namespace TriggerEdit
 			Close();
 		}
 
-		public MainForm(string[] args)
-		{
-			// Required for Windows Form Designer support
-			InitializeComponent();
-			//GetStats();
-			// get path
-			string path;
-			if (0 != args.Length)
-				path = args[0];
-			else
-			{
-				OpenFileDialog dlg = new OpenFileDialog();
-				dlg.Filter = "trigger file (xml made from scr)|*xml";
-				if (dlg.ShowDialog() != DialogResult.OK)
-					throw new Exception();
-				this.BringToFront();
-				this.Focus();
-				path = dlg.FileName;
-			}
-			// load the XML file
-			XmlTextReader reader = new XmlTextReader(path);
-			XmlDocument doc = new XmlDocument();
-			doc.Load(reader);
-			reader.Close();
-			// extract data
-			{
-				XmlNodeList positions = doc.SelectNodes(
-					"//script"                     +
-					"/set[@name=\"TriggerChain\"]" +
-					"/array[@name=\"triggers\"]"   +
-					"/set");
-				cells_ = new Cell[positions.Count];
-				Hashtable names = new Hashtable();
-				for (int i = 0; i != positions.Count; ++i)
-				{
-					XmlNode position = positions[i];
-					cells_[i].color_ = Brushes.Orange;
-					// read coordinates
-					cells_[i].X = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
-					cells_[i].Y = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
-					// reda name
-					cells_[i].name = position.SelectSingleNode(
-						"string[@name=\"name\"]").InnerText;
-					// read action
-					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
-					if (null != action)
-						cells_[i].action = new Property(action);
-					// read condition
-					XmlNode condition = position.SelectSingleNode("set[@name=\"condition\"]");
-					if (null != condition)
-						cells_[i].condition = new Property(condition);
-					names.Add(cells_[i].name, i);
-				}
-				// add links
-				for (int i = 0; i != positions.Count; ++i)
-				{
-					XmlNodeList link_nodes = positions[i].SelectNodes(
-						"array[@name=\"outcomingLinks\"]/set");
-					cells_[i].links = new ArrayList();
-					foreach (XmlNode node in link_nodes)
-					{
-						Cell.Link link;
-						link.target = (int)names[node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
-						XmlNode color_node = node.SelectSingleNode("value[@name=\"color\"]");
-						if (null != color_node)
-							switch (color_node.InnerText)
-							{
-								case "STRATEGY_BLUE":    link.color = Color.Blue;   break;
-								case "STRATEGY_COLOR_0": link.color = Color.Black;  break;
-								case "STRATEGY_GREEN":   link.color = Color.Green;  break;
-								case "STRATEGY_RED":     link.color = Color.Red;    break;
-								case "STRATEGY_YELLOW":  link.color = Color.Yellow; break;
-								default:                 link.color = Color.Cyan;   break;
-
-							}
-						else
-							link.color = Color.Cyan;
-						cells_[i].links.Add(link);
-					}
-				}
-				Array.Sort(cells_, new CellComparer());
-			}
-			// find bounds
-			Point min = new Point(int.MaxValue, int.MaxValue);
-			Point max = new Point(int.MinValue, int.MinValue);
-			foreach (Cell cell in cells_)
-			{
-				if (cell.X < min.X)
-					min.X = cell.X;
-				if (cell.X > max.X)
-					max.X = cell.X;
-				if (cell.Y < min.Y)
-					min.Y = cell.Y;
-				if (cell.Y > max.Y)
-					max.Y = cell.Y;
-			}
-			// normalize positions
-			for (int i = 0; i != cells_.Length; ++i)
-			{
-				cells_[i].X -= min.X;
-				cells_[i].Y -= min.Y;
-			}
-			// calculate grid size
-			grid_size_ = new Size(max.X - min.X + 1, max.Y - min.Y + 1);
-		}
-
 		/// <summary>
 		/// Clean up any resources being used.
 		/// </summary>
@@ -241,6 +179,8 @@ namespace TriggerEdit
 			base.Dispose( disposing );
 		}
 
+		#endregion
+
 		#region Windows Form Designer generated code
 		/// <summary>
 		/// Required method for Designer support - do not modify
@@ -248,7 +188,7 @@ namespace TriggerEdit
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.display_pnl_ = new GraphicsPanel();
+			this.display_pnl_ = new TriggerEdit.TriggerDisplay();
 			this.property_panel_ = new System.Windows.Forms.Panel();
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_label_ = new System.Windows.Forms.Label();
@@ -266,8 +206,6 @@ namespace TriggerEdit
 			this.display_pnl_.Size = new System.Drawing.Size(365, 461);
 			this.display_pnl_.TabIndex = 0;
 			this.display_pnl_.Click += new System.EventHandler(this.display_pnl_Click);
-			this.display_pnl_.Resize += new System.EventHandler(this.display_pnl_Resize);
-			this.display_pnl_.Paint += new System.Windows.Forms.PaintEventHandler(this.display_pnl_Paint);
 			// 
 			// property_panel_
 			// 
@@ -296,7 +234,7 @@ namespace TriggerEdit
 			this.property_label_.Name = "property_label_";
 			this.property_label_.Size = new System.Drawing.Size(200, 32);
 			this.property_label_.TabIndex = 2;
-			this.property_label_.Text = "Label";
+			this.property_label_.Text = "Trigger";
 			this.property_label_.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// splitter1
@@ -330,139 +268,18 @@ namespace TriggerEdit
 		[STAThread]
 		static void Main(string[] args) 
 		{
-			try
-			{
 				Application.Run(new MainForm(args));
-			}
-			catch (Exception e)
-			{
-				Debug.WriteLine("Error:");
-				Debug.WriteLine(e.Message);
-			}
 		}
 		#endregion
 
-		private void InitGraphics()
-		{
-			bmp_ = new Bitmap(display_pnl_.Width, display_pnl_.Height);
-			gfx_ = Graphics.FromImage(bmp_);
-		}
-
-		private Rectangle GetRectAtCoords(int x, int y)
-		{
-			Size dimensions = display_pnl_.Size;
-			Point min = new Point(
-				dimensions.Width  * x / grid_size_.Width,
-				dimensions.Height * y / grid_size_.Height);
-			Point max = new Point(
-				dimensions.Width  * (x + 1) / grid_size_.Width,
-				dimensions.Height * (y + 1) / grid_size_.Height);
-			return new Rectangle(
-				min.X,
-				min.Y,
-				max.X - min.X,
-				max.Y - min.Y);
-		}
-
-		private Point HitTest(int x, int y)
-		{
-			return new Point(
-				x * grid_size_.Width  / display_pnl_.Width,
-				y * grid_size_.Height / display_pnl_.Height);
-		}
-
-		private Point HitTest(Point point)
-		{
-			return HitTest(point.X, point.Y);
-		}
-
-		Point Center(Rectangle rect)
-		{
-			return new Point(
-				rect.Left + (rect.Right  - rect.Left) / 2,
-				rect.Top  + (rect.Bottom - rect.Top) / 2);
-		}
-
-		private void display_pnl_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
-		{
-			if (null == gfx_)
-				InitGraphics();
-			gfx_.SmoothingMode = SmoothingMode.None;
-			Pen   grid_pen   = new Pen(Color.Yellow);
-			Pen   arrow_pen  = new Pen(Color.Red);
-			arrow_pen.StartCap = LineCap.RoundAnchor;
-			arrow_pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
-			// gill the surface
-			gfx_.Clear(Color.Black);
-			// draw cells
-			foreach (Cell cell in cells_)
-				gfx_.FillRectangle(cell.color_, GetRectAtCoords(cell.X, cell.Y));
-			// draw horizontal lines
-			if (0 != grid_size_.Height)
-			{
-				Point s = new Point(0, 0);
-				Point f = new Point(display_pnl_.Width, 0);
-				for (int i = 1; i != grid_size_.Height; ++i)
-				{
-					s.Y = f.Y = display_pnl_.Height * i / grid_size_.Height;
-					gfx_.DrawLine(grid_pen, s, f);
-				}
-			}
-			// draw vertical lines
-			if (0 != grid_size_.Width)
-			{
-				Point s = new Point(0, 0);
-				Point f = new Point(0, display_pnl_.Height);
-				for (int i = 1; i != grid_size_.Width; ++i)
-				{
-					s.X = f.X = display_pnl_.Width * i / grid_size_.Width;
-					gfx_.DrawLine(grid_pen, s, f);
-				}
-			}
-			// draw dependency arrows
-			gfx_.SmoothingMode = SmoothingMode.AntiAlias;
-			foreach (Cell cell in cells_)
-			{
-				Point start = Center(GetRectAtCoords(cell.X, cell.Y));
-				foreach (Cell.Link link in cell.links)
-				{
-					arrow_pen.Color = link.color;
-					Cell target = cells_[link.target];
-					gfx_.DrawLine(
-						arrow_pen,
-						start,
-						Center(GetRectAtCoords(target.X, target.Y)));
-				}
-			}
-			gfx_.SmoothingMode = SmoothingMode.None;
-			// draw labels
-			foreach (Cell cell in cells_)
-				gfx_.DrawString(
-					cell.name,
-					display_pnl_.Font,
-					SystemBrushes.WindowText,
-					GetRectAtCoords(cell.X, cell.Y).Location);
-			e.Graphics.DrawImage(bmp_, 0, 0);
-		}
-
-		private void display_pnl_Resize(object sender, System.EventArgs e)
-		{
-			InitGraphics();
-			display_pnl_.Invalidate();
-		}
-
+		#region event handlers
+		
 		private void display_pnl_Click(object sender, System.EventArgs e)
 		{
-			Point hit = HitTest(display_pnl_.PointToClient(Cursor.Position));
-			Cell dummy = new Cell();
-			dummy.X = hit.X;
-			dummy.Y = hit.Y;
-			int index = Array.BinarySearch(cells_, dummy, new CellComparer());
-			if (index == selection_)
-				return;
+			int index = display_pnl_.GetTriggerAtPoint(Cursor.Position);
 			if (index < 0)
 				return;
-			Cell cell = cells_[index];
+			Trigger cell = triggers_[index];
 			// display cell info in the property tree
 			property_label_.Text = cell.name;
 			property_tree_.Nodes.Clear();
@@ -471,26 +288,25 @@ namespace TriggerEdit
 			if (null != cell.condition)
 				property_tree_.Nodes.Add(cell.condition.GetTreeNode());
 			property_tree_.ExpandAll();
-			// unhighlight the previous cell and its children
-			if (selection_ >= 0)
-			{
-				cells_[selection_].color_ = Brushes.Orange;
-				display_pnl_.Invalidate(GetRectAtCoords(cells_[selection_].X, cells_[selection_].Y));
-				foreach (Cell.Link link in cells_[selection_].links)
-				{
-					cells_[link.target].color_ = Brushes.Orange;
-					display_pnl_.Invalidate(GetRectAtCoords(cells_[link.target].X, cells_[link.target].Y));
-				}
-			}
-			// highlight the selected cell and its children
-			cells_[index].color_ = Brushes.Yellow;
-			display_pnl_.Invalidate(GetRectAtCoords(cell.X, cell.Y));
-			foreach (Cell.Link link in cell.links)
-			{
-				cells_[link.target].color_ = Brushes.Gold;
-				display_pnl_.Invalidate(GetRectAtCoords(cells_[link.target].X, cells_[link.target].Y));
-			}
-			selection_ = index;
 		}
+
+		#endregion
+
+		#region data
+
+		private Trigger[] triggers_;
+
+		#endregion
+
+		#region Component Designer data
+
+		private System.ComponentModel.Container components = null;
+		private TriggerDisplay                display_pnl_;
+		private System.Windows.Forms.Splitter splitter1;
+		private System.Windows.Forms.TreeView property_tree_;
+		private System.Windows.Forms.Panel    property_panel_;
+		private System.Windows.Forms.Label    property_label_;
+
+		#endregion
 	}
 }
