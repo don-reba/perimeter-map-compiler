@@ -18,95 +18,7 @@ namespace TriggerEdit
 		{
 			// Required for Windows Form Designer support
 			InitializeComponent();
-			//GetStats();
-			// get path
-			string path;
-			if (0 != args.Length)
-				path = args[0];
-			else
-			{
-				OpenFileDialog dlg = new OpenFileDialog();
-				dlg.Filter = "trigger file (xml made from scr)|*xml";
-				if (dlg.ShowDialog() != DialogResult.OK)
-					throw new Exception();
-				this.BringToFront();
-				this.Focus();
-				path = dlg.FileName;
-			}
-			// load the XML file
-			XmlTextReader reader = new XmlTextReader(path);
-			XmlDocument doc = new XmlDocument();
-			doc.Load(reader);
-			reader.Close();
-			// extract data
-			{
-				XmlNodeList trigger_nodes = doc.SelectNodes(
-					"//script"                     +
-					"/set[@name=\"TriggerChain\"]" +
-					"/array[@name=\"triggers\"]"   +
-					"/set");
-				triggers_ = new Trigger[trigger_nodes.Count];
-				Hashtable names = new Hashtable();
-				for (int i = 0; i != trigger_nodes.Count; ++i)
-				{
-					XmlNode position = trigger_nodes[i];
-					triggers_[i].color_ = Brushes.Orange;
-					// read coordinates
-					triggers_[i].X = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
-					triggers_[i].Y = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
-					// reda name
-					triggers_[i].name = position.SelectSingleNode(
-						"string[@name=\"name\"]").InnerText;
-					// read action
-					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
-					if (null != action)
-						triggers_[i].action = new Property(action);
-					// read condition
-					XmlNode condition = position.SelectSingleNode("set[@name=\"condition\"]");
-					if (null != condition)
-						triggers_[i].condition = new Property(condition);
-					names.Add(triggers_[i].name, i);
-				}
-				// add links
-				for (int i = 0; i != trigger_nodes.Count; ++i)
-				{
-					XmlNodeList link_nodes = trigger_nodes[i].SelectNodes(
-						"array[@name=\"outcomingLinks\"]/set");
-					triggers_[i].links = new ArrayList();
-					foreach (XmlNode node in link_nodes)
-					{
-						Trigger.Link link = new Trigger.Link();
-						// target
-						link.target = (int)names[node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
-						// color
-						XmlNode color_node = node.SelectSingleNode("value[@name=\"color\"]");
-						if (null != color_node)
-							switch (color_node.InnerText)
-							{
-								case "STRATEGY_BLUE":    link.color = Color.Blue;   break;
-								case "STRATEGY_COLOR_0": link.color = Color.Black;  break;
-								case "STRATEGY_GREEN":   link.color = Color.Green;  break;
-								case "STRATEGY_RED":     link.color = Color.Red;    break;
-								case "STRATEGY_YELLOW":  link.color = Color.Yellow; break;
-								default:                 link.color = Color.Cyan;   break;
-
-							}
-						else
-							link.color = Color.Cyan;
-						// active
-						XmlNode is_active_node = node.SelectSingleNode("value[@name=\"active_\"]");
-						if (null != is_active_node && "true" == is_active_node.InnerText)
-							link.is_active = true;
-						triggers_[i].links.Add(link);
-					}
-				}
-				Array.Sort(triggers_, new TriggerComparer());
-			}
-			display_pnl_.SetTriggers(ref triggers_);
-			BringToFront();
-			Focus();
+			args_ = args;
 		}
 
 		#endregion
@@ -255,6 +167,7 @@ namespace TriggerEdit
 			this.DockPadding.All = 8;
 			this.Name = "MainForm";
 			this.Text = "TriggerViewer";
+			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.property_panel_.ResumeLayout(false);
 			this.ResumeLayout(false);
 
@@ -290,11 +203,101 @@ namespace TriggerEdit
 			property_tree_.ExpandAll();
 		}
 
+		private void MainForm_Load(object sender, System.EventArgs e)
+		{
+			//GetStats();
+			// get path
+			string path;
+			if (0 != args_.Length)
+				path = args_[0];
+			else
+			{
+				OpenFileDialog dlg = new OpenFileDialog();
+				dlg.Filter = "trigger file (xml made from scr)|*xml";
+				if (dlg.ShowDialog() != DialogResult.OK)
+					throw new Exception();
+				path = dlg.FileName;
+			}
+			// load the XML file
+			XmlTextReader reader = new XmlTextReader(path);
+			XmlDocument doc = new XmlDocument();
+			doc.Load(reader);
+			reader.Close();
+			// extract data
+			{
+				XmlNodeList trigger_nodes = doc.SelectNodes(
+					"//script"                     +
+					"/set[@name=\"TriggerChain\"]" +
+					"/array[@name=\"triggers\"]"   +
+					"/set");
+				triggers_ = new Trigger[trigger_nodes.Count];
+				Hashtable names = new Hashtable();
+				for (int i = 0; i != trigger_nodes.Count; ++i)
+				{
+					XmlNode position = trigger_nodes[i];
+					triggers_[i].color_ = Brushes.Orange;
+					// read coordinates
+					triggers_[i].X = int.Parse(position.SelectSingleNode(
+						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
+					triggers_[i].Y = int.Parse(position.SelectSingleNode(
+						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
+					// reda name
+					triggers_[i].name = position.SelectSingleNode(
+						"string[@name=\"name\"]").InnerText;
+					// read action
+					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
+					if (null != action)
+						triggers_[i].action = new Property(action);
+					// read condition
+					XmlNode condition = position.SelectSingleNode("set[@name=\"condition\"]");
+					if (null != condition)
+						triggers_[i].condition = new Property(condition);
+					names.Add(triggers_[i].name, i);
+				}
+				// add links
+				for (int i = 0; i != trigger_nodes.Count; ++i)
+				{
+					XmlNodeList link_nodes = trigger_nodes[i].SelectNodes(
+						"array[@name=\"outcomingLinks\"]/set");
+					triggers_[i].links = new ArrayList();
+					foreach (XmlNode node in link_nodes)
+					{
+						Trigger.Link link = new Trigger.Link();
+						// target
+						link.target = (int)names[node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
+						// color
+						XmlNode color_node = node.SelectSingleNode("value[@name=\"color\"]");
+						if (null != color_node)
+							switch (color_node.InnerText)
+							{
+								case "STRATEGY_BLUE":    link.color = Color.Blue;   break;
+								case "STRATEGY_COLOR_0": link.color = Color.Black;  break;
+								case "STRATEGY_GREEN":   link.color = Color.Green;  break;
+								case "STRATEGY_RED":     link.color = Color.Red;    break;
+								case "STRATEGY_YELLOW":  link.color = Color.Yellow; break;
+								default:                 link.color = Color.Cyan;   break;
+
+							}
+						else
+							link.color = Color.Cyan;
+						// active
+						XmlNode is_active_node = node.SelectSingleNode("value[@name=\"active_\"]");
+						if (null != is_active_node && "true" == is_active_node.InnerText)
+							link.is_active = true;
+						triggers_[i].links.Add(link);
+					}
+			}
+			Array.Sort(triggers_, new TriggerComparer());
+		}
+			display_pnl_.SetTriggers(ref triggers_);
+		}
+
 		#endregion
 
 		#region data
 
 		private Trigger[] triggers_;
+		private string[]    args_;
 
 		#endregion
 

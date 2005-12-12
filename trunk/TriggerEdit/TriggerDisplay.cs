@@ -112,18 +112,19 @@ namespace TriggerEdit
 					triggers_[link.target].color_ = Brushes.Orange;
 					Invalidate(GetRectAtCoords(triggers_[link.target].X, triggers_[link.target].Y));
 				}
+				selection_ = -1;
 			}
 			if (index < 0)
 				return;
 			Trigger trigger = triggers_[index];
 			// highlight the selected trigger and its dependants
+			triggers_[index].color_ = Brushes.Yellow;
+			Invalidate(GetRectAtCoords(trigger.X, trigger.Y));
 			foreach (Trigger.Link link in trigger.links)
 			{
 				triggers_[link.target].color_ = Brushes.Gold;
 				Invalidate(GetRectAtCoords(triggers_[link.target].X, triggers_[link.target].Y));
 			}
-			triggers_[index].color_ = Brushes.Yellow;
-			Invalidate(GetRectAtCoords(trigger.X, trigger.Y));
 			selection_ = index;
 		}
 
@@ -200,6 +201,14 @@ namespace TriggerEdit
 			if (DesignMode || null == triggers_)
 				base.OnPaintBackground(pevent);
 		}
+
+		protected override void OnSizeChanged(EventArgs e)
+		{
+			base.OnSizeChanged (e);
+			InitGraphics();
+			Invalidate();
+		}
+
 
 		#endregion
 
