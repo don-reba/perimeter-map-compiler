@@ -110,6 +110,7 @@ namespace TriggerEdit
 			// 
 			// display_pnl_
 			// 
+			this.display_pnl_.AutoScroll = true;
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
 			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;

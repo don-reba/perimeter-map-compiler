@@ -9,6 +9,16 @@ using System.Windows.Forms;
 
 namespace TriggerEdit
 {
+	#region nested types
+
+	public enum Mode
+	{
+		Grid,
+		Free
+	}
+
+	#endregion
+
 	/// <summary>
 	/// Summary description for TriggerDisplay.
 	/// </summary>
@@ -16,10 +26,13 @@ namespace TriggerEdit
 	{
 		#region interface
 
-		public TriggerDisplay(/*Trigger[] triggers*/)
+		public TriggerDisplay()
 		{
 			// This call is required by the Windows.Forms Form Designer.
 			InitializeComponent();
+			// initialize variables
+			mode_ = Mode.Grid;
+			cell_size_ = new Size(Font.Height * 6, Font.Height + 4);
 		}
 
 		public void SetTriggers(ref Trigger[] triggers)
@@ -42,21 +55,20 @@ namespace TriggerEdit
 			// normalize positions
 			for (int i = 0; i != triggers_.Length; ++i)
 			{
-				triggers_[i].X -= min.X;
-				triggers_[i].Y -= min.Y;
+				triggers_[i].X -= min.X - 1;
+				triggers_[i].Y -= min.Y - 1;
 			}
 			// calculate grid size
-			grid_size_ = new Size(max.X - min.X + 1, max.Y - min.Y + 1);
-		}
-
-		public enum Mode
-		{
-			Grid,
-			Free
+			grid_size_ = new Size(max.X - min.X + 3, max.Y - min.Y + 3);
+			// draw
+			InitGraphics();
+			AutoScrollMinSize = bmp_.Size;
+			FormImage();
 		}
 
 		public void SwithMode(Mode mode)
 		{
+			mode_ = mode;
 		}
 
 		/// <summary>
@@ -90,53 +102,8 @@ namespace TriggerEdit
 			base.Dispose( disposing );
 		}
 
-		#endregion
-
-		#region overrides
-
-		protected override void OnMouseMove(MouseEventArgs e)
+		private void DrawGrid()
 		{
-			base.OnMouseMove (e);
-			if (DesignMode || null == triggers_)
-				return;
-			int index = GetTriggerAtPoint(Cursor.Position);
-			if (index == selection_)
-				return;
-			// unhighlight the previous cell and its children
-			if (selection_ >= 0)
-			{
-				triggers_[selection_].color_ = Brushes.Orange;
-				Invalidate(GetRectAtCoords(triggers_[selection_].X, triggers_[selection_].Y));
-				foreach (Trigger.Link link in triggers_[selection_].links)
-				{
-					triggers_[link.target].color_ = Brushes.Orange;
-					Invalidate(GetRectAtCoords(triggers_[link.target].X, triggers_[link.target].Y));
-				}
-				selection_ = -1;
-			}
-			if (index < 0)
-				return;
-			Trigger trigger = triggers_[index];
-			// highlight the selected trigger and its dependants
-			triggers_[index].color_ = Brushes.Yellow;
-			Invalidate(GetRectAtCoords(trigger.X, trigger.Y));
-			foreach (Trigger.Link link in trigger.links)
-			{
-				triggers_[link.target].color_ = Brushes.Gold;
-				Invalidate(GetRectAtCoords(triggers_[link.target].X, triggers_[link.target].Y));
-			}
-			selection_ = index;
-		}
-
-		protected override void OnPaint(PaintEventArgs e)
-		{
-			if (DesignMode || null == triggers_)
-			{
-				base.OnPaint(e);
-				return;
-			}
-			if (null == gfx_)
-				InitGraphics();
 			gfx_.SmoothingMode = SmoothingMode.None;
 			Pen   grid_pen   = new Pen(Color.Yellow);
 			Pen   arrow_pen  = new Pen(Color.Red);
@@ -151,10 +118,10 @@ namespace TriggerEdit
 			if (0 != grid_size_.Height)
 			{
 				Point s = new Point(0, 0);
-				Point f = new Point(Width, 0);
+				Point f = new Point(bmp_.Width, 0);
 				for (int i = 1; i != grid_size_.Height; ++i)
 				{
-					s.Y = f.Y = Height * i / grid_size_.Height;
+					s.Y = f.Y = bmp_.Height * i / grid_size_.Height;
 					gfx_.DrawLine(grid_pen, s, f);
 				}
 			}
@@ -162,10 +129,10 @@ namespace TriggerEdit
 			if (0 != grid_size_.Width)
 			{
 				Point s = new Point(0, 0);
-				Point f = new Point(0, Height);
+				Point f = new Point(0, bmp_.Height);
 				for (int i = 1; i != grid_size_.Width; ++i)
 				{
-					s.X = f.X = Width * i / grid_size_.Width;
+					s.X = f.X = bmp_.Width * i / grid_size_.Width;
 					gfx_.DrawLine(grid_pen, s, f);
 				}
 			}
@@ -188,12 +155,117 @@ namespace TriggerEdit
 			gfx_.SmoothingMode = SmoothingMode.None;
 			// draw labels
 			foreach (Trigger trigger in triggers_)
-				gfx_.DrawString(
-					trigger.name,
-					Font,
-					SystemBrushes.WindowText,
-					GetRectAtCoords(trigger.X, trigger.Y).Location);
-			e.Graphics.DrawImage(bmp_, 0, 0);
+			{
+				Rectangle rect = GetRectAtCoords(trigger.X, trigger.Y);
+				rect.Offset(4, 2);
+				if (rect.Width > 8)
+					rect.Width -= 8;
+				if (rect.Height > 4)
+					rect.Height -= 4;
+				gfx_.DrawString(trigger.name, Font, SystemBrushes.WindowText, rect);
+			}
+		}
+
+		private void DrawFree()
+		{
+		}
+
+		private void FormImage()
+		{
+			if (null == gfx_)
+				InitGraphics();
+			switch (mode_)
+			{
+				case Mode.Free: DrawFree(); break;
+				case Mode.Grid: DrawGrid(); break;
+			}
+		}
+		
+		private void InitGraphics()
+		{
+			// calculate the new size
+			Size new_size = new Size(
+				Math.Max(ClientSize.Width,  grid_size_.Width  * cell_size_.Width),
+				Math.Max(ClientSize.Height, grid_size_.Height * cell_size_.Height));
+			if (null != bmp_ && bmp_.Size == new_size)
+				return;
+			// release resources
+			if (null != gfx_)
+				gfx_.Dispose();
+			if (null != bmp_)
+				bmp_.Dispose();
+			// initialize resources
+			bmp_ = new Bitmap(new_size.Width, new_size.Height);
+			gfx_ = Graphics.FromImage(bmp_);
+		}
+
+		#endregion
+
+		#region overrides
+
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+			if (DesignMode || null == triggers_)
+				return;
+			// find the cell under cursor
+			int index = GetTriggerAtPoint(Cursor.Position);
+			if (index == selection_)
+				return;
+			// unhighlight the previous cell and its children
+			Rectangle rect;
+			if (selection_ >= 0)
+			{
+				triggers_[selection_].color_ = Brushes.Orange;
+				rect = GetRectAtCoords(
+					triggers_[selection_].X,
+					triggers_[selection_].Y);
+				rect.Offset(AutoScrollPosition);
+				Invalidate(rect);
+				foreach (Trigger.Link link in triggers_[selection_].links)
+				{
+					triggers_[link.target].color_ = Brushes.Orange;
+					rect = GetRectAtCoords(
+						triggers_[link.target].X,
+						triggers_[link.target].Y);
+					rect.Offset(AutoScrollPosition)  ;
+					Invalidate(rect);
+				}
+			}
+			selection_ = index;
+			if (index < 0)
+			{
+				FormImage();
+				return;
+			}
+			// highlight the selected trigger and its dependants
+			triggers_[index].color_ = Brushes.Yellow;
+			rect = GetRectAtCoords(
+				triggers_[index].X,
+				triggers_[index].Y);
+			rect.Offset(AutoScrollPosition);
+			Invalidate(rect);
+			foreach (Trigger.Link link in triggers_[index].links)
+			{
+				triggers_[link.target].color_ = Brushes.Gold;
+				rect = GetRectAtCoords(
+					triggers_[link.target].X,
+					triggers_[link.target].Y);
+				rect.Offset(AutoScrollPosition);
+				Invalidate(rect);
+			}
+			// redraw
+			FormImage();
+		}
+
+		protected override void OnPaint(PaintEventArgs e)
+		{
+			if (DesignMode || null == triggers_)
+			{
+				base.OnPaint(e);
+				return;
+			}
+			e.Graphics.DrawImage(bmp_, AutoScrollPosition);
 		}
 
 		protected override void OnPaintBackground(PaintEventArgs pevent)
@@ -204,8 +276,20 @@ namespace TriggerEdit
 
 		protected override void OnSizeChanged(EventArgs e)
 		{
-			base.OnSizeChanged (e);
+			base.OnSizeChanged(e);
 			InitGraphics();
+			if (null != triggers_)
+				FormImage();
+			// set scrollbars
+			if (null != bmp_)
+			{
+				Size new_scroll_size = bmp_.Size;
+				if (ClientSize.Width >= bmp_.Width)
+					new_scroll_size.Width = 0;
+				if (ClientSize.Height >= bmp_.Height)
+					new_scroll_size.Height = 0;
+				AutoScrollMinSize = new_scroll_size;
+			}
 			Invalidate();
 		}
 
@@ -220,21 +304,15 @@ namespace TriggerEdit
 				rect.Left + (rect.Right  - rect.Left) / 2,
 				rect.Top  + (rect.Bottom - rect.Top) / 2);
 		}
-		
-		private void InitGraphics()
-		{
-			bmp_ = new Bitmap(Width, Height);
-			gfx_ = Graphics.FromImage(bmp_);
-		}
 
 		private Rectangle GetRectAtCoords(int x, int y)
 		{
 			Point min = new Point(
-				Width  * x / grid_size_.Width,
-				Height * y / grid_size_.Height);
+				bmp_.Width  * x / grid_size_.Width,
+				bmp_.Height * y / grid_size_.Height);
 			Point max = new Point(
-				Width  * (x + 1) / grid_size_.Width,
-				Height * (y + 1) / grid_size_.Height);
+				bmp_.Width  * (x + 1) / grid_size_.Width,
+				bmp_.Height * (y + 1) / grid_size_.Height);
 			return new Rectangle(
 				min.X,
 				min.Y,
@@ -244,9 +322,11 @@ namespace TriggerEdit
 
 		private Point HitTest(int x, int y)
 		{
+			x -= AutoScrollPosition.X;
+			y -= AutoScrollPosition.Y;
 			return new Point(
-				x * grid_size_.Width  / Width,
-				y * grid_size_.Height / Height);
+				x * grid_size_.Width  / bmp_.Width,
+				y * grid_size_.Height / bmp_.Height);
 		}
 
 		private Point HitTest(Point point)
@@ -275,12 +355,13 @@ namespace TriggerEdit
 
 		#region data
 
-		private Trigger[] triggers_;
-		private Size      grid_size_;
 		private Bitmap    bmp_;
+		private Size      cell_size_;
 		private Graphics  gfx_;
+		private Size      grid_size_;
+		private Mode      mode_;
 		private int       selection_ = -1;
-		Mode              mode_;
+		private Trigger[] triggers_;
 
 		#endregion
 	}
