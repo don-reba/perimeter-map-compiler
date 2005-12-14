@@ -28,28 +28,12 @@ namespace TriggerEdit
 		private void GetStats()
 		{
 			string dir = Directory.GetCurrentDirectory();
-			string[] files = Directory.GetFiles("F:\\Application Data\\PETdemo\\Game\\Scripts\\Triggers", "*.scr");
+			string[] files = Directory.GetFiles("F:\\Application Data\\PETdemo\\Game\\Scripts\\Triggers\\XML", "*.xml");
 			SortedList list = new SortedList();
 			foreach (string source in files)
 			{
-				// create the destination path
-				string destination = Path.ChangeExtension(source, ".xml");
-				// make sure the conversion of the SCR file into XML exists
-				if (!File.Exists(destination))
-				{
-					Process process = new Process();
-					process.StartInfo.FileName  = "ScriptConverter.exe";
-					process.StartInfo.Arguments = string.Format("-s \"{0}\" \"{1}\"", source, destination);
-					process.StartInfo.RedirectStandardError = true;
-					process.StartInfo.RedirectStandardOutput = true;
-					process.StartInfo.UseShellExecute = false;
-					process.Start();
-					process.WaitForExit();
-					if (0 != process.ExitCode)
-						return;
-				}
 				// load the XML file
-				XmlTextReader reader = new XmlTextReader(destination);
+				XmlTextReader reader = new XmlTextReader(source);
 				XmlDocument doc = new XmlDocument();
 				doc.Load(reader);
 				reader.Close();
@@ -60,8 +44,7 @@ namespace TriggerEdit
 					"/set[@name=\"TriggerChain\"]"                       +
 					"/array[@name=\"triggers\"]"                         +
 					"/set"                                               +
-					"/set[@code=\"struct ActionAttackBySpecialWeapon\"]" +
-					"/value[@name=\"unitClassToAttack\"]");
+					"/value[@name=\"state_\"]");
 				foreach (XmlNode node in positions)
 				{
 					string str = node.InnerText;
@@ -111,6 +94,7 @@ namespace TriggerEdit
 			// display_pnl_
 			// 
 			this.display_pnl_.AutoScroll = true;
+			this.display_pnl_.AutoScrollMinSize = new System.Drawing.Size(512, 512);
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
 			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -168,6 +152,7 @@ namespace TriggerEdit
 			this.DockPadding.All = 8;
 			this.Name = "MainForm";
 			this.Text = "TriggerViewer";
+			this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.property_panel_.ResumeLayout(false);
 			this.ResumeLayout(false);
@@ -197,6 +182,12 @@ namespace TriggerEdit
 			// display cell info in the property tree
 			property_label_.Text = cell.name;
 			property_tree_.Nodes.Clear();
+			switch (cell.state)
+			{
+				case Trigger.State.Checking: property_tree_.Nodes.Add("state: Checking"); break;
+				case Trigger.State.Sleeping: property_tree_.Nodes.Add("state: Sleeping"); break;
+				case Trigger.State.Done:     property_tree_.Nodes.Add("state: Done");     break;
+			}
 			if (null != cell.action)
 				property_tree_.Nodes.Add(cell.action.GetTreeNode());
 			if (null != cell.condition)
@@ -216,7 +207,10 @@ namespace TriggerEdit
 				OpenFileDialog dlg = new OpenFileDialog();
 				dlg.Filter = "trigger file (xml made from scr)|*xml";
 				if (dlg.ShowDialog() != DialogResult.OK)
-					throw new Exception();
+				{
+					Close();
+					return;
+				}
 				path = dlg.FileName;
 			}
 			// load the XML file
@@ -242,9 +236,18 @@ namespace TriggerEdit
 						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
 					triggers_[i].Y = int.Parse(position.SelectSingleNode(
 						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
-					// reda name
+					// read name
 					triggers_[i].name = position.SelectSingleNode(
 						"string[@name=\"name\"]").InnerText;
+					// read state
+					XmlNode state = position.SelectSingleNode(
+						"value[@name=\"state_\"]");
+					switch (state.InnerText)
+					{
+						case "CHECKING": triggers_[i].state = Trigger.State.Checking; break;
+						case "SLEEPING": triggers_[i].state = Trigger.State.Sleeping; break;
+						case "DONE":     triggers_[i].state = Trigger.State.Done;     break;
+					}
 					// read action
 					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
 					if (null != action)
@@ -287,9 +290,9 @@ namespace TriggerEdit
 							link.is_active = true;
 						triggers_[i].links.Add(link);
 					}
+				}
+				Array.Sort(triggers_, new TriggerComparer());
 			}
-			Array.Sort(triggers_, new TriggerComparer());
-		}
 			display_pnl_.SetTriggers(ref triggers_);
 		}
 

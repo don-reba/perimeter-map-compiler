@@ -11,7 +11,7 @@
                     RemoteDebugEnabled = "false"
                     RemoteDebugMachine = ""
                     StartAction = "Project"
-                    StartArguments = '"F:\\Application Data\\PETdemo\\Game\\Scripts\\Triggers\\addon01.xml"'
+                    StartArguments = ""
                     StartPage = ""
                     StartProgram = ""
                     StartURL = ""

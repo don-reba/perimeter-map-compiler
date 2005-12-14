@@ -8,11 +8,20 @@ namespace TriggerEdit
 	{
 		public int       X;
 		public int       Y;
-		public string    name;
+		public float     v_x_;
+		public float     v_y_;
 		public Property  action;
+		public Brush     color_;
 		public Property  condition;
 		public ArrayList links;
-		public Brush     color_;
+		public State     state;
+		public string    name;
+		public enum State
+		{
+			Checking,
+			Sleeping,
+			Done
+		}
 		public struct Link
 		{
 			public int   target;
