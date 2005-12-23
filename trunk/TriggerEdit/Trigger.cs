@@ -11,7 +11,7 @@ namespace TriggerEdit
 		public float     v_x_;
 		public float     v_y_;
 		public Property  action;
-		public Brush     color_;
+		public Color     color_;
 		public Property  condition;
 		public ArrayList links;
 		public State     state;

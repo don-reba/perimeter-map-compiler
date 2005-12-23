@@ -85,10 +85,16 @@ namespace TriggerEdit
 		{
 			this.display_pnl_ = new TriggerEdit.TriggerDisplay();
 			this.property_panel_ = new System.Windows.Forms.Panel();
+			this.property_actions_panel_ = new System.Windows.Forms.Panel();
+			this.action_btn_ = new System.Windows.Forms.Button();
+			this.condition_btn_ = new System.Windows.Forms.Button();
+			this.state_dud_ = new System.Windows.Forms.DomainUpDown();
+			this.name_edt_ = new System.Windows.Forms.TextBox();
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_label_ = new System.Windows.Forms.Label();
 			this.splitter1 = new System.Windows.Forms.Splitter();
 			this.property_panel_.SuspendLayout();
+			this.property_actions_panel_.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// display_pnl_
@@ -106,13 +112,56 @@ namespace TriggerEdit
 			// 
 			// property_panel_
 			// 
+			this.property_panel_.Controls.Add(this.property_actions_panel_);
 			this.property_panel_.Controls.Add(this.property_tree_);
 			this.property_panel_.Controls.Add(this.property_label_);
 			this.property_panel_.Dock = System.Windows.Forms.DockStyle.Left;
+			this.property_panel_.DockPadding.Right = 4;
 			this.property_panel_.Location = new System.Drawing.Point(8, 8);
 			this.property_panel_.Name = "property_panel_";
 			this.property_panel_.Size = new System.Drawing.Size(200, 461);
 			this.property_panel_.TabIndex = 1;
+			// 
+			// property_actions_panel_
+			// 
+			this.property_actions_panel_.Controls.Add(this.action_btn_);
+			this.property_actions_panel_.Controls.Add(this.condition_btn_);
+			this.property_actions_panel_.Controls.Add(this.state_dud_);
+			this.property_actions_panel_.Controls.Add(this.name_edt_);
+			this.property_actions_panel_.Dock = System.Windows.Forms.DockStyle.Bottom;
+			this.property_actions_panel_.Location = new System.Drawing.Point(0, 357);
+			this.property_actions_panel_.Name = "property_actions_panel_";
+			this.property_actions_panel_.Size = new System.Drawing.Size(196, 104);
+			this.property_actions_panel_.TabIndex = 3;
+			// 
+			// action_btn_
+			// 
+			this.action_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.action_btn_.Location = new System.Drawing.Point(104, 72);
+			this.action_btn_.Name = "action_btn_";
+			this.action_btn_.TabIndex = 3;
+			this.action_btn_.Text = "Action";
+			// 
+			// condition_btn_
+			// 
+			this.condition_btn_.Location = new System.Drawing.Point(16, 72);
+			this.condition_btn_.Name = "condition_btn_";
+			this.condition_btn_.TabIndex = 2;
+			this.condition_btn_.Text = "Condition";
+			// 
+			// state_dud_
+			// 
+			this.state_dud_.Location = new System.Drawing.Point(64, 40);
+			this.state_dud_.Name = "state_dud_";
+			this.state_dud_.TabIndex = 1;
+			// 
+			// name_edt_
+			// 
+			this.name_edt_.Location = new System.Drawing.Point(64, 8);
+			this.name_edt_.Name = "name_edt_";
+			this.name_edt_.Size = new System.Drawing.Size(120, 20);
+			this.name_edt_.TabIndex = 0;
+			this.name_edt_.Text = "";
 			// 
 			// property_tree_
 			// 
@@ -121,7 +170,7 @@ namespace TriggerEdit
 			this.property_tree_.Location = new System.Drawing.Point(0, 32);
 			this.property_tree_.Name = "property_tree_";
 			this.property_tree_.SelectedImageIndex = -1;
-			this.property_tree_.Size = new System.Drawing.Size(200, 429);
+			this.property_tree_.Size = new System.Drawing.Size(196, 429);
 			this.property_tree_.TabIndex = 1;
 			// 
 			// property_label_
@@ -129,7 +178,7 @@ namespace TriggerEdit
 			this.property_label_.Dock = System.Windows.Forms.DockStyle.Top;
 			this.property_label_.Location = new System.Drawing.Point(0, 0);
 			this.property_label_.Name = "property_label_";
-			this.property_label_.Size = new System.Drawing.Size(200, 32);
+			this.property_label_.Size = new System.Drawing.Size(196, 32);
 			this.property_label_.TabIndex = 2;
 			this.property_label_.Text = "Trigger";
 			this.property_label_.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -155,6 +204,7 @@ namespace TriggerEdit
 			this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.property_panel_.ResumeLayout(false);
+			this.property_actions_panel_.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -230,7 +280,7 @@ namespace TriggerEdit
 				for (int i = 0; i != trigger_nodes.Count; ++i)
 				{
 					XmlNode position = trigger_nodes[i];
-					triggers_[i].color_ = Brushes.Orange;
+					triggers_[i].color_ = Color.Orange;
 					// read coordinates
 					triggers_[i].X = int.Parse(position.SelectSingleNode(
 						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
@@ -312,6 +362,11 @@ namespace TriggerEdit
 		private System.Windows.Forms.Splitter splitter1;
 		private System.Windows.Forms.TreeView property_tree_;
 		private System.Windows.Forms.Panel    property_panel_;
+		private System.Windows.Forms.Panel property_actions_panel_;
+		private System.Windows.Forms.TextBox name_edt_;
+		private System.Windows.Forms.DomainUpDown state_dud_;
+		private System.Windows.Forms.Button condition_btn_;
+		private System.Windows.Forms.Button action_btn_;
 		private System.Windows.Forms.Label    property_label_;
 
 		#endregion
