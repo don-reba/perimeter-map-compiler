@@ -126,6 +126,21 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "ConditionBuilder.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "ConditionBuilder.resx"
+                    DependentUpon = "ConditionBuilder.cs"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "ConditionDisplay.cs"
+                    SubType = "Component"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "MainForm.cs"
                     SubType = "Form"
                     BuildAction = "Compile"

@@ -18,7 +18,9 @@ namespace TriggerEdit
 		{
 			// Required for Windows Form Designer support
 			InitializeComponent();
-			args_ = args;
+			args_      = args;
+			selection_ = -1;
+			display_pnl_.SelectTrigger +=new TriggerEdit.TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
 		}
 
 		#endregion
@@ -40,11 +42,7 @@ namespace TriggerEdit
 				// extract data
 				XmlDocument fusion = new XmlDocument();
 				XmlNodeList positions = doc.SelectNodes(
-					"//script"                                           +
-					"/set[@name=\"TriggerChain\"]"                       +
-					"/array[@name=\"triggers\"]"                         +
-					"/set"                                               +
-					"/value[@name=\"state_\"]");
+					"descendant::array[@name=\"conditions\"]/set/value[@name=\"type\"]");
 				foreach (XmlNode node in positions)
 				{
 					string str = node.InnerText;
@@ -59,9 +57,6 @@ namespace TriggerEdit
 			Close();
 		}
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
 		protected override void Dispose( bool disposing )
 		{
 			if( disposing )
@@ -72,6 +67,14 @@ namespace TriggerEdit
 				}
 			}
 			base.Dispose( disposing );
+		}
+
+		private void EnableTriggerControls(bool enable)
+		{
+			name_edt_.Enabled      = enable;
+			state_lst_.Enabled     = enable;
+			condition_btn_.Enabled = enable;
+			action_btn_.Enabled    = enable;
 		}
 
 		#endregion
@@ -86,9 +89,11 @@ namespace TriggerEdit
 			this.display_pnl_ = new TriggerEdit.TriggerDisplay();
 			this.property_panel_ = new System.Windows.Forms.Panel();
 			this.property_actions_panel_ = new System.Windows.Forms.Panel();
+			this.state_lst_ = new System.Windows.Forms.ComboBox();
+			this.state_lbl_ = new System.Windows.Forms.Label();
+			this.name_lbl_ = new System.Windows.Forms.Label();
 			this.action_btn_ = new System.Windows.Forms.Button();
 			this.condition_btn_ = new System.Windows.Forms.Button();
-			this.state_dud_ = new System.Windows.Forms.DomainUpDown();
 			this.name_edt_ = new System.Windows.Forms.TextBox();
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_label_ = new System.Windows.Forms.Label();
@@ -108,7 +113,6 @@ namespace TriggerEdit
 			this.display_pnl_.Name = "display_pnl_";
 			this.display_pnl_.Size = new System.Drawing.Size(365, 461);
 			this.display_pnl_.TabIndex = 0;
-			this.display_pnl_.Click += new System.EventHandler(this.display_pnl_Click);
 			// 
 			// property_panel_
 			// 
@@ -121,12 +125,15 @@ namespace TriggerEdit
 			this.property_panel_.Name = "property_panel_";
 			this.property_panel_.Size = new System.Drawing.Size(200, 461);
 			this.property_panel_.TabIndex = 1;
+			this.property_panel_.Resize += new System.EventHandler(this.property_panel__Resize);
 			// 
 			// property_actions_panel_
 			// 
+			this.property_actions_panel_.Controls.Add(this.state_lst_);
+			this.property_actions_panel_.Controls.Add(this.state_lbl_);
+			this.property_actions_panel_.Controls.Add(this.name_lbl_);
 			this.property_actions_panel_.Controls.Add(this.action_btn_);
 			this.property_actions_panel_.Controls.Add(this.condition_btn_);
-			this.property_actions_panel_.Controls.Add(this.state_dud_);
 			this.property_actions_panel_.Controls.Add(this.name_edt_);
 			this.property_actions_panel_.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.property_actions_panel_.Location = new System.Drawing.Point(0, 357);
@@ -134,34 +141,65 @@ namespace TriggerEdit
 			this.property_actions_panel_.Size = new System.Drawing.Size(196, 104);
 			this.property_actions_panel_.TabIndex = 3;
 			// 
+			// state_lst_
+			// 
+			this.state_lst_.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.state_lst_.Enabled = false;
+			this.state_lst_.Items.AddRange(new object[] {
+																		  "checking",
+																		  "done",
+																		  "sleeping"});
+			this.state_lst_.Location = new System.Drawing.Point(56, 40);
+			this.state_lst_.Name = "state_lst_";
+			this.state_lst_.Size = new System.Drawing.Size(128, 21);
+			this.state_lst_.TabIndex = 6;
+			// 
+			// state_lbl_
+			// 
+			this.state_lbl_.Location = new System.Drawing.Point(8, 40);
+			this.state_lbl_.Name = "state_lbl_";
+			this.state_lbl_.Size = new System.Drawing.Size(40, 16);
+			this.state_lbl_.TabIndex = 5;
+			this.state_lbl_.Text = "State";
+			// 
+			// name_lbl_
+			// 
+			this.name_lbl_.Location = new System.Drawing.Point(8, 8);
+			this.name_lbl_.Name = "name_lbl_";
+			this.name_lbl_.Size = new System.Drawing.Size(40, 16);
+			this.name_lbl_.TabIndex = 4;
+			this.name_lbl_.Text = "Name";
+			// 
 			// action_btn_
 			// 
-			this.action_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.action_btn_.Anchor = System.Windows.Forms.AnchorStyles.Top;
+			this.action_btn_.Enabled = false;
 			this.action_btn_.Location = new System.Drawing.Point(104, 72);
 			this.action_btn_.Name = "action_btn_";
+			this.action_btn_.Size = new System.Drawing.Size(72, 23);
 			this.action_btn_.TabIndex = 3;
 			this.action_btn_.Text = "Action";
 			// 
 			// condition_btn_
 			// 
-			this.condition_btn_.Location = new System.Drawing.Point(16, 72);
+			this.condition_btn_.Anchor = System.Windows.Forms.AnchorStyles.Top;
+			this.condition_btn_.Enabled = false;
+			this.condition_btn_.Location = new System.Drawing.Point(24, 72);
 			this.condition_btn_.Name = "condition_btn_";
+			this.condition_btn_.Size = new System.Drawing.Size(72, 23);
 			this.condition_btn_.TabIndex = 2;
 			this.condition_btn_.Text = "Condition";
-			// 
-			// state_dud_
-			// 
-			this.state_dud_.Location = new System.Drawing.Point(64, 40);
-			this.state_dud_.Name = "state_dud_";
-			this.state_dud_.TabIndex = 1;
+			this.condition_btn_.Click += new System.EventHandler(this.condition_btn__Click);
 			// 
 			// name_edt_
 			// 
-			this.name_edt_.Location = new System.Drawing.Point(64, 8);
+			this.name_edt_.Enabled = false;
+			this.name_edt_.Location = new System.Drawing.Point(56, 8);
 			this.name_edt_.Name = "name_edt_";
-			this.name_edt_.Size = new System.Drawing.Size(120, 20);
+			this.name_edt_.Size = new System.Drawing.Size(128, 20);
 			this.name_edt_.TabIndex = 0;
 			this.name_edt_.Text = "";
+			this.name_edt_.TextChanged += new System.EventHandler(this.name_edt__TextChanged);
 			// 
 			// property_tree_
 			// 
@@ -222,32 +260,58 @@ namespace TriggerEdit
 		#endregion
 
 		#region event handlers
-		
-		private void display_pnl_Click(object sender, System.EventArgs e)
+
+		private void condition_btn__Click(object sender, System.EventArgs e)
 		{
-			int index = display_pnl_.GetTriggerAtPoint(Cursor.Position);
-			if (index < 0)
+			if (selection_ < 0)
 				return;
-			Trigger cell = triggers_[index];
-			// display cell info in the property tree
-			property_label_.Text = cell.name;
-			property_tree_.Nodes.Clear();
-			switch (cell.state)
+			ConditionBuilder condition_builder = new ConditionBuilder();
+			condition_builder.Condition = triggers_[selection_].condition;
+			condition_builder.ShowDialog(this);
+			if (DialogResult.OK == condition_builder.DialogResult)
+				triggers_[selection_].condition = condition_builder.Condition;
+		}
+
+		private void display_pnl__SelectTrigger(object sender, TriggerDisplay.TriggerEventArgs e)
+		{
+			if (e.trigger_id_ < 0)
 			{
-				case Trigger.State.Checking: property_tree_.Nodes.Add("state: Checking"); break;
-				case Trigger.State.Sleeping: property_tree_.Nodes.Add("state: Sleeping"); break;
-				case Trigger.State.Done:     property_tree_.Nodes.Add("state: Done");     break;
+				EnableTriggerControls(false);
+				return;
 			}
-			if (null != cell.action)
-				property_tree_.Nodes.Add(cell.action.GetTreeNode());
-			if (null != cell.condition)
-				property_tree_.Nodes.Add(cell.condition.GetTreeNode());
+			// display cell info
+			Trigger trigger = triggers_[e.trigger_id_];
+			property_label_.Text = trigger.name;
+			name_edt_.Text       = trigger.name;
+			property_tree_.Nodes.Clear();
+			switch (trigger.state)
+			{
+				case Trigger.State.Checking:
+					property_tree_.Nodes.Add("state: checking");
+					state_lst_.SelectedIndex = 0;
+					break;
+				case Trigger.State.Done:
+					property_tree_.Nodes.Add("state: done");
+					state_lst_.SelectedIndex = 1;
+					break;
+				case Trigger.State.Sleeping:
+					property_tree_.Nodes.Add("state: sleeping");
+					state_lst_.SelectedIndex = 2;
+					break;
+			}
+			if (null != trigger.action)
+				property_tree_.Nodes.Add(trigger.action.GetTreeNode());
+			//			if (null != trigger.condition)
+			//				property_tree_.Nodes.Add(trigger.condition.GetTreeNode());
 			property_tree_.ExpandAll();
+			EnableTriggerControls(true);
 		}
 
 		private void MainForm_Load(object sender, System.EventArgs e)
 		{
-			//GetStats();
+//			GetStats();
+//			Application.Exit();
+//			return;
 			// get path
 			string path;
 			if (0 != args_.Length)
@@ -280,32 +344,9 @@ namespace TriggerEdit
 				for (int i = 0; i != trigger_nodes.Count; ++i)
 				{
 					XmlNode position = trigger_nodes[i];
-					triggers_[i].color_ = Color.Orange;
-					// read coordinates
-					triggers_[i].X = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText);
-					triggers_[i].Y = int.Parse(position.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText);
-					// read name
-					triggers_[i].name = position.SelectSingleNode(
-						"string[@name=\"name\"]").InnerText;
-					// read state
-					XmlNode state = position.SelectSingleNode(
-						"value[@name=\"state_\"]");
-					switch (state.InnerText)
-					{
-						case "CHECKING": triggers_[i].state = Trigger.State.Checking; break;
-						case "SLEEPING": triggers_[i].state = Trigger.State.Sleeping; break;
-						case "DONE":     triggers_[i].state = Trigger.State.Done;     break;
-					}
-					// read action
-					XmlNode action = position.SelectSingleNode("set[@name=\"action\"]");
-					if (null != action)
-						triggers_[i].action = new Property(action);
-					// read condition
-					XmlNode condition = position.SelectSingleNode("set[@name=\"condition\"]");
-					if (null != condition)
-						triggers_[i].condition = new Property(condition);
+					triggers_[i].color_   = Color.Orange;
+					triggers_[i].outline_ = Color.Orange;
+					triggers_[i].Serialize(position);
 					names.Add(triggers_[i].name, i);
 				}
 				// add links
@@ -346,28 +387,46 @@ namespace TriggerEdit
 			display_pnl_.SetTriggers(ref triggers_);
 		}
 
+		private void name_edt__TextChanged(object sender, System.EventArgs e)
+		{
+			if (selection_ < 0)
+				return;
+			triggers_[selection_].name = name_edt_.Text;
+			property_label_.Text       = name_edt_.Text;
+		}
+
+		private void property_panel__Resize(object sender, System.EventArgs e)
+		{
+			int width = property_actions_panel_.Width - name_edt_.Left - 8;
+			name_edt_.Width  = width;
+			state_lst_.Width = width;
+		}
+
 		#endregion
 
 		#region data
 
+		private string[]  args_;
+		private int       selection_;
 		private Trigger[] triggers_;
-		private string[]    args_;
 
 		#endregion
 
 		#region Component Designer data
 
 		private System.ComponentModel.Container components = null;
-		private TriggerDisplay                display_pnl_;
-		private System.Windows.Forms.Splitter splitter1;
-		private System.Windows.Forms.TreeView property_tree_;
-		private System.Windows.Forms.Panel    property_panel_;
-		private System.Windows.Forms.Panel property_actions_panel_;
-		private System.Windows.Forms.TextBox name_edt_;
-		private System.Windows.Forms.DomainUpDown state_dud_;
-		private System.Windows.Forms.Button condition_btn_;
-		private System.Windows.Forms.Button action_btn_;
+		private System.Windows.Forms.Button   action_btn_;
+		private System.Windows.Forms.Button   condition_btn_;
+		private System.Windows.Forms.ComboBox state_lst_;
+		private System.Windows.Forms.Label    name_lbl_;
 		private System.Windows.Forms.Label    property_label_;
+		private System.Windows.Forms.Label    state_lbl_;
+		private System.Windows.Forms.Panel    property_actions_panel_;
+		private System.Windows.Forms.Panel    property_panel_;
+		private System.Windows.Forms.Splitter splitter1;
+		private System.Windows.Forms.TextBox  name_edt_;
+		private System.Windows.Forms.TreeView property_tree_;
+		private TriggerDisplay                display_pnl_;
 
 		#endregion
 	}

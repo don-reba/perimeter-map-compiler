@@ -37,9 +37,9 @@ namespace TriggerEdit
 			if (switch_)
 			{
 				TreeNode conditions = new TreeNode("conditions:");
-				if (conditions_.Count != 0)
+				if (children_.Count != 0)
 				{
-					foreach (Property condition in conditions_)
+					foreach (Property condition in children_)
 						conditions.Nodes.Add(condition.GetTreeNode());
 				}
 				else
@@ -68,7 +68,7 @@ namespace TriggerEdit
 						"/set"                        +
 						"/set[@name=\"condition\"]");
 					foreach (XmlNode condition in conditions)
-						conditions_.Add(new Property(condition));
+						children_.Add(new Property(condition));
 				}
 			}
 		}
@@ -579,10 +579,10 @@ namespace TriggerEdit
 		}
 
 		// data
-		private static Hashtable strings_;
+		private static Hashtable strings_; // (string)name -> (ArrayList of string)fields
 		private string    name_;
 		private string[]  fields_;
-		private ArrayList conditions_ = new ArrayList();
+		private ArrayList children_ = new ArrayList(); // of Property
 		private bool      switch_;
 	}
 }

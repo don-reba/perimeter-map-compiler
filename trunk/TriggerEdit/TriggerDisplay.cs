@@ -31,12 +31,6 @@ namespace TriggerEdit
 			Done
 		}
 
-		public enum Mode
-		{
-			Grid,
-			Free
-		}
-
 		#endregion
 
 		#region interface
@@ -47,8 +41,6 @@ namespace TriggerEdit
 			InitializeComponent();
 			// initialize variables
 			cell_size_ = new Size(Font.Height * 6, Font.Height * 2 + 4);
-//			Font       = new System.Drawing.Font(Font.FontFamily, 7);
-			mode_      = Mode.Free;
 			animation_state_ = AnimationState.Off;
 			// hook event handlers
 			Application.Idle += new EventHandler(OnApplicationIdle);
@@ -69,88 +61,42 @@ namespace TriggerEdit
 					((BitArray)trigger_adj_[link.target])[i] = true;
 				}
 			}
-			if	(Mode.Grid == mode_)
+			Random rand = new Random(0);
+			bounds_ = new Rectangle(
+				0,
+				0,
+				(cell_size_.Width  + cell_spacing_) * ((int)Math.Sqrt(triggers_.Length) + 1) * 2,
+				(cell_size_.Height + cell_spacing_) * ((int)Math.Sqrt(triggers_.Length) + 1) * 2);
+			bounds_.Inflate(cell_size_);
+			bounds_ = Rectangle.Union(bounds_, ClientRectangle);
+			for (int i = 0; i != triggers_.Length; ++i)
 			{
-				// find bounds
-				Point min = new Point(int.MaxValue, int.MaxValue);
-				Point max = new Point(int.MinValue, int.MinValue);
-				foreach (Trigger trigger in triggers_)
-				{
-					if (trigger.X < min.X)
-						min.X = trigger.X;
-					if (trigger.X > max.X)
-						max.X = trigger.X;
-					if (trigger.Y < min.Y)
-						min.Y = trigger.Y;
-					if (trigger.Y > max.Y)
-						max.Y = trigger.Y;
-				}
-				// normalize positions
-				for (int i = 0; i != triggers_.Length; ++i)
-				{
-					triggers_[i].X -= min.X - 1;
-					triggers_[i].Y -= min.Y - 1;
-				}
-				// calculate grid size
-				grid_size_ = new Size(max.X - min.X + 3, max.Y - min.Y + 3);
-			} 
-			else if (Mode.Free == mode_)
-			{
-				Random rand = new Random(0);
-				bounds_ = new Rectangle(
-					0,
-					0,
-					(cell_size_.Width  + cell_spacing_) * ((int)Math.Sqrt(triggers_.Length) + 1) * 2,
-					(cell_size_.Height + cell_spacing_) * ((int)Math.Sqrt(triggers_.Length) + 1) * 2);
-				bounds_.Inflate(cell_size_);
-				bounds_ = Rectangle.Union(bounds_, ClientRectangle);
-				for (int i = 0; i != triggers_.Length; ++i)
-				{
-					triggers_[i].X = cell_size_.Width  / 2 + rand.Next(bounds_.Width  - cell_size_.Width);
-					triggers_[i].Y = cell_size_.Height / 2 + rand.Next(bounds_.Height - cell_size_.Height);
-				}
-				history_ = new Point[triggers_.Length * 3];
-				InitGraphics();
-				bspline_   = new BSpline(history_, triggers_, 32);
-				animation_state_ = AnimationState.FirstStep;
+				triggers_[i].X = cell_size_.Width  / 2 + rand.Next(bounds_.Width  - cell_size_.Width);
+				triggers_[i].Y = cell_size_.Height / 2 + rand.Next(bounds_.Height - cell_size_.Height);
 			}
-		}
-
-		public void SwitchMode(Mode mode)
-		{
-			mode_ = mode;
+			history_ = new Point[triggers_.Length * 3];
+			InitGraphics();
+			bspline_   = new BSpline(history_, triggers_, 32);
+			animation_state_ = AnimationState.FirstStep;
 		}
 
 		public int GetTriggerAtPoint(Point point)
 		{
-			if (Mode.Grid == mode_)
+			int radius_h = cell_size_.Width  / 2;
+			int radius_v = cell_size_.Height / 2;
+			int index;
+			for (index = 0; index != triggers_.Length; ++index)
 			{
-				Point hit = HitTest(PointToClient(Cursor.Position));
-				Trigger dummy = new Trigger();
-				dummy.X = hit.X;
-				dummy.Y = hit.Y;
-				return Array.BinarySearch(triggers_, dummy, new TriggerComparer());
+				int x = triggers_[index].X + AutoScrollPosition.X;
+				int y = triggers_[index].Y + AutoScrollPosition.Y;
+				if (
+					x - radius_h <= point.X &&
+					x + radius_h >= point.X &&
+					y - radius_v <= point.Y &&
+					y + radius_v >= point.Y)
+					break;
 			}
-			else if (Mode.Free == mode_)
-			{
-				Point hit = PointToClient(point);
-				int radius_h = cell_size_.Width  / 2;
-				int radius_v = cell_size_.Height / 2;
-				int index;
-				for (index = 0; index != triggers_.Length; ++index)
-				{
-					int x = triggers_[index].X + AutoScrollPosition.X;
-					int y = triggers_[index].Y + AutoScrollPosition.Y;
-					if (
-						x - radius_h <= hit.X &&
-						x + radius_h >= hit.X &&
-						y - radius_v <= hit.Y &&
-						y + radius_v >= hit.Y)
-						break;
-				}
-				return (triggers_.Length == index) ? -1 : index;
-			}
-			return -1;
+			return (triggers_.Length == index) ? -1 : index;
 		}
 
 		#endregion
@@ -180,20 +126,6 @@ namespace TriggerEdit
 			}
 			// reposition the viewport, if necessary
 			AutoScrollMinSize = bounds_.Size;
-//			Point delta = new Point(
-//				old_bounds.Left - bounds_.Left,
-//				old_bounds.Top  - bounds_.Top);
-//			if (AutoScroll)
-//			{
-//				Point position = AutoScrollPosition;
-//				position.X = -position.X;
-//				position.Y = -position.Y;
-//				if (delta.X > 0)
-//					position.X += delta.X;
-//				if (delta.Y > 0)
-//					position.Y += delta.Y;
-//				AutoScrollPosition = position;
-//			}
 		}
 
 		private void AdvanceAnimation()
@@ -343,123 +275,6 @@ namespace TriggerEdit
 			}
 			base.Dispose( disposing );
 		}
-
-		private void DrawGrid()
-		{
-//			gfx_.SmoothingMode = SmoothingMode.None;
-//			Pen   grid_pen   = new Pen(Color.Yellow);
-//			Pen   arrow_pen  = new Pen(Color.Red);
-//			arrow_pen.StartCap = LineCap.RoundAnchor;
-//			arrow_pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
-//			// fill the surface
-//			gfx_.Clear(Color.Black);
-//			// draw cells
-//			foreach (Trigger trigger in triggers_)
-//				gfx_.FillRectangle(trigger.color_, GetRectAtCoords(trigger.X, trigger.Y));
-//			// draw horizontal lines
-//			if (0 != grid_size_.Height)
-//			{
-//				Point s = new Point(0, 0);
-//				Point f = new Point(bmp_.Width, 0);
-//				for (int i = 1; i != grid_size_.Height; ++i)
-//				{
-//					s.Y = f.Y = bmp_.Height * i / grid_size_.Height;
-//					gfx_.DrawLine(grid_pen, s, f);
-//				}
-//			}
-//			// draw vertical lines
-//			if (0 != grid_size_.Width)
-//			{
-//				Point s = new Point(0, 0);
-//				Point f = new Point(0, bmp_.Height);
-//				for (int i = 1; i != grid_size_.Width; ++i)
-//				{
-//					s.X = f.X = bmp_.Width * i / grid_size_.Width;
-//					gfx_.DrawLine(grid_pen, s, f);
-//				}
-//			}
-//			// draw dependency arrows
-//			gfx_.SmoothingMode = SmoothingMode.AntiAlias;
-//			foreach (Trigger trigger in triggers_)
-//			{
-//				Point start = Center(GetRectAtCoords(trigger.X, trigger.Y));
-//				foreach (Trigger.Link link in trigger.links)
-//				{
-//					arrow_pen.Color = link.color;
-//					arrow_pen.Width = link.is_active ? 2 : 0;
-//					Trigger target = triggers_[link.target];
-//					gfx_.DrawLine(
-//						arrow_pen,
-//						start,
-//						Center(GetRectAtCoords(target.X, target.Y)));
-//				}
-//			}
-//			gfx_.SmoothingMode = SmoothingMode.None;
-//			// draw labels
-//			foreach (Trigger trigger in triggers_)
-//			{
-//				Rectangle rect = GetRectAtCoords(trigger.X, trigger.Y);
-//				rect.Offset(4, 2);
-//				if (rect.Width > 8)
-//					rect.Width -= 8;
-//				if (rect.Height > 4)
-//					rect.Height -= 4;
-//				gfx_.DrawString(trigger.name, Font, SystemBrushes.WindowText, rect);
-//			}
-		}
-
-		private void DrawFree()
-		{
-//			Pen   arrow_pen  = new Pen(Color.Red);
-//			arrow_pen.StartCap = LineCap.RoundAnchor;
-//			arrow_pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
-//			// fill the surface
-//			gfx_.Clear(Color.Black);
-//			// draw cells
-//			foreach (Trigger trigger in triggers_)
-//				gfx_.FillRectangle(
-//					Brushes.Orange,
-//					trigger.X - cell_size_.Width  / 2,
-//					trigger.Y - cell_size_.Height / 2,
-//					cell_size_.Width,
-//					cell_size_.Height);
-//			// draw dependency arrows
-//			gfx_.SmoothingMode = SmoothingMode.AntiAlias;
-//			foreach (Trigger trigger in triggers_)
-//				foreach (Trigger.Link link in trigger.links)
-//				{
-//					arrow_pen.Color = link.color;
-//					arrow_pen.Width = link.is_active ? 2 : 0;
-//					Trigger target = triggers_[link.target];
-//					Point s = new Point(trigger.X, trigger.Y);
-//					Point f = new Point(target.X,  target.Y);
-//					SnapPoints(ref s, ref f);
-//					gfx_.DrawLine(arrow_pen, s, f);
-//				}
-//			gfx_.SmoothingMode = SmoothingMode.None;
-//			// draw labels
-//			foreach (Trigger trigger in triggers_)
-//			{
-//				Rectangle rect = new Rectangle(
-//					trigger.X - cell_size_.Width  / 2,
-//					trigger.Y - cell_size_.Height / 2,
-//					cell_size_.Width,
-//					cell_size_.Height);
-//				rect.Inflate(-2, -1);
-//				gfx_.DrawString(trigger.name, Font, SystemBrushes.WindowText, rect);
-//			}
-		}
-
-		private void FormImage()
-		{
-//			if (null == gfx_)
-//				InitGraphics();
-			switch (mode_)
-			{
-				case Mode.Free: DrawFree(); break;
-				case Mode.Grid: DrawGrid(); break;
-			}
-		}
 		
 		private bool InitGraphics()
 		{
@@ -502,20 +317,6 @@ namespace TriggerEdit
 			device_.RenderState.CullMode = Cull.None;
 			device_.RenderState.Lighting = false;
 			return true;
-			// calculate the new size
-//			Size new_size;
-//			if (null == bmp_ || bounds_.Width > bmp_.Width || bounds_.Height > bmp_.Height)
-//				new_size = bounds_.Size;
-//			else
-//				return;
-//			// release resources
-//			if (null != gfx_)
-//				gfx_.Dispose();
-//			if (null != bmp_)
-//				bmp_.Dispose();
-//			// initialize resources
-//			bmp_ = new Bitmap(new_size.Width, new_size.Height);
-//			gfx_ = Graphics.FromImage(bmp_);
 		}
 
 		private void Render()
@@ -538,8 +339,8 @@ namespace TriggerEdit
 			device_.Transform.Projection = Microsoft.DirectX.Matrix.OrthoLH(
 				-ClientRectangle.Width,
 				-ClientRectangle.Height,
-				0.01f,
-				1.0f);
+				0.1f,
+				2.0f);
 			trigger_renderer_.Render(device_, triggers_);
 			device_.EndScene();
 			try
@@ -698,6 +499,29 @@ namespace TriggerEdit
 
 		#endregion
 
+		#region events
+
+		public class TriggerEventArgs : EventArgs
+		{
+			public TriggerEventArgs(int trigger_id)
+			{
+				trigger_id_ = trigger_id;
+			}
+			public int trigger_id_;
+		}
+
+		public delegate void SelectTriggerEvent(object sender, TriggerEventArgs e);
+
+		public event SelectTriggerEvent SelectTrigger;
+
+		public void OnSelectTrigger(TriggerEventArgs e)
+		{
+			if (null != SelectTrigger)
+				SelectTrigger(this, e);	
+		}
+
+		#endregion
+
 		#region event handlers
 
 		private void OnApplicationIdle(object sender, EventArgs e)
@@ -710,88 +534,44 @@ namespace TriggerEdit
 			}
 		}
 
+		protected override void OnMouseDown(MouseEventArgs e)
+		{
+			int new_selection = GetTriggerAtPoint(new Point(e.X, e.Y));
+			if (selection_ == new_selection)
+				return;
+			if (selection_ >= 0)
+				triggers_[selection_].outline_ = Color.Orange;
+			if (new_selection >= 0)
+				triggers_[new_selection].outline_ = Color.Yellow;
+			selection_ = new_selection;
+			OnSelectTrigger(new TriggerEventArgs(selection_));
+			base.OnMouseDown(e);
+		}
+
+
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			base.OnMouseMove(e);
-			if (Mode.Grid == mode_)
+			if (DesignMode || null == triggers_)
+				return;
+			// find the cell under cursor
+			int index = GetTriggerAtPoint(new Point(e.X, e.Y));
+			if (index == active_)
+				return;
+			// unhighlight the previous cell and its children
+			if (active_ >= 0)
 			{
-				if (DesignMode || null == triggers_)
-					return;
-				// find the cell under cursor
-				int index = GetTriggerAtPoint(Cursor.Position);
-				if (index == selection_)
-					return;
-				// unhighlight the previous cell and its children
-				Rectangle rect;
-				if (selection_ >= 0)
-				{
-					triggers_[selection_].color_ = Color.Orange;
-					rect = GetRectAtCoords(
-						triggers_[selection_].X,
-						triggers_[selection_].Y);
-					rect.Offset(AutoScrollPosition);
-					Invalidate(rect);
-					foreach (Trigger.Link link in triggers_[selection_].links)
-					{
-						triggers_[link.target].color_ = Color.Orange;
-						rect = GetRectAtCoords(
-							triggers_[link.target].X,
-							triggers_[link.target].Y);
-						rect.Offset(AutoScrollPosition) ;
-						Invalidate(rect);
-					}
-				}
-				selection_ = index;
-				if (index < 0)
-				{
-					FormImage();
-					return;
-				}
-				// highlight the selected trigger and its dependants
-				triggers_[index].color_ = Color.Yellow;
-				rect = GetRectAtCoords(
-					triggers_[index].X,
-					triggers_[index].Y);
-				rect.Offset(AutoScrollPosition);
-				Invalidate(rect);
-				foreach (Trigger.Link link in triggers_[index].links)
-				{
-					triggers_[link.target].color_ = Color.Gold;
-					rect = GetRectAtCoords(
-						triggers_[link.target].X,
-						triggers_[link.target].Y);
-					rect.Offset(AutoScrollPosition);
-					Invalidate(rect);
-				}
-				// redraw
-				FormImage();
+				triggers_[active_].color_ = Color.Orange;
+				foreach (Trigger.Link link in triggers_[active_].links)
+					triggers_[link.target].color_ = Color.Orange;
 			}
-			else if (Mode.Free == mode_)
-			{
-				if (DesignMode || null == triggers_)
-					return;
-				// find the cell under cursor
-				int index = GetTriggerAtPoint(Cursor.Position);
-				if (index == selection_)
-					return;
-				// unhighlight the previous cell and its children
-				if (selection_ >= 0)
-				{
-					triggers_[selection_].color_ = Color.Orange;
-					foreach (Trigger.Link link in triggers_[selection_].links)
-						triggers_[link.target].color_ = Color.Orange;
-				}
-				selection_ = index;
-				if (index < 0)
-				{
-					FormImage();
-					return;
-				}
-				// highlight the selected trigger and its dependants
-				triggers_[index].color_ = Color.Yellow;
-				foreach (Trigger.Link link in triggers_[index].links)
-					triggers_[link.target].color_ = Color.Gold;
-			}
+			active_ = index;
+			if (index < 0)
+				return;
+			// highlight the selected trigger and its dependants
+			triggers_[index].color_ = Color.Yellow;
+			foreach (Trigger.Link link in triggers_[index].links)
+				triggers_[link.target].color_ = Color.Gold;
 		}
 
 		protected override void OnPaint(PaintEventArgs e)
@@ -802,62 +582,6 @@ namespace TriggerEdit
 				return;
 			}
 			Render();
-//			if (null == gfx_)
-//			{
-//				e.Graphics.Clear(Color.Black);
-//				return;
-//			}
-//			// calculate the difference between the size of the client rectangle and the bounds
-//			Size delta = new Size(
-//				ClientRectangle.Width  - bounds_.Width,
-//				ClientRectangle.Height - bounds_.Height);
-//			// calculate image placement
-//			Point origin = new Point(
-//				(delta.Width  > 0) ? (delta.Width  / 2) : 0,
-//				(delta.Height > 0) ? (delta.Height / 2) : 0);
-//			// draw the image
-//			Rectangle src = ClientRectangle;
-//			if (src.Width > bmp_.Width)
-//				src.Width = bmp_.Width;
-//			if (src.Height > bmp_.Height)
-//				src.Height = bmp_.Height;
-//			src.Offset(-AutoScrollPosition.X, -AutoScrollPosition.Y);
-//			e.Graphics.DrawImage(bmp_, origin.X, origin.Y, src, GraphicsUnit.Pixel);
-//			// draw black borders, if necessary
-//			if (delta.Width > 0)
-//			{
-//				// left
-//				e.Graphics.FillRectangle(
-//					Brushes.Black,
-//					0,
-//					0,
-//					origin.X,
-//					ClientRectangle.Height);
-//				// right
-//				e.Graphics.FillRectangle(
-//					Brushes.Black,
-//					ClientRectangle.Width - delta.Width / 2,
-//					0,
-//					delta.Width / 2,
-//					ClientRectangle.Height);
-//			}
-//			if (delta.Height > 0)
-//			{
-//				// top
-//				e.Graphics.FillRectangle(
-//					Brushes.Black,
-//					0,
-//					0,
-//					ClientRectangle.Width,
-//					origin.Y);
-//				// bottom
-//				e.Graphics.FillRectangle(
-//					Brushes.Black,
-//					0,
-//					ClientRectangle.Height - delta.Height / 2,
-//					ClientRectangle.Width,
-//					delta.Height / 2);
-//			}
 		}
 
 		protected override void OnPaintBackground(PaintEventArgs pevent)
@@ -869,12 +593,6 @@ namespace TriggerEdit
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			base.OnSizeChanged(e);
-			if (Mode.Grid == mode_)
-			{
-				InitGraphics();
-				if (null != triggers_)
-					FormImage();
-			}
 			InitGraphics();
 			Invalidate();
 		}
@@ -893,42 +611,9 @@ namespace TriggerEdit
 
 		private Rectangle GetRectAtCoords(int x, int y)
 		{
-			if (Mode.Grid == mode_)
-			{
-//				Point min = new Point(
-//					bmp_.Width  * x / grid_size_.Width,
-//					bmp_.Height * y / grid_size_.Height);
-//				Point max = new Point(
-//					bmp_.Width  * (x + 1) / grid_size_.Width,
-//					bmp_.Height * (y + 1) / grid_size_.Height);
-//				return new Rectangle(
-//					min.X,
-//					min.Y,
-//					max.X - min.X,
-//					max.Y - min.Y);
-			}
-			else if (Mode.Free == mode_)
-			{
-				int radius_h = cell_size_.Width  / 2;
-				int radius_v = cell_size_.Height / 2;
-				return Rectangle.FromLTRB(x - radius_h, y - radius_v, x + radius_h, y + radius_v);
-			}
-			return Rectangle.Empty;
-		}
-
-		private Point HitTest(int x, int y)
-		{
-			return new Point(0,0);
-//			x -= AutoScrollPosition.X;
-//			y -= AutoScrollPosition.Y;
-//			return new Point(
-//				x * grid_size_.Width  / bmp_.Width,
-//				y * grid_size_.Height / bmp_.Height);
-		}
-
-		private Point HitTest(Point point)
-		{
-			return HitTest(point.X, point.Y);
+			int radius_h = cell_size_.Width  / 2;
+			int radius_v = cell_size_.Height / 2;
+			return Rectangle.FromLTRB(x - radius_h, y - radius_v, x + radius_h, y + radius_v);
 		}
 
 		#endregion
@@ -973,14 +658,11 @@ namespace TriggerEdit
 		#region data
 
 		private Rectangle bounds_;
-//		private Bitmap    bmp_;
 		private BSpline   bspline_;
 		private Size      cell_size_;
 		private int       cell_spacing_ = 64;
 		private Point[]   history_;
-//		private Graphics  gfx_;
-		private Size      grid_size_;
-		private Mode      mode_;
+		private int       active_ = -1;
 		private int       selection_ = -1;
 		private float     temperature_;
 		private ArrayList trigger_adj_;
