@@ -49,9 +49,9 @@ namespace TriggerEdit
 				case "DONE":     state = State.Done;     break;
 			}
 			// read action
-//			XmlNode action = node.SelectSingleNode("set[@name=\"action\"]");
-//			if (null != action)
-//				triggers_[i].action = new Property(action);
+			XmlNode action_node = node.SelectSingleNode("set[@name=\"action\"]");
+			if (null != action_node)
+				action = ReadAction(action_node);
 			// read condition
 			XmlNode condition_node = node.SelectSingleNode("set[@name=\"condition\"]");
 			if (null != condition_node)
@@ -67,6 +67,110 @@ namespace TriggerEdit
 
 		#region internal implementation
 
+		private Action ReadAction(XmlNode node)
+		{
+			Action action;
+			// get the "code" attribute node
+			XmlNode code_node = node.Attributes["code"];
+			if (null == code_node)
+				return  null;
+			// get the action name
+			string code   = code_node.InnerText;
+			string prefix = "struct ";
+			if (code.StartsWith(prefix))
+				code = code.Substring(prefix.Length);
+			// get type information
+			try
+			{
+				// initialize main object
+				Type action_type = Type.GetType("TriggerEdit.Definitions." + code);
+				action = (Action)Activator.CreateInstance(action_type);
+				// set properties
+				PropertyInfo[] properties = action_type.GetProperties();
+				foreach (PropertyInfo property in properties)
+					if (
+						property.Name == "attackTimer"   ||
+						property.Name == "delayTimer"    ||
+						property.Name == "durationTimer" ||
+						property.Name == "timer")
+					{
+						XmlNode property_node = node.SelectSingleNode(
+							"*[@name=\"" + property.Name + "\"]/int[@name=\"time\"]");
+						if (null == property_node)
+							continue;
+						property.SetValue(
+							action,
+							int.Parse(property_node.InnerText),
+							null);
+					} 
+					else if (property.PropertyType == typeof(TriggerEdit.Definitions.ControlCollection))
+					{
+						// get the control nodes
+						XmlNode property_node = node.SelectSingleNode(
+							"*[@name=\"" + property.Name + "\"]");
+						if (null == property_node)
+							continue;
+						XmlNodeList control_nodes = property_node.SelectNodes("set");
+						if (null == control_nodes || 0 == control_nodes.Count)
+							continue;
+						// initialize the collection
+						ControlCollection controls = new ControlCollection();
+						// set properties
+						PropertyInfo[] control_properties = typeof(Control).GetProperties();
+						foreach (XmlNode control_node in control_nodes)
+						{
+							Control control = new Control();
+							foreach (PropertyInfo control_property in control_properties)
+							{
+								XmlNode control_property_node = control_node.SelectSingleNode(
+									"*[@name=\"" + control_property.Name + "\"]");
+								if (null == control_property_node)
+									continue;
+								if (control_property.PropertyType.IsEnum)
+									control_property.SetValue(
+										action,
+										Enum.Parse(
+											control_property.PropertyType,
+											control_property_node.InnerText),
+										null);
+								else
+									control_property.SetValue(
+										control,
+										Convert.ChangeType(
+											control_property_node.InnerText,
+											control_property.PropertyType),
+										null);
+							}
+							controls.Add(control);
+						}
+					}
+					else
+					{
+						XmlNode property_node = node.SelectSingleNode(
+							"*[@name=\"" + property.Name + "\"]");
+						if (null == property_node)
+							continue;
+						if (property.PropertyType.IsEnum)
+							property.SetValue(
+								action,
+								Enum.Parse(property.PropertyType, property_node.InnerText),
+								null);
+						else
+							property.SetValue(
+								action,
+								Convert.ChangeType(property_node.InnerText, property.PropertyType),
+								null);
+					}
+			}
+			catch (Exception e)
+			{
+				Debug.WriteLine("Action property could not be set.");
+				Debug.WriteLine(e.ToString());
+				return null;
+			}
+			return action;
+		}
+
 		private Condition ReadCondition(XmlNode node)
 		{
 			Condition condition;
@@ -76,7 +180,7 @@ namespace TriggerEdit
 				return  null;
 			// get the condition name
 			string code   = code_node.InnerText;
-			string prefix = "struct Condition";
+			string prefix = "struct ";
 			if (code.StartsWith(prefix))
 				code = code.Substring(prefix.Length);
 			// get type information
@@ -105,7 +209,7 @@ namespace TriggerEdit
 							null);
 				}
 				// set preconditions
-				if ("Switcher" == code)
+				if ("ConditionSwitcher" == code)
 				{
 					XmlNodeList wrappers = node.SelectNodes(
 						"*[@name=\"conditions\"]/set");
@@ -144,7 +248,7 @@ namespace TriggerEdit
 		public int       Y;
 		public float     v_x_;
 		public float     v_y_;
-		public Property  action;
+		public Action    action;
 		public Color     color_;
 		public Color     outline_;
 		public Condition condition;
@@ -197,6 +301,9 @@ namespace TriggerEdit
 		}
 		public enum ControlID
 		{
+			SQSH_BAR_SQUAD1_ID,
+			SQSH_COMMANDER_ID,
+			SQSH_CORRIDOR_ALPHA_ID,
 			SQSH_FIELD_OFF_ID,
 			SQSH_FIELD_ON_ID,
 			SQSH_FRAME_TERRAIN_BUILD1_ID,
@@ -205,13 +312,26 @@ namespace TriggerEdit
 			SQSH_FRAME_TERRAIN_BUILD4_ID,
 			SQSH_FRAME_TERRAIN_BUILD5_ID,
 			SQSH_OFFICER_ID,
+			SQSH_OFFICER_PLANT_ID,
+			SQSH_PROGRESS_COLLECTED,
 			SQSH_RELAY_ID,
 			SQSH_SELPANEL_BRIG_CHANGE_ID,
+			SQSH_SELPANEL_SELL_ID,
+			SQSH_SOLDIER_PLANT_ID,
 			SQSH_SQUAD_UNIT2,
+			SQSH_STATION_HARKBACK_LAB_ID,
+			SQSH_STATION1_ID,
 			SQSH_STATION2_ID,
+			SQSH_STATION3_ID,
+			SQSH_STATION4_ID,
 			SQSH_STATION5_ID,
 			SQSH_TAB_BUILD_ID,
+			SQSH_TECHNIC_PLANT_ID,
+			SQSH_WORKAREA1_ID,
+			SQSH_WORKAREA2_ID,
 			SQSH_WORKAREA3_ID,
+			SQSH_WORKAREA4_ID,
+			SQSH_YADRO_EX_ID,
 			SQSH_YADRO_ID
 		}
 		public enum Difficulty
@@ -236,6 +356,18 @@ namespace TriggerEdit
 			COMPARE_LESS,
 			COMPARE_LESS_EQ
 		}
+		public enum PlacementStrategy
+		{
+			PLACEMENT_STRATEGY_CORE_CATCHING_CORRIDOR,
+			PLACEMENT_STRATEGY_CORE_CATCHING,
+			PLACEMENT_STRATEGY_CORE_OFFENSIVE,
+			PLACEMENT_STRATEGY_CORE,
+			PLACEMENT_STRATEGY_GUN_TO_ENEMY_BUILDING,
+			PLACEMENT_STRATEGY_GUN,
+			PLACEMENT_STRATEGY_PLANT,
+			PLACEMENT_STRATEGY_SPECIAL_WEAPON,
+			PLACEMENT_STRATEGY_STATION
+		}
 		public enum PlayerStateType
 		{
 			PLAYER_STATE_UNABLE_TO_PLACE_BUILDING,
@@ -254,6 +386,13 @@ namespace TriggerEdit
 			EXODUS,
 			HARKBACKHOOD
 		}
+		public enum SellFactor
+		{
+			AI_SELL_CLOSEST_TO_FRAME,
+			AI_SELL_FAREST_FROM_FRAME,
+			AI_SELL_IF_DAMAGE_GREATER,
+			AI_SELL_IF_GUN_CANT_REACH_BUILDINGS
+		}
 		public enum SquadID
 		{
 			CHOOSE_SQUAD_1,
@@ -267,17 +406,23 @@ namespace TriggerEdit
 		{
 			FILTH,
 			GEO
-		}	
-		public enum SuperWeapon
+		}
+		public enum SwitchMode
 		{
-			UNIT_ATTRIBUTE_GUN_BALLISTIC,
-			UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR,
-			UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR
+			ON,
+			OFF
 		}
 		public enum SwitchType
 		{
 			AND,
 			OR
+		}
+		public enum TaskType
+		{
+			ASSIGNED,
+			COMPLETED,
+			FAILED,
+			TO_DELETE
 		}
 		public enum TeleportationType
 		{
@@ -401,8 +546,17 @@ namespace TriggerEdit
 			UNIT_ATTRIBUTE_UNSEEN,
 			UNIT_ATTRIBUTE_WARGON
 		}
+		public enum Weapon
+		{
+			UNIT_ATTRIBUTE_GUN_BALLISTIC,
+			UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR,
+			UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR,
+			UNIT_ATTRIBUTE_SCUM_SPOT
+		}
 
 		#endregion
+
+		#region conditions
 
 		public class Condition : ICloneable
 		{
@@ -449,12 +603,12 @@ namespace TriggerEdit
 				get
 				{
 					string name = GetType().ToString();
-					name = name.Substring(name.LastIndexOf(Type.Delimiter) + 1);
+					name = name.Substring(name.LastIndexOf(Type.Delimiter) + "Condition".Length + 1);
 					return name;
 				}
 			}
 		}
-		public class ActivateSpot : Condition
+		public class ConditionActivateSpot : Condition
 		{
 			private SpotType type_;
 			public  SpotType type
@@ -463,7 +617,7 @@ namespace TriggerEdit
 				set { type_ = value; }
 			}
 		}
-		public class BuildingNearBuilding : Condition
+		public class ConditionBuildingNearBuilding : Condition
 		{
 			private float distance_;
 			public  float distance
@@ -484,7 +638,7 @@ namespace TriggerEdit
 				set { playerType2_ = value; }
 			}
 		}
-		public class CaptureBuilding : Condition
+		public class ConditionCaptureBuilding : Condition
 		{
 			private UnitType object_;
 			public  UnitType @object
@@ -499,7 +653,7 @@ namespace TriggerEdit
 				set { playerType_ = value; }
 			}
 		}
-		public class CheckBelligerent : Condition
+		public class ConditionCheckBelligerent : Condition
 		{
 			private Race belligerent_;
 			public  Race belligerent
@@ -508,7 +662,7 @@ namespace TriggerEdit
 				set { belligerent_ = value; }
 			}
 		}
-		public class ClickOnButton : Condition
+		public class ConditionClickOnButton : Condition
 		{
 			private ControlID controlID_;
 			public  ControlID controlID
@@ -523,10 +677,10 @@ namespace TriggerEdit
 				set { counter_ = value; }
 			}
 		}
-		public class CorridorOmegaUpgraded : Condition
+		public class ConditionCorridorOmegaUpgraded : Condition
 		{
 		}
-		public class CutSceneWasSkipped : Condition
+		public class ConditionCutSceneWasSkipped : Condition
 		{
 			private int timeMax_;
 			public  int timeMax
@@ -535,7 +689,7 @@ namespace TriggerEdit
 				set { timeMax_ = value; }
 			}
 		}
-		public class DifficultyLevel : Condition
+		public class ConditionDifficultyLevel : Condition
 		{
 			private Difficulty difficulty_;
 			public  Difficulty difficulty
@@ -544,7 +698,7 @@ namespace TriggerEdit
 				set { difficulty_ = value; }
 			}
 		}
-		public class EnegyLevelLowerReserve : Condition
+		public class ConditionEnegyLevelLowerReserve : Condition
 		{
 			private float energyReserve_;
 			public  float energyReserve
@@ -553,7 +707,7 @@ namespace TriggerEdit
 				set { energyReserve_ = value; }
 			}
 		}
-		public class EnegyLevelUpperReserve : Condition
+		public class ConditionEnegyLevelUpperReserve : Condition
 		{
 			private float energyReserve_;
 			public  float energyReserve
@@ -562,7 +716,7 @@ namespace TriggerEdit
 				set { energyReserve_ = value; }
 			}
 		}
-		public class FrameState : Condition
+		public class ConditionFrameState : Condition
 		{
 			private FrameStateType f_state_;
 			public  FrameStateType state
@@ -583,10 +737,10 @@ namespace TriggerEdit
 				set { spiralChargingPercent_ = value; }
 			}
 		}
-		public class IsFieldOn : Condition
+		public class ConditionIsFieldOn : Condition
 		{
 		}
-		public class KillObject : Condition
+		public class ConditionKillObject : Condition
 		{
 			private UnitType object_;
 			public  UnitType @object
@@ -607,7 +761,7 @@ namespace TriggerEdit
 				set { playerType_ = value; }
 			}
 		}
-		public class KillObjectByLabel : Condition
+		public class ConditionKillObjectByLabel : Condition
 		{
 			private string label_;
 			public  string label
@@ -616,7 +770,7 @@ namespace TriggerEdit
 				set { label_ = value; }
 			}
 		}
-		public class MutationEnabled : Condition
+		public class ConditionMutationEnabled : Condition
 		{
 			private UnitType unitType_;
 			public  UnitType unitType
@@ -625,7 +779,7 @@ namespace TriggerEdit
 				set { unitType_ = value; }
 			}
 		}
-		public class NumberOfBuildingByCoresCapacity : Condition
+		public class ConditionNumberOfBuildingByCoresCapacity : Condition
 		{
 			private Building building_;
 			public  Building building
@@ -658,7 +812,7 @@ namespace TriggerEdit
 				set { playerType_ = value; }
 			}
 		}
-		public class ObjectByLabelExists : Condition
+		public class ConditionObjectByLabelExists : Condition
 		{
 			private string label_;
 			public  string label
@@ -667,7 +821,7 @@ namespace TriggerEdit
 				set { label_ = value; }
 			}
 		}
-		public class ObjectExists : Condition
+		public class ConditionObjectExists : Condition
 		{
 			private UnitType object_;
 			public  UnitType @object
@@ -694,7 +848,7 @@ namespace TriggerEdit
 				set { constructedAndConstructing_ = value; }
 			}
 		}
-		public class ObjectNearObjectByLabel : Condition
+		public class ConditionObjectNearObjectByLabel : Condition
 		{
 			private string label_;
 			public  string label
@@ -727,10 +881,10 @@ namespace TriggerEdit
 				set { distance_ = value; }
 			}
 		}
-		public class OnlyMyClan : Condition
+		public class ConditionOnlyMyClan : Condition
 		{
 		}
-		public class OutOfEnergyCapacity : Condition
+		public class ConditionOutOfEnergyCapacity : Condition
 		{
 			private int chargingPercent_;
 			public  int chargingPercent
@@ -739,7 +893,7 @@ namespace TriggerEdit
 				set { chargingPercent_ = value; }
 			}
 		}
-		public class PlayerState : Condition
+		public class ConditionPlayerState : Condition
 		{
 			private PlayerStateType playerState_;
 			public  PlayerStateType playerState
@@ -748,13 +902,13 @@ namespace TriggerEdit
 				set { playerState_ = value; }
 			}
 		}
-		public class SetSquadWayPoint : Condition
+		public class ConditionSetSquadWayPoint : Condition
 		{
 		}
-		public class SkipCutScene : Condition
+		public class ConditionSkipCutScene : Condition
 		{
 		}
-		public class SquadGoingToAttack : Condition
+		public class ConditionSquadGoingToAttack : Condition
 		{
 			private SquadID chooseSquadID_;
 			public  SquadID chooseSquadID
@@ -763,7 +917,7 @@ namespace TriggerEdit
 				set { chooseSquadID_ = value; }
 			}
 		}
-		public class SquadSufficientUnits : Condition
+		public class ConditionSquadSufficientUnits : Condition
 		{
 			private PlayerType playerType_;
 			public  PlayerType playerType
@@ -814,7 +968,7 @@ namespace TriggerEdit
 				set { technics_ = value; }
 			}
 		}
-		public class Switcher : Condition
+		public class ConditionSwitcher : Condition
 		{
 			private SwitchType type_;
 			public  SwitchType type
@@ -823,7 +977,7 @@ namespace TriggerEdit
 				set { type_ = value; }
 			}
 		}
-		public class Teleportation : Condition
+		public class ConditionTeleportation : Condition
 		{
 			private TeleportationType teleportationType_;
 			public  TeleportationType teleportationType
@@ -838,7 +992,7 @@ namespace TriggerEdit
 				set { playerType_ = value; }
 			}
 		}
-		public class TerrainLeveledNearObjectByLabel : Condition
+		public class ConditionTerrainLeveledNearObjectByLabel : Condition
 		{
 			private string label_;
 			public  string label
@@ -853,7 +1007,7 @@ namespace TriggerEdit
 				set { radius_ = value; }
 			}
 		}
-		public class TimeMatched : Condition
+		public class ConditionTimeMatched : Condition
 		{
 			private int time_;
 			public  int time
@@ -862,7 +1016,7 @@ namespace TriggerEdit
 				set { time_ = value; }
 			}
 		}
-		public class ToolzerSelectedNearObjectByLabel : Condition
+		public class ConditionToolzerSelectedNearObjectByLabel : Condition
 		{
 			private string label_;
 			public  string label
@@ -877,7 +1031,7 @@ namespace TriggerEdit
 				set { radius_ = value; }
 			}
 		}
-		public class UnitClassIsGoingToBeAttacked : Condition
+		public class ConditionUnitClassIsGoingToBeAttacked : Condition
 		{
 			private UnitClass victimUnitClass_;
 			public  UnitClass victimUnitClass
@@ -892,7 +1046,7 @@ namespace TriggerEdit
 				set { agressorUnitClass_ = value; }
 			}
 		}
-		public class UnitClassUnderAttack : Condition
+		public class ConditionUnitClassUnderAttack : Condition
 		{
 			private UnitClass victimUnitClass_;
 			public  UnitClass victimUnitClass
@@ -919,14 +1073,650 @@ namespace TriggerEdit
 				set { playerType_ = value; }
 			}
 		}
-		public class WeaponIsFiring : Condition
+		public class ConditionWeaponIsFiring : Condition
 		{
-			private SuperWeapon gun_;
-			public  SuperWeapon gun
+			private Weapon gun_;
+			public  Weapon gun
 			{
 				get { return gun_; }
 				set { gun_ = value; }
 			}
 		}
+
+		#endregion
+
+		#region actions
+
+		public class Action
+		{
+			#region ICloneable Members
+
+			/// <summary>
+			/// Copy the object's public properties.
+			/// </summary>
+			public object Clone()
+			{
+				Action action = (Action)Activator.CreateInstance(GetType());
+				// copy properties
+				PropertyInfo[] properties = GetType().GetProperties();
+				foreach (PropertyInfo property in properties)
+					if (property.CanRead && property.CanWrite)
+						property.SetValue(action, property.GetValue(this, null), null);
+				return action;
+			}
+
+			#endregion
+
+			public ArrayList preconditions;
+			[System.ComponentModel.Browsable(false)]
+			public string Name
+			{
+				get
+				{
+					string name = GetType().ToString();
+					name = name.Substring(name.LastIndexOf(Type.Delimiter) + "Action".Length + 1);
+					return name;
+				}
+			}
+		}
+		public class ActionActivateAllSpots : Action
+		{
+		}
+		public class ActionActivateObjectByLabel : Action
+		{
+			private string label_;
+			public  string label
+			{
+				get { return label_; }
+				set { label_ = value; }
+			}
+		}
+		public class ActionAttackBySpecialWeapon : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private Weapon weapon_;
+			public  Weapon weapon
+			{
+				get { return weapon_; }
+				set { weapon_ = value; }
+			}
+			private UnitType unitsToAttack_;
+			public  UnitType unitsToAttack
+			{
+				get { return unitsToAttack_; }
+				set { unitsToAttack_ = value; }
+			}
+			private UnitClass unitClassToAttack_;
+			public  UnitClass unitClassToAttack
+			{
+				get { return unitClassToAttack_; }
+				set { unitClassToAttack_ = value; }
+			}
+		}
+		public class ActionDeactivateAllSpots : Action
+		{
+		}
+		public class ActionDeactivateObjectByLabel : Action
+		{
+			private string label_;
+			public  string label
+			{
+				get { return label_; }
+				set { label_ = value; }
+			}
+		}
+		public class ActionDefeat : Action
+		{
+		}
+		public class ActionDelay : Action
+		{
+			private int delay_;
+			public  int delay
+			{
+				get { return delay_; }
+				set { delay_ = value; }
+			}
+			private bool showTimer_;
+			public  bool showTimer
+			{
+				get { return showTimer_; }
+				set { showTimer_ = value; }
+			}
+			private bool scaleByDifficulty_;
+			public  bool scaleByDifficulty
+			{
+				get { return scaleByDifficulty_; }
+				set { scaleByDifficulty_ = value; }
+			}
+			private int timer_;
+			public  int timer
+			{
+				get { return timer_; }
+				set { timer_ = value; }
+			}
+		}
+		public class ActionHoldBuilding : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private Building building_;
+			public  Building building
+			{
+				get { return building_; }
+				set { building_ = value; }
+			}
+		}
+		public class ActionInstallFrame : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+		}
+		public class ActionKillObject : Action
+		{
+			private UnitType object_;
+			public  UnitType @object
+			{
+				get { return object_; }
+				set { object_ = value; }
+			}
+		}
+		public class ActionMessage : Action
+		{
+			private string messageID_;
+			[ System.ComponentModel.Description(
+				"Message ID from Texts.btdb. " +
+				"For example: \"Mission Tips.Mission 26.Tip 6\".") ]
+			public  string messageID
+			{
+				get { return messageID_; }
+				set { messageID_ = value; }
+			}
+			private string message_;
+			public  string message
+			{
+				get { return message_; }
+				set { message_ = value; }
+			}
+			private int delay_;
+			public  int delay
+			{
+				get { return delay_; }
+				set { delay_ = value; }
+			}
+			private int duration_;
+			public  int duration
+			{
+				get { return duration_; }
+				set { duration_ = value; }
+			}
+			private bool syncroBySound_;
+			public  bool syncroBySound
+			{
+				get { return syncroBySound_; }
+				set { syncroBySound_ = value; }
+			}
+			private int delayTimer_; 
+			public  int delayTimer
+			{
+				get { return delayTimer_; }
+				set { delayTimer_ = value; }
+			}
+			private int durationTimer_;
+			public  int durationTimer
+			{
+				get { return durationTimer_; }
+				set { durationTimer_ = value; }
+			}
+		}
+		public class ActionOrderBuilding : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private Building building_;
+			public  Building building
+			{
+				get { return building_; }
+				set { building_ = value; }
+			}
+			private PlacementStrategy placementStrategy_;
+			public  PlacementStrategy placementStrategy
+			{
+				get { return placementStrategy_; }
+				set { placementStrategy_ = value; }
+			}
+			private float energyReserve_;
+			public  float energyReserve
+			{
+				get { return energyReserve_; }
+				set { energyReserve_ = value; }
+			}
+			private int buildDurationMax_;
+			public  int buildDurationMax
+			{
+				get { return buildDurationMax_; }
+				set { buildDurationMax_ = value; }
+			}
+			[ System.ComponentModel.Description("[0-3]") ]
+			private int priority_;
+			public  int priority
+			{
+				get { return priority_; }
+				set { priority_ = value; }
+			}
+		}
+		public class ActionOscillateCamera : Action
+		{
+			private int duration_;
+			public  int duration
+			{
+				get { return duration_; }
+				set { duration_ = value; }
+			}
+			private float factor_; 
+			public  float factor
+			{
+				get { return factor_; }
+				set { factor_ = value; }
+			}
+		}
+		public class ActionRepareObjectByLabel : Action
+		{
+			private string label_;
+			public  string label
+			{
+				get { return label_; }
+				set { label_ = value; }
+			}
+		}
+		public class ActionSellBuilding : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private Building building_;
+			public  Building building
+			{
+				get { return building_; }
+				set { building_ = value; }
+			}
+			private float damagePercent_;
+			public  float damagePercent
+			{
+				get { return damagePercent_; }
+				set { damagePercent_ = value; }
+			}
+			private SellFactor sellFactor_;
+			public  SellFactor sellFactor
+			{
+				get { return sellFactor_; }
+				set { sellFactor_ = value; }
+			}
+		}
+		public class ActionSetCamera : Action
+		{
+			private string cameraSplineName_;
+			public  string cameraSplineName
+			{
+				get { return cameraSplineName_; }
+				set { cameraSplineName_ = value; }
+			}
+			private float stepTime_;
+			public  float stepTime
+			{
+				get { return stepTime_; }
+				set { stepTime_ = value; }
+			}
+			private float cycles_;
+			public  float cycles
+			{
+				get { return cycles_; }
+				set { cycles_ = value; }
+			}
+			private bool smoothTransition_;
+			public  bool smoothTransition
+			{
+				get { return smoothTransition_; }
+				set { smoothTransition_ = value; }
+			}
+		}
+		public class ActionSetCameraAtObject : Action
+		{
+			private UnitType object_;
+			public  UnitType @object
+			{
+				get { return object_; }
+				set { object_ = value; }
+			}
+			private PlayerType playerType_;
+			public  PlayerType playerType
+			{
+				get { return playerType_; }
+				set { playerType_ = value; }
+			}
+			private int transitionTime_;
+			public  int transitionTime
+			{
+				get { return transitionTime_; }
+				set { transitionTime_ = value; }
+			}
+			private bool setFollow_;
+			public  bool setFollow
+			{
+				get { return setFollow_; }
+				set { setFollow_ = value; }
+			}
+			private int turnTime_;
+			public  int turnTime
+			{
+				get { return turnTime_; }
+				set { turnTime_ = value; }
+			}
+		}
+		public class ActionSetControls : Action
+		{
+			private ControlCollection controls_;
+			public  ControlCollection controls
+			{
+				get { return controls_; }
+				set { controls_ = value; }
+			}
+		}
+		public class ActionSetInterface : Action
+		{
+			private bool enableInterface_;
+			public  bool enableInterface
+			{
+				get { return enableInterface_; }
+				set { enableInterface_ = value; }
+			}
+		}
+		public class ActionSquadAttack : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private SquadID chooseSquadID_;
+			public  SquadID chooseSquadID
+			{
+				get { return chooseSquadID_; }
+				set { chooseSquadID_ = value; }
+			}
+			private UnitType attackByType_;
+			public  UnitType attackByType
+			{
+				get { return attackByType_; }
+				set { attackByType_ = value; }
+			}
+			private UnitType unitsToAttack_;
+			public  UnitType unitsToAttack
+			{
+				get { return unitsToAttack_; }
+				set { unitsToAttack_ = value; }
+			}
+			private UnitClass unitClassToAttack_;
+			public  UnitClass unitClassToAttack
+			{
+				get { return unitClassToAttack_; }
+				set { unitClassToAttack_ = value; }
+			}
+			private bool offensive_;
+			public  bool offensive
+			{
+				get { return offensive_; }
+				set { offensive_ = value; }
+			}
+			private int unitsNumber_;
+			public  int unitsNumber
+			{
+				get { return unitsNumber_; }
+				set { unitsNumber_ = value; }
+			}
+			private int soldiers_;
+			public  int soldiers
+			{
+				get { return soldiers_; }
+				set { soldiers_ = value; }
+			}
+			private int officers_;
+			public  int officers
+			{
+				get { return officers_; }
+				set { officers_ = value; }
+			}
+			private int technics_;
+			public  int technics
+			{
+				get { return technics_; }
+				set { technics_ = value; }
+			}
+			private int attackTime_;
+			public  int attackTime
+			{
+				get { return attackTime_; }
+				set { attackTime_ = value; }
+			}
+			[ System.ComponentModel.Description("[0-2]") ]
+			private int remutateCounter_;
+			public  int remutateCounter
+			{
+				get { return remutateCounter_; }
+				set { remutateCounter_ = value; }
+			}
+			private bool holdProduction_;
+			public  bool holdProduction
+			{
+				get { return holdProduction_; }
+				set { holdProduction_ = value; }
+			}
+			private float squadFollowDistance_;
+			public  float squadFollowDistance
+			{
+				get { return squadFollowDistance_; }
+				set { squadFollowDistance_ = value; }
+			}
+			private SquadID squadToFollowBy_;
+			public  SquadID squadToFollowBy
+			{
+				get { return squadToFollowBy_; }
+				set { squadToFollowBy_ = value; }
+			}
+			private bool ignoreLastTarget_;
+			public  bool ignoreLastTarget
+			{
+				get { return ignoreLastTarget_; }
+				set { ignoreLastTarget_ = value; }
+			}
+			private bool returnToBase_;
+			public  bool returnToBase
+			{
+				get { return returnToBase_; }
+				set { returnToBase_ = value; }
+			}
+			private bool interruptable_;
+			public  bool interruptable
+			{
+				get { return interruptable_; }
+				set { interruptable_ = value; }
+			}
+			private int attackTimer_;
+			public  int attackTimer
+			{
+				get { return attackTimer_; }
+				set { attackTimer_ = value; }
+			}
+		}
+		public class ActionSquadOrderUnits : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private SquadID chooseSquadID_;
+			public  SquadID chooseSquadID
+			{
+				get { return chooseSquadID_; }
+				set { chooseSquadID_ = value; }
+			}
+			private int soldiers_;
+			public  int soldiers
+			{
+				get { return soldiers_; }
+				set { soldiers_ = value; }
+			}
+			private int officers_;
+			public  int officers
+			{
+				get { return officers_; }
+				set { officers_ = value; }
+			}
+			private int technics_;
+			public  int technics
+			{
+				get { return technics_; }
+				set { technics_ = value; }
+			}
+			private float energyReserve_;
+			public  float energyReserve
+			{
+				get { return energyReserve_; }
+				set { energyReserve_ = value; }
+			}
+		}
+		public class ActionSwitchFieldOn : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private int duration_;
+			public  int duration
+			{
+				get { return duration_; }
+				set { duration_ = value; }
+			}
+			private float energyReserve_;
+			public  float energyReserve
+			{
+				get { return energyReserve_; }
+				set { energyReserve_ = value; }
+			}
+			private bool allCores_;
+			public  bool allCores
+			{
+				get { return allCores_; }
+				set { allCores_ = value; }
+			}
+			private bool onlyIfCoreDamaged_;
+			public  bool onlyIfCoreDamaged
+			{
+				get { return onlyIfCoreDamaged_; }
+				set { onlyIfCoreDamaged_ = value; }
+			}
+			private int timer_;
+			public  int timer
+			{
+				get { return timer_; }
+				set { timer_ = value; }
+			}
+		}
+		public class ActionSwitchGuns : Action
+		{
+			private bool onlyIfAi_;
+			public  bool onlyIfAi
+			{
+				get { return onlyIfAi_; }
+				set { onlyIfAi_ = value; }
+			}
+			private SwitchMode mode_;
+			public  SwitchMode mode
+			{
+				get { return mode_; }
+				set { mode_ = value; }
+			}
+			private Weapon gunID_;
+			public  Weapon gunID
+			{
+				get { return gunID_; }
+				set { gunID_ = value; }
+			}
+		}
+		public class ActionTask : Action
+		{
+			private TaskType type_;
+			public  TaskType type
+			{
+				get { return type_; }
+				set { type_ = value; }
+			}
+			[ System.ComponentModel.Description(
+				  "Task ID from Texts.btdb. " +
+				  "For example: \"Mission Tips.Mission 15.Task 1\".") ]
+			private string taskID_;
+			public  string taskID
+			{
+				get { return taskID_; }
+				set { taskID_ = value; }
+			}
+			private int duration_;
+			public  int duration
+			{
+				get { return duration_; }
+				set { duration_ = value; }
+			}
+			private bool syncroBySound_;
+			public  bool syncroBySound
+			{
+				get { return syncroBySound_; }
+				set { syncroBySound_ = value; }
+			}
+			private bool showTips_;
+			public  bool showTips
+			{
+				get { return showTips_; }
+				set { showTips_ = value; }
+			}
+			private int durationTimer_;
+			public  int durationTimer
+			{
+				get { return durationTimer_; }
+				set { durationTimer_ = value; }
+			}
+		}
+		public class ActionTeleportationOut : Action
+		{
+		}
+		public class ActionVictory : Action
+		{
+		}
+
+
+		#endregion
 	}
 }

@@ -1,0 +1,658 @@
+[ TypeConverter(typeof(ExpandableObjectConverter)) ]
+public class Control
+{
+	private ControlID controlID_;
+	public  ControlID controlID
+	{
+		get { return controlID_; }
+		set { controlID_ = value; }
+	}
+	private bool enabled_;
+	public  bool enabled
+	{
+		get { return enabled_; }
+		set { enabled_ = value; }
+	}
+	private bool visible_;
+	public  bool visible
+	{
+		get { return visible_; }
+		set { visible_ = value; }
+	}
+	private bool flashing_;
+	public  bool flashing
+	{
+		get { return flashing_; }
+		set { flashing_ = value; }
+	}
+	private int tabNumber_;
+	public  int tabNumber
+	{
+		get { return tabNumber_; }
+		set { tabNumber_ = value; }
+	}
+}
+public enum PlacementStrategy
+{
+	PLACEMENT_STRATEGY_CORE_CATCHING_CORRIDOR,
+	PLACEMENT_STRATEGY_CORE_CATCHING,
+	PLACEMENT_STRATEGY_CORE_OFFENSIVE,
+	PLACEMENT_STRATEGY_CORE,
+	PLACEMENT_STRATEGY_GUN_TO_ENEMY_BUILDING,
+	PLACEMENT_STRATEGY_GUN,
+	PLACEMENT_STRATEGY_PLANT,
+	PLACEMENT_STRATEGY_SPECIAL_WEAPON,
+	PLACEMENT_STRATEGY_STATION
+}
+public enum SellFactor
+{
+	AI_SELL_CLOSEST_TO_FRAME,
+	AI_SELL_FAREST_FROM_FRAME,
+	AI_SELL_IF_DAMAGE_GREATER,
+	AI_SELL_IF_GUN_CANT_REACH_BUILDINGS
+}	
+public enum SwitchMode
+{
+	ON,
+	OFF
+}
+public enum TaskType
+{
+	ASSIGNED,
+	COMPLETED,
+	FAILED,
+	TO_DELETE
+}
+public class Action
+{
+}
+public class ActionActivateAllSpots : Action
+{
+}
+public class ActionActivateObjectByLabel : Action
+{
+	private string label_;
+	public  string label
+	{
+		get { return label_; }
+		set { label_ = value; }
+	}
+}
+public class ActionAttackBySpecialWeapon : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private Weapon weapon_;
+	public  Weapon weapon
+	{
+		get { return weapon_; }
+		set { weapon_ = value; }
+	}
+	private UnitType unitsToAttack_;
+	public  UnitType unitsToAttack
+	{
+		get { return unitsToAttack_; }
+		set { unitsToAttack_ = value; }
+	}
+	private UnitClass unitClassToAttack_;
+	public  UnitClass unitClassToAttack
+	{
+		get { return unitClassToAttack_; }
+		set { unitClassToAttack_ = value; }
+	}
+}
+public class ActionDeactivateAllSpots : Action
+{
+}
+public class ActionDeactivateObjectByLabel : Action
+{
+	private string label_;
+	public  string label
+	{
+		get { return label_; }
+		set { label_ = value; }
+	}
+}
+public class ActionDefeat : Action
+{
+}
+public class ActionDelay : Action
+{
+	private int delay_;
+	public  int delay
+	{
+		get { return delay_; }
+		set { delay_ = value; }
+	}
+	private bool showTimer_;
+	public  bool showTimer
+	{
+		get { return showTimer_; }
+		set { showTimer_ = value; }
+	}
+	private bool scaleByDifficulty_;
+	public  bool scaleByDifficulty
+	{
+		get { return scaleByDifficulty_; }
+		set { scaleByDifficulty_ = value; }
+	}
+	private int timer_;
+	public  int timer
+	{
+		get { return timer_; }
+		set { timer_ = value; }
+	}
+}
+public class ActionHoldBuilding : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private Building building_;
+	public  Building building
+	{
+		get { return building_; }
+		set { building_ = value; }
+	}
+}
+public class ActionInstallFrame : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+}
+public class ActionKillObject : Action
+{
+	private UnitType object_;
+	public  UnitType @object
+	{
+		get { return object_; }
+		set { object_ = value; }
+	}
+}
+public class ActionMessage : Action
+{
+	private string messageID_;
+	public  string messageID
+	{
+		get { return messageID_; }
+		set { messageID_ = value; }
+	}
+	private string message_;
+	public  string message
+	{
+		get { return message_; }
+		set { message_ = value; }
+	}
+	private int delay_;
+	public  int delay
+	{
+		get { return delay_; }
+		set { delay_ = value; }
+	}
+	private int duration_;
+	public  int duration
+	{
+		get { return duration_; }
+		set { duration_ = value; }
+	}
+	private bool syncroBySound_;
+	public  bool syncroBySound
+	{
+		get { return syncroBySound; }
+		set { syncroBySound = value; }
+	}
+	private int delayTimer_; 
+	public  int delayTimer
+	{
+		get { return delayTimer_; }
+		set { delayTimer_ = value; }
+	}
+	private int durationTimer_;
+	public  int durationTimer
+	{
+		get { return durationTimer_; }
+		set { durationTimer_ = value; }
+	}
+}
+public class ActionOrderBuilding : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private Building building_;
+	public  Building building
+	{
+		get { return building_; }
+		set { building_ = value; }
+	}
+	private PlacementStrategy placementStrategy_;
+	public  PlacementStrategy placementStrategy
+	{
+		get { return placementStrategy_; }
+		set { placementStrategy_ = value; }
+	}
+	private float energyReserve_;
+	public  float energyReserve
+	{
+		get { return energyReserve_; }
+		set { energyReserve_ = value; }
+	}
+	private int buildDurationMax_;
+	public  int buildDurationMax
+	{
+		get { return buildDurationMax_; }
+		set { buildDurationMax_ = value; }
+	}
+	[ System.ComponentModel.Description("[0-3]") ]
+	private int priority_;
+	public  int priority
+	{
+		get { return priority_; }
+		set { priority_ = value; }
+	}
+}
+public class ActionOscillateCamera : Action
+{
+	private int duration_;
+	public  int duration
+	{
+		get { return duration_; }
+		set { duration_ = value; }
+	}
+	private float factor_; 
+	public  float factor
+	{
+		get { return factor_; }
+		set { factor_ = value; }
+	}
+}
+public class ActionRepareObjectByLabel : Action
+{
+	private string label_;
+	public  string label
+	{
+		get { return label_; }
+		set { label_ = value; }
+	}
+}
+public class ActionSellBuilding : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private Building building_;
+	public  Building building
+	{
+		get { return building_; }
+		set { building_ = value; }
+	}
+	private float damagePercent_;
+	public  float damagePercent
+	{
+		get { return damagePercent_; }
+		set { damagePercent_ = value; }
+	}
+	private SellFactor sellFactor_;
+	public  SellFactor sellFactor
+	{
+		get { return sellFactor_; }
+		set { sellFactor_ = value; }
+	}
+}
+public class ActionSetCamera : Action
+{
+	private string cameraSplineName_;
+	public  string cameraSplineName
+	{
+		get { return cameraSplineName_; }
+		set { cameraSplineName_ = value; }
+	}
+	private float stepTime_;
+	public  float stepTime
+	{
+		get { return stepTime_; }
+		set { stepTime_ = value; }
+	}
+	private float cycles_;
+	public  float cycles
+	{
+		get { return cycles_; }
+		set { cycles_ = value; }
+	}
+	private bool smoothTransition_;
+	public  bool smoothTransition
+	{
+		get { return smoothTransition_; }
+		set { smoothTransition_ = value; }
+	}
+}
+public class ActionSetCameraAtObject : Action
+{
+	private UnitType object_;
+	public  UnitType @object
+	{
+		get { return object_; }
+		set { object_ = value; }
+	}
+	private PlayerType playerType_;
+	public  PlayerType playerType
+	{
+		get { return playerType_; }
+		set { playerType_ = value; }
+	}
+	private int transitionTime_;
+	public  int transitionTime
+	{
+		get { return transitionTime_; }
+		set { transitionTime_ = value; }
+	}
+	private bool setFollow_;
+	public  bool setFollow
+	{
+		get { return setFollow_; }
+		set { setFollow_ = value; }
+	}
+	private int turnTime_;
+	public  int turnTime
+	{
+		get { return turnTime_; }
+		set { turnTime_ = value; }
+	}
+}
+public class ActionSetControls : Action
+{
+	private ControlCollection controls_;
+	public  ControlCollection controls
+	{
+		get { return controls_; }
+		set { controls_ = value; }
+	}
+}
+public class ActionSetInterface : Action
+{
+	private bool enableInterface_;
+	public  bool enableInterface
+	{
+		get { return enableInterface_; }
+		set { enableInterface_ = value; }
+	}
+}
+public class ActionSquadAttack : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private SquadID chooseSquadID_;
+	public  SquadID chooseSquadID
+	{
+		get { return chooseSquadID_; }
+		set { chooseSquadID_ = value; }
+	}
+	private UnitType attackByType_;
+	public  UnitType attackByType
+	{
+		get { return attackByType_; }
+		set { attackByType_ = value; }
+	}
+	private UnitType unitsToAttack_;
+	public  UnitType unitsToAttack
+	{
+		get { return unitsToAttack_; }
+		set { unitsToAttack_ = value; }
+	}
+	private UnitClass unitClassToAttack_;
+	public  UnitClass unitClassToAttack
+	{
+		get { return unitClassToAttack_; }
+		set { unitClassToAttack_ = value; }
+	}
+	private bool offensive_;
+	public  bool offensive
+	{
+		get { return offensive_; }
+		set { offensive_ = value; }
+	}
+	private int unitsNumber_;
+	public  int unitsNumber
+	{
+		get { return unitsNumber_; }
+		set { unitsNumber_ = value; }
+	}
+	private int soldiers_;
+	public  int soldiers
+	{
+		get { return soldiers_; }
+		set { soldiers_ = value; }
+	}
+	private int officers_;
+	public  int officers
+	{
+		get { return officers_; }
+		set { officers_ = value; }
+	}
+	private int technics_;
+	public  int technics
+	{
+		get { return technics_; }
+		set { technics_ = value; }
+	}
+	private int attackTime_;
+	public  int attackTime
+	{
+		get { return attackTime_; }
+		set { attackTime_ = value; }
+	}
+	[ System.ComponentModel.Description("[0-2]") ]
+	private int remutateCounter_;
+	public  int remutateCounter
+	{
+		get { return remutateCounter_; }
+		set { remutateCounter_ = value; }
+	}
+	private bool holdProduction_;
+	public  bool holdProduction
+	{
+		get { return holdProduction_; }
+		set { holdProduction_ = value; }
+	}
+	private float squadFollowDistance_;
+	public  float squadFollowDistance
+	{
+		get { return squadFollowDistance_; }
+		set { squadFollowDistance_ = value; }
+	}
+	private SquadID squadToFollowBy_;
+	public  SquadID squadToFollowBy
+	{
+		get { return squadToFollowBy_; }
+		set { squadToFollowBy_ = value; }
+	}
+	private bool ignoreLastTarget_;
+	public  bool ignoreLastTarget
+	{
+		get { return ignoreLastTarget_; }
+		set { ignoreLastTarget_ = value; }
+	}
+	private bool returnToBase_;
+	public  bool returnToBase
+	{
+		get { return returnToBase_; }
+		set { returnToBase_ = value; }
+	}
+	private bool interruptable_;
+	public  bool interruptable
+	{
+		get { return interruptable_; }
+		set { interruptable_ = value; }
+	}
+	private int attackTimer_;
+	public  int attackTimer
+	{
+		get { return attackTimer_; }
+		set { attackTimer_ = value; }
+	}
+}
+public class ActionSquadOrderUnits : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private SquadID chooseSquadID_;
+	public  SquadID chooseSquadID
+	{
+		get { return chooseSquadID_; }
+		set { chooseSquadID_ = value; }
+	}
+	private int soldiers_;
+	public  int soldiers
+	{
+		get { return soldiers_; }
+		set { soldiers_ = value; }
+	}
+	private int officers_;
+	public  int officers
+	{
+		get { return officers_; }
+		set { officers_ = value; }
+	}
+	private int technics_;
+	public  int technics
+	{
+		get { return technics_; }
+		set { technics_ = value; }
+	}
+	private float energyReserve_;
+	public  float energyReserve
+	{
+		get { return energyReserve_; }
+		set { energyReserve_ = value; }
+	}
+}
+public class ActionSwitchFieldOn : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private int duration_;
+	public  int duration
+	{
+		get { return duration_; }
+		set { duration_ = value; }
+	}
+	private float energyReserve_;
+	public  float energyReserve
+	{
+		get { return energyReserve_; }
+		set { energyReserve_ = value; }
+	}
+	private bool allCores_;
+	public  bool allCores
+	{
+		get { return allCores_; }
+		set { allCores_ = value; }
+	}
+	private bool onlyIfCoreDamaged_;
+	public  bool onlyIfCoreDamaged
+	{
+		get { return onlyIfCoreDamaged_; }
+		set { onlyIfCoreDamaged_ = value; }
+	}
+	private int timer_;
+	public  int timer
+	{
+		get { return timer_; }
+		set { timer_ = value; }
+	}
+}
+public class ActionSwitchGuns : Action
+{
+	private bool onlyIfAi_;
+	public  bool onlyIfAi
+	{
+		get { return onlyIfAi_; }
+		set { onlyIfAi_ = value; }
+	}
+	private SwitchMode mode_;
+	public  SwitchMode mode
+	{
+		get { return mode_; }
+		set { mode_ = value; }
+	}
+	private Weapon gunID_;
+	public  Weapon gunID
+	{
+		get { return gunID_; }
+		set { gunID_ = value; }
+	}
+}
+public class ActionTask : Action
+{
+	private TaskType type_;
+	public  TaskType type
+	{
+		get { return type_; }
+		set { type_ = value; }
+	}
+	private string taskID_;
+	public  string taskID
+	{
+		get { return taskID_; }
+		set { taskID_ = value; }
+	}
+	private int duration_;
+	public  int duration
+	{
+		get { return duration_; }
+		set { duration_ = value; }
+	}
+	private bool syncroBySound_;
+	public  bool syncroBySound
+	{
+		get { return syncroBySound_; }
+		set { syncroBySound_ = value; }
+	}
+	private bool showTips_;
+	public  bool showTips
+	{
+		get { return showTips_; }
+		set { showTips_ = value; }
+	}
+	private int durationTimer_;
+	public  int durationTimer
+	{
+		get { return durationTimer_; }
+		set { durationTimer_ = value; }
+	}
+}
+public class ActionTeleportationOut : Action
+{
+}
+public class ActionVictory : Action
+{
+}

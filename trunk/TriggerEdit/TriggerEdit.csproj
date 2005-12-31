@@ -112,6 +112,16 @@
         <Files>
             <Include>
                 <File
+                    RelPath = "ActionBuilder.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "ActionBuilder.resx"
+                    DependentUpon = "ActionBuilder.cs"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
                     RelPath = "App.ico"
                     BuildAction = "Content"
                 />
@@ -141,6 +151,11 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "ControlCollection.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "MainForm.cs"
                     SubType = "Form"
                     BuildAction = "Compile"
@@ -149,11 +164,6 @@
                     RelPath = "MainForm.resx"
                     DependentUpon = "MainForm.cs"
                     BuildAction = "EmbeddedResource"
-                />
-                <File
-                    RelPath = "Property.cs"
-                    SubType = "Code"
-                    BuildAction = "Compile"
                 />
                 <File
                     RelPath = "Trigger.cs"

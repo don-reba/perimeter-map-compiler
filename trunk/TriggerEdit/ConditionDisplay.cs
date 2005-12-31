@@ -34,7 +34,7 @@ namespace TriggerEdit
 					switch (name)
 					{
 						case "Switcher":
-							return ((Switcher)link_).type.ToString();
+							return ((ConditionSwitcher)link_).type.ToString();
 						default:
 							return name;
 					}

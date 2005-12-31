@@ -15,9 +15,8 @@ namespace TriggerEdit
 		{
 			InitializeComponent();
 			InitializeConditionList();
-			property_grid_.SelectedObject = new ObjectExists();
 			display_pnl_.SelectCondition += new ConditionDisplay.SelectConditionEventHandler(display_pnl__SelectCondition);
-			display_pnl_.NewCondition    += new TriggerEdit.ConditionDisplay.NewConditionEventHandler(display_pnl__NewCondition);
+			display_pnl_.NewCondition    += new ConditionDisplay.NewConditionEventHandler   (display_pnl__NewCondition);
 		}
 
 		public Condition Condition
@@ -28,7 +27,10 @@ namespace TriggerEdit
 			}
 			set
 			{
-				condition_                    = (Condition)value.Clone();
+				if (null == value)
+					condition_ = new ConditionSwitcher();
+				else
+					condition_ = (Condition)value.Clone();
 				selection_                    = condition_;
 				new_condition_                = false;
 				display_pnl_.Condition        = condition_;
@@ -47,7 +49,6 @@ namespace TriggerEdit
 			property_grid_.SelectedObject = null;
 			new_condition_                = true;
 		}
-
 		private void display_pnl__SelectCondition(object sender, ConditionDisplay.ConditionEventArgs e)
 		{
 			selection_                    = e.condition_;
@@ -55,7 +56,6 @@ namespace TriggerEdit
 			condition_lst_.SelectedIndex  = condition_lst_.FindString(e.condition_.Name);
 			property_grid_.SelectedObject = e.condition_;
 		}
-
 		private void condition_lst__SelectedValueChanged(object sender, System.EventArgs e)
 		{
 			if (null == selection_)
@@ -63,9 +63,9 @@ namespace TriggerEdit
 			if (null ==  condition_lst_.SelectedItem)
 				return;
 			string selection_name = condition_lst_.SelectedItem.ToString();
-			if (!new_condition_ && selection_name == selection_.Name)
+			if (!new_condition_ && null != selection_ && selection_name == selection_.Name)
 				return;
-			Type condition_type = Type.GetType("TriggerEdit.Definitions." + selection_name);
+			Type condition_type = Type.GetType("TriggerEdit.Definitions.Condition" + selection_name);
 			if (null == condition_type)
 				return;
 			Condition condition = (Condition)Activator.CreateInstance(condition_type);
@@ -179,7 +179,7 @@ namespace TriggerEdit
 			// 
 			// splitter1
 			// 
-			this.splitter1.Location = new System.Drawing.Point(232, 0);
+			this.splitter1.Location = new System.Drawing.Point(248, 0);
 			this.splitter1.Name = "splitter1";
 			this.splitter1.Size = new System.Drawing.Size(3, 189);
 			this.splitter1.TabIndex = 4;
@@ -189,9 +189,9 @@ namespace TriggerEdit
 			// 
 			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.display_pnl_.Location = new System.Drawing.Point(232, 0);
+			this.display_pnl_.Location = new System.Drawing.Point(248, 0);
 			this.display_pnl_.Name = "display_pnl_";
-			this.display_pnl_.Size = new System.Drawing.Size(344, 189);
+			this.display_pnl_.Size = new System.Drawing.Size(328, 189);
 			this.display_pnl_.TabIndex = 2;
 			// 
 			// panel3
@@ -201,7 +201,7 @@ namespace TriggerEdit
 			this.panel3.Dock = System.Windows.Forms.DockStyle.Left;
 			this.panel3.Location = new System.Drawing.Point(0, 0);
 			this.panel3.Name = "panel3";
-			this.panel3.Size = new System.Drawing.Size(232, 189);
+			this.panel3.Size = new System.Drawing.Size(248, 189);
 			this.panel3.TabIndex = 3;
 			// 
 			// property_grid_
@@ -213,7 +213,7 @@ namespace TriggerEdit
 			this.property_grid_.Location = new System.Drawing.Point(0, 21);
 			this.property_grid_.Name = "property_grid_";
 			this.property_grid_.PropertySort = System.Windows.Forms.PropertySort.Alphabetical;
-			this.property_grid_.Size = new System.Drawing.Size(232, 168);
+			this.property_grid_.Size = new System.Drawing.Size(248, 168);
 			this.property_grid_.TabIndex = 0;
 			this.property_grid_.Text = "PropertyGrid";
 			this.property_grid_.ToolbarVisible = false;
@@ -226,7 +226,7 @@ namespace TriggerEdit
 			this.condition_lst_.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.condition_lst_.Location = new System.Drawing.Point(0, 0);
 			this.condition_lst_.Name = "condition_lst_";
-			this.condition_lst_.Size = new System.Drawing.Size(232, 21);
+			this.condition_lst_.Size = new System.Drawing.Size(248, 21);
 			this.condition_lst_.TabIndex = 1;
 			this.condition_lst_.SelectedValueChanged += new System.EventHandler(this.condition_lst__SelectedValueChanged);
 			// 

@@ -19,7 +19,6 @@ namespace TriggerEdit
 			// Required for Windows Form Designer support
 			InitializeComponent();
 			args_      = args;
-			selection_ = -1;
 			display_pnl_.SelectTrigger +=new TriggerEdit.TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
 		}
 
@@ -41,8 +40,15 @@ namespace TriggerEdit
 				reader.Close();
 				// extract data
 				XmlDocument fusion = new XmlDocument();
+//				XmlNodeList positions = doc.SelectNodes(
+//					"script"                                      +
+//					"/set[@name=\"TriggerChain\"]"                +
+//					"/array[@name=\"triggers\"]"                  +
+//					"/set"                                        +
+//					"/set[@code=\"struct ActionOrderBuilding\"]" +
+//					"/*[@name=\"placementStrategy\"]");
 				XmlNodeList positions = doc.SelectNodes(
-					"descendant::array[@name=\"conditions\"]/set/value[@name=\"type\"]");
+					"descendant::*[@name=\"controlID\"]");
 				foreach (XmlNode node in positions)
 				{
 					string str = node.InnerText;
@@ -179,6 +185,7 @@ namespace TriggerEdit
 			this.action_btn_.Size = new System.Drawing.Size(72, 23);
 			this.action_btn_.TabIndex = 3;
 			this.action_btn_.Text = "Action";
+			this.action_btn_.Click += new System.EventHandler(this.action_btn__Click);
 			// 
 			// condition_btn_
 			// 
@@ -261,15 +268,26 @@ namespace TriggerEdit
 
 		#region event handlers
 
+		private void action_btn__Click(object sender, System.EventArgs e)
+		{
+			if (display_pnl_.Selection < 0)
+				return;
+			ActionBuilder action_builder = new ActionBuilder();
+			action_builder.Action = triggers_[display_pnl_.Selection].action;
+			action_builder.ShowDialog(this);
+			if (DialogResult.OK == action_builder.DialogResult)
+				triggers_[display_pnl_.Selection].action = action_builder.Action;
+		}
+
 		private void condition_btn__Click(object sender, System.EventArgs e)
 		{
-			if (selection_ < 0)
+			if (display_pnl_.Selection < 0)
 				return;
 			ConditionBuilder condition_builder = new ConditionBuilder();
-			condition_builder.Condition = triggers_[selection_].condition;
+			condition_builder.Condition = triggers_[display_pnl_.Selection].condition;
 			condition_builder.ShowDialog(this);
 			if (DialogResult.OK == condition_builder.DialogResult)
-				triggers_[selection_].condition = condition_builder.Condition;
+				triggers_[display_pnl_.Selection].condition = condition_builder.Condition;
 		}
 
 		private void display_pnl__SelectTrigger(object sender, TriggerDisplay.TriggerEventArgs e)
@@ -299,10 +317,10 @@ namespace TriggerEdit
 					state_lst_.SelectedIndex = 2;
 					break;
 			}
-			if (null != trigger.action)
-				property_tree_.Nodes.Add(trigger.action.GetTreeNode());
-			//			if (null != trigger.condition)
-			//				property_tree_.Nodes.Add(trigger.condition.GetTreeNode());
+//			if (null != trigger.action)
+//				property_tree_.Nodes.Add(trigger.action.GetTreeNode());
+//			if (null != trigger.condition)
+//				property_tree_.Nodes.Add(trigger.condition.GetTreeNode());
 			property_tree_.ExpandAll();
 			EnableTriggerControls(true);
 		}
@@ -389,9 +407,9 @@ namespace TriggerEdit
 
 		private void name_edt__TextChanged(object sender, System.EventArgs e)
 		{
-			if (selection_ < 0)
+			if (display_pnl_.Selection < 0)
 				return;
-			triggers_[selection_].name = name_edt_.Text;
+			triggers_[display_pnl_.Selection].name = name_edt_.Text;
 			property_label_.Text       = name_edt_.Text;
 		}
 
@@ -407,7 +425,6 @@ namespace TriggerEdit
 		#region data
 
 		private string[]  args_;
-		private int       selection_;
 		private Trigger[] triggers_;
 
 		#endregion

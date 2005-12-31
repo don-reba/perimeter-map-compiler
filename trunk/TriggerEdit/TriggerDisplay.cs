@@ -99,6 +99,11 @@ namespace TriggerEdit
 			return (triggers_.Length == index) ? -1 : index;
 		}
 
+		public int Selection
+		{
+			get { return selection_; }
+		}
+
 		#endregion
 
 		#region internal implementation
@@ -304,12 +309,25 @@ namespace TriggerEdit
 			presentParams.Windowed               = true;
 			if (null ==	 device_)
 			{
-				device_ = new Device(
-					0,
-					DeviceType.Hardware,
-					this, 
-					CreateFlags.HardwareVertexProcessing,
-					presentParams);
+				try
+				{
+					device_ = new Device(
+						0,
+						DeviceType.Hardware,
+						this, 
+						CreateFlags.HardwareVertexProcessing,
+						presentParams);
+				}
+				catch (InvalidCallException e)
+				{
+					MessageBox.Show(
+						"Direct 3D device could not be created. The program will now terminate.\n" +
+						"Please make sure you have Managed DirectX 9.0c installed.",
+						"Error",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Error);
+					Application.Exit();
+				}
 				trigger_renderer_ = new TriggerRenderer(device_, Font);
 			}
 			else
