@@ -11,33 +11,36 @@ namespace TriggerEdit
 	{
 		#region interface
 
-		public TriggerRenderer(Device device, System.Drawing.Font font)
+		public TriggerRenderer(Device device, MarkerLayout marker_layout, System.Drawing.Font font)
 		{
-			System.Drawing.Font new_font = new System.Drawing.Font("Bitstream Vera Sans", 12);
-			new_font = font;//new System.Drawing.Font(new_font, FontStyle.Regular);
-			font_ = new Microsoft.DirectX.Direct3D.Font(device, new_font);
-			sprite_ = new Sprite(device);
-			cell_size_ = new Size(new_font.Height * 6, new_font.Height * 2 + 4);
+			font_          = new Microsoft.DirectX.Direct3D.Font(device, font);
+			marker_layout_ = marker_layout;
+			sprite_        = new Sprite(device);
 		}
 		
 		/// <summary>
 		/// This method must be called from inside of a Device.BeginScene ... Device.EndScene block.
 		/// </summary>
-		public void Render(Device device, Trigger[] triggers)
+		public void Render(Device device, TriggerContainer triggers)
 		{
 			// create geometry
 			ArrayList vertices = new ArrayList();
-			foreach (Trigger trigger in triggers)
+			PointF rounded_start = PointF.Empty;
+			PointF rounded_end   = PointF.Empty;
+			for (int i = 0; i != triggers.count_; ++i)
 			{
-				PushMarker(ref vertices, new Point(trigger.X, trigger.Y), trigger.color_, trigger.outline_);
-				foreach(Trigger.Link link in trigger.links)
+				rounded_start.X = (float)Math.Round(triggers.positions_[i].X);
+				rounded_start.Y = (float)Math.Round(triggers.positions_[i].Y);
+				PushMarker(
+					ref vertices,
+					rounded_start,
+					triggers.descriptions_[i].Fill,
+					triggers.descriptions_[i].Outline);
+				foreach (int j in triggers.adjacency_.GetList(i))
 				{
-					Trigger target = (Trigger)triggers[link.target];
-					PushLine(
-						ref vertices,
-						new Point(trigger.X, trigger.Y),
-						new Point(target.X, target.Y),
-						link.color);
+					rounded_end.X = (float)Math.Round(triggers.positions_[j].X);
+					rounded_end.Y = (float)Math.Round(triggers.positions_[j].Y);
+					PushLine(ref vertices, rounded_start, rounded_end, Color.Red);
 				}
 			}
 			Debug.Assert(vertices.Count % 3 == 0);
@@ -60,15 +63,22 @@ namespace TriggerEdit
 			// draw text
 			sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.SortTexture | SpriteFlags.ObjectSpace);
 			device.SamplerState[0].MinFilter = TextureFilter.Point;
-			foreach (Trigger trigger in triggers)
+			for (int i = 0; i != triggers.count_; ++i)
 			{
 				Rectangle rect = new Rectangle(
-					trigger.X - cell_size_.Width  / 2,
-					trigger.Y - cell_size_.Height / 2,
-					cell_size_.Width,
-					cell_size_.Height);
-				rect.Inflate(-3, -2);
-				font_.DrawText(sprite_, trigger.name, rect, DrawTextFormat.WordBreak, Color.Black);
+					(int)Math.Round(triggers.positions_[i].X - marker_layout_.Width  / 2),
+					(int)Math.Round(triggers.positions_[i].Y - marker_layout_.Height / 2),
+					marker_layout_.Width,
+					marker_layout_.Height);
+				rect.Inflate(
+					-marker_layout_.TextOffset.Width,
+					-marker_layout_.TextOffset.Height);
+				font_.DrawText(
+					sprite_,
+					triggers.descriptions_[i].name_,
+					rect,
+					DrawTextFormat.WordBreak,
+					Color.Black);
 			}
 			sprite_.End();
 		}
@@ -77,7 +87,7 @@ namespace TriggerEdit
 
 		#region internal implementation
 
-		private void MakeRectangle(ref ArrayList vertices, Point position, SizeF radius, float z, Color color)
+		private void MakeRectangle(ref ArrayList vertices, PointF position, SizeF radius, float z, Color color)
 		{
 			CustomVertex.PositionColored vertex = new CustomVertex.PositionColored();
 			vertex.Color = color.ToArgb();
@@ -100,7 +110,8 @@ namespace TriggerEdit
 			vertices.Add(vertex);
 		}
 
-		private void PushLine(ref ArrayList vertices, Point start, Point end, Color color)
+		// [-0.1,0)
+		private void PushLine(ref ArrayList vertices, PointF start, PointF end, Color color)
 		{
 			SnapPoints(ref start, ref end);
 			// calculate new coordinate system
@@ -149,98 +160,100 @@ namespace TriggerEdit
 			vertices.Add(vertex);
 		}
 
-		private void PushMarker(ref ArrayList vertices, Point position, Color color, Color outline)
+		// [-0.2,-0.1)
+		private void PushMarker(ref ArrayList vertices, PointF position, Color color, Color outline)
 		{
 			SizeF radius = new SizeF(
-				cell_size_.Width  / 2.0f,
-				cell_size_.Height / 2.0f);
-			MakeRectangle(ref vertices, position, radius, -0.3f, outline);
+				marker_layout_.Width  / 2.0f,
+				marker_layout_.Height / 2.0f);
+			MakeRectangle(ref vertices, position, radius, -0.20f, outline);
 			radius.Width  -= 1.0f;
 			radius.Height -= 1.0f;
-			MakeRectangle(ref vertices, position, radius, -0.2f, color);
+			MakeRectangle(ref vertices, position, radius, -0.17f, color);
+			MakeRectangle(
+				ref vertices,
+				new PointF(
+					position.X - radius.Width + marker_layout_.TearOffWidth,
+					position.Y),
+				new SizeF(
+					0.5f,
+					marker_layout_.Height / 2.0f - 1.0f),
+				-0.13f,
+				Color.Black);
 		}
 
-		private void SnapPoints(ref Point pnt1, ref Point pnt2)
+		private void SnapPoints(ref PointF pnt1, ref PointF pnt2)
 		{
 			// initialize the rectangles
-			Rectangle rect1 = new Rectangle(0, 0, cell_size_.Width, cell_size_.Height);
-			Rectangle rect2 = rect1;
+			RectangleF rect1 = new RectangleF(0, 0, marker_layout_.Width, marker_layout_.Height);
+			RectangleF rect2 = rect1;
 			rect2.Offset(pnt2.X - pnt1.X, pnt2.Y - pnt1.Y);
 			// snap logic
 			if (rect1.Bottom < rect2.Top)
 			{
 				if (rect1.Right < rect2.Left)
 				{
-					pnt1.X += cell_size_.Width  / 2;
-					pnt1.Y += cell_size_.Height / 2;
-					pnt2.X -= cell_size_.Width  / 2;
-					pnt2.Y -= cell_size_.Height / 2;
+					pnt1.X += marker_layout_.Width  / 2;
+					pnt1.Y += marker_layout_.Height / 2;
+					pnt2.X -= marker_layout_.Width  / 2;
+					pnt2.Y -= marker_layout_.Height / 2;
 				}
 				else if (rect1.Left > rect2.Right)
 				{
-					pnt1.X -= cell_size_.Width  / 2;
-					pnt1.Y += cell_size_.Height / 2;
-					pnt2.X += cell_size_.Width  / 2;
-					pnt2.Y -= cell_size_.Height / 2;
+					pnt1.X -= marker_layout_.Width  / 2;
+					pnt1.Y += marker_layout_.Height / 2;
+					pnt2.X += marker_layout_.Width  / 2;
+					pnt2.Y -= marker_layout_.Height / 2;
 				}
 				else
 				{
-					pnt1.Y += cell_size_.Height / 2;
-					pnt2.Y -= cell_size_.Height / 2;
+					pnt1.Y += marker_layout_.Height / 2;
+					pnt2.Y -= marker_layout_.Height / 2;
 				}
 			}
 			else if (rect1.Top > rect2.Bottom)
 			{
 				if (rect1.Right < rect2.Left)
 				{
-					pnt1.X += cell_size_.Width  / 2;
-					pnt1.Y -= cell_size_.Height / 2;
-					pnt2.X -= cell_size_.Width  / 2;
-					pnt2.Y += cell_size_.Height / 2;
+					pnt1.X += marker_layout_.Width  / 2;
+					pnt1.Y -= marker_layout_.Height / 2;
+					pnt2.X -= marker_layout_.Width  / 2;
+					pnt2.Y += marker_layout_.Height / 2;
 				}
 				else if (rect1.Left > rect2.Right)
 				{
-					pnt1.X -= cell_size_.Width  / 2;
-					pnt1.Y -= cell_size_.Height / 2;
-					pnt2.X += cell_size_.Width  / 2;
-					pnt2.Y += cell_size_.Height / 2;
+					pnt1.X -= marker_layout_.Width  / 2;
+					pnt1.Y -= marker_layout_.Height / 2;
+					pnt2.X += marker_layout_.Width  / 2;
+					pnt2.Y += marker_layout_.Height / 2;
 				}
 				else
 				{
-					pnt1.Y -= cell_size_.Height / 2;
-					pnt2.Y += cell_size_.Height / 2;
+					pnt1.Y -= marker_layout_.Height / 2;
+					pnt2.Y += marker_layout_.Height / 2;
 				}
 			}
 			else
 			{
 				if (rect1.Right < rect2.Left)
 				{
-					pnt1.X += cell_size_.Width / 2;
-					pnt2.X -= cell_size_.Width / 2;
+					pnt1.X += marker_layout_.Width / 2;
+					pnt2.X -= marker_layout_.Width / 2;
 				}
 				else if (rect1.Left > rect2.Right)
 				{
-					pnt1.X -= cell_size_.Width / 2;
-					pnt2.X += cell_size_.Width / 2;
+					pnt1.X -= marker_layout_.Width / 2;
+					pnt2.X += marker_layout_.Width / 2;
 				}
 			}
 		}
 
 		#endregion
 
-		#region utility
-//
-//		private float MakeAngle(float dx, float dy)
-//		{
-//			f
-//		}
-
-		#endregion
-
 		#region data
 
-		Size cell_size_;
 		Microsoft.DirectX.Direct3D.Font font_;
+		MarkerLayout                    marker_layout_;
 		Sprite                          sprite_;
 
 		#endregion

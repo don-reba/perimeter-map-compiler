@@ -65,7 +65,7 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region internal implementation
+		#region implementation
 
 		private Action ReadAction(XmlNode node)
 		{
@@ -343,11 +343,11 @@ namespace TriggerEdit
 		[Flags]
 		public enum FrameStateType
 		{
-			AI_FRAME_STATE_INSTALLED,
-			AI_FRAME_STATE_INSTALLING,
-			AI_FRAME_STATE_SPIRAL_CHARGING,
-			AI_FRAME_STATE_TELEPORTATION_ENABLED,
-			AI_FRAME_STATE_TELEPORTATION_STARTED
+			AI_FRAME_STATE_INSTALLED             = 0x1,
+			AI_FRAME_STATE_INSTALLING            = 0x2,
+			AI_FRAME_STATE_SPIRAL_CHARGING       = 0x4,
+			AI_FRAME_STATE_TELEPORTATION_ENABLED = 0x8,
+			AI_FRAME_STATE_TELEPORTATION_STARTED = 0x10
 		}	
 		public enum Operator
 		{
@@ -404,8 +404,8 @@ namespace TriggerEdit
 		[Flags]
 		public enum SpotType
 		{
-			FILTH,
-			GEO
+			FILTH = 0x1,
+			GEO   = 0x2
 		}
 		public enum SwitchMode
 		{
@@ -432,29 +432,30 @@ namespace TriggerEdit
 		[Flags]
 		public enum UnitClass
 		{
-			UNIT_CLASS_AIR,
-			UNIT_CLASS_AIR_FILTH,
-			UNIT_CLASS_AIR_HEAVY,
-			UNIT_CLASS_BASE,
-			UNIT_CLASS_BLOCK,
-			UNIT_CLASS_BUILDER,
-			UNIT_CLASS_FRAME,
-			UNIT_CLASS_GROUND_FILTH,
-			UNIT_CLASS_HEAVY,
-			UNIT_CLASS_IGNORE,
-			UNIT_CLASS_LIGHT,
-			UNIT_CLASS_MEDIUM,
-			UNIT_CLASS_MISSILE,
-			UNIT_CLASS_NATURE,
-			UNIT_CLASS_STRUCTURE,
-			UNIT_CLASS_STRUCTURE_CORE,
-			UNIT_CLASS_STRUCTURE_ENVIRONMENT,
-			UNIT_CLASS_STRUCTURE_GUN,
-			UNIT_CLASS_STRUCTURE_SPECIAL,
-			UNIT_CLASS_TRUCK,
-			UNIT_CLASS_UNDERGROUND,
-			UNIT_CLASS_UNDERGROUND_FILTH
+			UNIT_CLASS_AIR                   = 0x1,
+			UNIT_CLASS_AIR_FILTH             = 0x2,
+			UNIT_CLASS_AIR_HEAVY             = 0x4,
+			UNIT_CLASS_BASE                  = 0x8,
+			UNIT_CLASS_BLOCK                 = 0x10,
+			UNIT_CLASS_BUILDER               = 0x20,
+			UNIT_CLASS_FRAME                 = 0x40,
+			UNIT_CLASS_GROUND_FILTH          = 0x80,
+			UNIT_CLASS_HEAVY                 = 0x100,
+			UNIT_CLASS_IGNORE                = 0x200,
+			UNIT_CLASS_LIGHT                 = 0x400,
+			UNIT_CLASS_MEDIUM                = 0x800,
+			UNIT_CLASS_MISSILE               = 0x1000,
+			UNIT_CLASS_NATURE                = 0x2000,
+			UNIT_CLASS_STRUCTURE             = 0x4000,
+			UNIT_CLASS_STRUCTURE_CORE        = 0x8000,
+			UNIT_CLASS_STRUCTURE_ENVIRONMENT = 0x10000,
+			UNIT_CLASS_STRUCTURE_GUN         = 0x20000,
+			UNIT_CLASS_STRUCTURE_SPECIAL     = 0x40000,
+			UNIT_CLASS_TRUCK                 = 0x80000,
+			UNIT_CLASS_UNDERGROUND           = 0x100000,
+			UNIT_CLASS_UNDERGROUND_FILTH     = 0x200000
 		}
+
 		[Flags]
 		public enum UnitType
 		{
@@ -560,6 +561,78 @@ namespace TriggerEdit
 
 		public class Condition : ICloneable
 		{
+			#region interface
+
+			public static Condition CreateInstance(XmlNode node)
+			{
+				Condition condition;
+				// get the "code" attribute node
+				XmlNode code_node = node.Attributes["code"];
+				if (null == code_node)
+					return  null;
+				// get the condition name
+				string code   = code_node.InnerText;
+				string prefix = "struct ";
+				if (code.StartsWith(prefix))
+					code = code.Substring(prefix.Length);
+				// get type information
+				try
+				{
+					// initialize main object
+					Type condition_type = Type.GetType("TriggerEdit.Definitions." + code);
+					condition = (Condition)Activator.CreateInstance(condition_type);
+					// set properties
+					PropertyInfo[] properties = condition_type.GetProperties();
+					foreach (PropertyInfo property in properties)
+					{
+						XmlNode property_node = node.SelectSingleNode(
+							"*[@name=\"" + property.Name + "\"]");
+						if (null == property_node)
+							continue;
+						if (property.PropertyType.IsEnum)
+							property.SetValue(
+								condition,
+								Enum.Parse(property.PropertyType, property_node.InnerText),
+								null);
+						else
+							property.SetValue(
+								condition,
+								Convert.ChangeType(property_node.InnerText, property.PropertyType),
+								null);
+					}
+					// set preconditions
+					if ("ConditionSwitcher" == code)
+					{
+						XmlNodeList wrappers = node.SelectNodes(
+							"*[@name=\"conditions\"]/set");
+						condition.preconditions = new ArrayList(wrappers.Count);
+						if (wrappers.Count > 0)
+						{
+							foreach (XmlNode wrapper in wrappers)
+							{
+								XmlNode condition_node = wrapper.SelectSingleNode("set[@name=\"condition\"]");
+								Condition precondition = Condition.CreateInstance(condition_node);
+								if (null == precondition)
+									continue;
+								XmlNode type = wrapper.SelectSingleNode("value[@name=\"type\"]");
+								if (null != type)
+									precondition.condition_type =
+										(ConditionType)Enum.Parse(typeof(ConditionType), type.InnerText);
+								condition.preconditions.Add(precondition);
+							}
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					Debug.WriteLine("Condition property could not be set.");
+					Debug.WriteLine(e.ToString());
+					return null;
+				}
+				return condition;
+			}
+
+			#endregion
 			#region ICloneable Members
 
 			/// <summary>
@@ -1089,6 +1162,114 @@ namespace TriggerEdit
 
 		public class Action
 		{
+			#region interface
+
+			public static Action CreateInstance(XmlNode node)
+			{
+				Action action;
+				// get the "code" attribute node
+				XmlNode code_node = node.Attributes["code"];
+				if (null == code_node)
+					return  null;
+				// get the action name
+				string code   = code_node.InnerText;
+				string prefix = "struct ";
+				if (code.StartsWith(prefix))
+					code = code.Substring(prefix.Length);
+				// get type information
+				try
+				{
+					// initialize main object
+					Type action_type = Type.GetType("TriggerEdit.Definitions." + code);
+					action = (Action)Activator.CreateInstance(action_type);
+					// set properties
+					PropertyInfo[] properties = action_type.GetProperties();
+					foreach (PropertyInfo property in properties)
+						if (
+							property.Name == "attackTimer"   ||
+							property.Name == "delayTimer"    ||
+							property.Name == "durationTimer" ||
+							property.Name == "timer")
+						{
+							XmlNode property_node = node.SelectSingleNode(
+								"*[@name=\"" + property.Name + "\"]/int[@name=\"time\"]");
+							if (null == property_node)
+								continue;
+							property.SetValue(
+								action,
+								int.Parse(property_node.InnerText),
+								null);
+						} 
+						else if (property.PropertyType == typeof(TriggerEdit.Definitions.ControlCollection))
+						{
+							// get the control nodes
+							XmlNode property_node = node.SelectSingleNode(
+								"*[@name=\"" + property.Name + "\"]");
+							if (null == property_node)
+								continue;
+							XmlNodeList control_nodes = property_node.SelectNodes("set");
+							if (null == control_nodes || 0 == control_nodes.Count)
+								continue;
+							// initialize the collection
+							ControlCollection controls = new ControlCollection();
+							// set properties
+							PropertyInfo[] control_properties = typeof(Control).GetProperties();
+							foreach (XmlNode control_node in control_nodes)
+							{
+								Control control = new Control();
+								foreach (PropertyInfo control_property in control_properties)
+								{
+									XmlNode control_property_node = control_node.SelectSingleNode(
+										"*[@name=\"" + control_property.Name + "\"]");
+									if (null == control_property_node)
+										continue;
+									if (control_property.PropertyType.IsEnum)
+										control_property.SetValue(
+											action,
+											Enum.Parse(
+											control_property.PropertyType,
+											control_property_node.InnerText),
+											null);
+									else
+										control_property.SetValue(
+											control,
+											Convert.ChangeType(
+											control_property_node.InnerText,
+											control_property.PropertyType),
+											null);
+								}
+								controls.Add(control);
+							}
+						}
+						else
+						{
+							XmlNode property_node = node.SelectSingleNode(
+								"*[@name=\"" + property.Name + "\"]");
+							if (null == property_node)
+								continue;
+							if (property.PropertyType.IsEnum)
+								property.SetValue(
+									action,
+									Enum.Parse(property.PropertyType, property_node.InnerText),
+									null);
+							else
+								property.SetValue(
+									action,
+									Convert.ChangeType(property_node.InnerText, property.PropertyType),
+									null);
+						}
+				}
+				catch (Exception e)
+				{
+					Debug.WriteLine("Action property could not be set.");
+					Debug.WriteLine(e.ToString());
+					return null;
+				}
+				return action;
+			}
+
+			#endregion
+
 			#region ICloneable Members
 
 			/// <summary>

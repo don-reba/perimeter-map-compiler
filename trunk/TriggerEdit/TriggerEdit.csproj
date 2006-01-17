@@ -122,6 +122,11 @@
                     BuildAction = "EmbeddedResource"
                 />
                 <File
+                    RelPath = "AdjacencyMatrix.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "App.ico"
                     BuildAction = "Content"
                 />
@@ -132,6 +137,11 @@
                 />
                 <File
                     RelPath = "BSpline.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "Camera.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />
@@ -151,7 +161,17 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "ConditionDisplay.resx"
+                    DependentUpon = "ConditionDisplay.cs"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
                     RelPath = "ControlCollection.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "Import.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />
@@ -166,7 +186,22 @@
                     BuildAction = "EmbeddedResource"
                 />
                 <File
+                    RelPath = "MarkerLayout.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "RandomPermutation.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "Trigger.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "TriggerContainer.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />

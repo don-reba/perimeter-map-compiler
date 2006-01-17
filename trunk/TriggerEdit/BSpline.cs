@@ -5,6 +5,8 @@ using System.Collections;
 
 namespace TriggerEdit
 {
+	using PositionHistory = TriggerContainer.PositionHistory;
+
 	/// <summary>
 	/// Quadratic B-Spline calculator.
 	/// </summary>
@@ -12,7 +14,7 @@ namespace TriggerEdit
 	{
 		#region interface
 
-		public BSpline(Point[] source, Trigger[] target, uint tesselation)
+		public BSpline(PositionHistory[] source, PointF[] target, uint tesselation)
 		{
 			Debug.Assert(tesselation > 0);
 			tesselation_ = tesselation;
@@ -39,46 +41,34 @@ namespace TriggerEdit
 				float r1 = -t * t + t + 0.5f;
 				float r2 = t * t / 2;
 				// calculate targets
-				uint source_iter = 0;
-				uint target_iter = 0;
-				while (target_iter != target_.Length)
+				PositionHistory src;
+				for (int i = 0; i != target_.Length; ++i)
 				{
-					Point p0 = source_[source_iter++];
-					Point p1 = source_[source_iter++];
-					Point p2 = source_[source_iter++];
-					target_[target_iter].X = (int)(p0.X * r0 + p1.X * r1 + p2.X * r2);
-					target_[target_iter].Y = (int)(p0.Y * r0 + p1.Y * r1 + p2.Y * r2);
-					++target_iter;
+					src = source_[i];
+					target_[i].X = src.point1_.X * r0 + src.point2_.X * r1	+ src.point3_.X * r2;
+					target_[i].Y = src.point1_.Y * r0 + src.point2_.Y * r1	+ src.point3_.Y * r2;
 				}
 			}
 			else if (Mode.First == mode_)
 			{
 				float r = t / 2.0f;
-				uint source_iter = 0;
-				uint target_iter = 0;
-				while (target_iter != target_.Length)
+				PositionHistory src;
+				for (int i = 0; i != target_.Length; ++i)
 				{
-					Point p0 = source_[source_iter++];
-					Point p1 = source_[source_iter++];
-					++source_iter;
-					target_[target_iter].X = (int)(p0.X * (1 - r) + p1.X * r);
-					target_[target_iter].Y = (int)(p0.Y * (1 - r) + p1.Y * r);
-					++target_iter;
+					src = source_[i];
+					target_[i].X = src.point1_.X * (1 - r) + src.point2_.X * r;
+					target_[i].Y = src.point1_.Y * (1 - r) + src.point2_.Y * r;
 				}
 			}
 			else if (Mode.Last == mode_)
 			{
 				float r = 0.5f + t / 2.0f;
-				uint source_iter = 0;
-				uint target_iter = 0;
-				while (target_iter != target_.Length)
+				PositionHistory src;
+				for (int i = 0; i != target_.Length; ++i)
 				{
-					++source_iter;
-					Point p1 = source_[source_iter++];
-					Point p2 = source_[source_iter++];
-					target_[target_iter].X = (int)(p1.X * (1 - r) + p2.X * r);
-					target_[target_iter].Y = (int)(p1.Y * (1 - r) + p2.Y * r);
-					++target_iter;
+					src = source_[i];
+					target_[i].X = src.point2_.X * (1 - r) + src.point3_.X * r;
+					target_[i].Y = src.point2_.Y * (1 - r) + src.point3_.Y * r;
 				}
 			}
 		}
@@ -92,7 +82,7 @@ namespace TriggerEdit
 			}
 		}
 
-		public Point[] Source
+		public PositionHistory[] Source
 		{
 			set
 			{
@@ -100,7 +90,7 @@ namespace TriggerEdit
 			}
 		}
 
-			public Trigger[] Target
+		public PointF[] Target
 		{
 			set
 			{
@@ -119,11 +109,11 @@ namespace TriggerEdit
 		
 		#region data
 
-		float             iter_;
-		private Mode      mode_;
-		private Point[]   source_;
-		private uint      tesselation_;
-		private Trigger[] target_;
+		float                     iter_;
+		private Mode              mode_;
+		private PositionHistory[] source_;
+		private uint              tesselation_;
+		private PointF[]          target_;
 
 		#endregion
 	}

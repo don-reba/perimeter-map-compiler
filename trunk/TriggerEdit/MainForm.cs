@@ -10,7 +10,15 @@ using System.Windows.Forms;
 
 namespace TriggerEdit
 {
-	public class MainForm : System.Windows.Forms.Form
+	#region using
+
+	using TriggerDescription = TriggerContainer.TriggerDescription;
+	using TriggerState       = TriggerContainer.TriggerDescription.State;
+	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
+
+	#endregion
+
+	public class MainForm : System.Windows.Forms.Form, IMessageFilter
 	{
 		#region interface
 
@@ -20,11 +28,61 @@ namespace TriggerEdit
 			InitializeComponent();
 			args_      = args;
 			display_pnl_.SelectTrigger +=new TriggerEdit.TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
+			triggers_  = new TriggerContainer();
+			Application.AddMessageFilter(this);
 		}
 
 		#endregion
 
-		#region internal implementation
+		#region IMessageFilter Members
+
+		public bool PreFilterMessage(ref Message m)
+		{
+			if (m.Msg == (int)Import.WindowsMessages.WM_MOUSEWHEEL)
+			{
+				Import.POINT point = new TriggerEdit.Import.POINT(
+					(int)(short)((uint)m.LParam & 0xFFFF),
+					(int)(short)(((uint)m.LParam & 0xFFFF0000) >> 16));
+				m.HWnd = Import.WindowFromPoint(point);
+				Import.SendMessage(m.HWnd, (uint)m.Msg, m.WParam, m.LParam);
+				return true;
+			}
+			return false;
+		}
+
+		#endregion
+
+		#region implementation
+
+		private void AppendActionTreeNode(Definitions.Action action, TreeNodeCollection nodes)
+		{
+			nodes.Add("Action: " + action.Name);
+		}
+
+		private void AppendConditionTreeNode(Definitions.Condition condition, TreeNodeCollection nodes)
+		{
+			if (null == condition.preconditions || 0 == condition.preconditions.Count)
+			{
+				nodes.Add("Condition: " + condition.Name);
+				return;
+			}
+			TreeNode root = new TreeNode("Conditions:");
+			AppendConditionTreeNodeRecursive(condition, root.Nodes);
+			nodes.Add(root);
+		}
+
+		private void AppendConditionTreeNodeRecursive(Definitions.Condition condition, TreeNodeCollection nodes)
+		{
+			TreeNode root = new TreeNode();
+			if (condition.GetType() == typeof(Definitions.ConditionSwitcher))
+				root.Text = ((Definitions.ConditionSwitcher)condition).type.ToString();
+			else
+				root.Text = condition.Name;
+			if (null != condition.preconditions)
+				foreach (Definitions.Condition precondition in condition.preconditions)
+					AppendConditionTreeNodeRecursive(precondition, root.Nodes);
+			nodes.Add(root);
+		}
 
 		private void GetStats()
 		{
@@ -85,6 +143,131 @@ namespace TriggerEdit
 
 		#endregion
 
+		#region Entry Point
+		/// <summary>
+		/// The main entry point for the application.
+		/// </summary>
+		[STAThread]
+		static void Main(string[] args) 
+		{
+				Application.Run(new MainForm(args));
+		}
+		#endregion
+
+		#region event handlers
+
+		private void action_btn__Click(object sender, System.EventArgs e)
+		{
+			if (display_pnl_.Selection < 0)
+				return;
+			ActionBuilder action_builder = new ActionBuilder();
+			action_builder.Action = triggers_.descriptions_[display_pnl_.Selection].action_;
+			action_builder.ShowDialog(this);
+			if (DialogResult.OK == action_builder.DialogResult)
+				triggers_.descriptions_[display_pnl_.Selection].action_ = action_builder.Action;
+		}
+
+		private void condition_btn__Click(object sender, System.EventArgs e)
+		{
+			if (display_pnl_.Selection < 0)
+				return;
+			ConditionBuilder condition_builder = new ConditionBuilder();
+			condition_builder.Condition = triggers_.descriptions_[display_pnl_.Selection].condition_;
+			condition_builder.ShowDialog(this);
+			if (DialogResult.OK == condition_builder.DialogResult)
+				triggers_.descriptions_[display_pnl_.Selection].condition_ = condition_builder.Condition;
+		}
+
+		private void display_pnl__SelectTrigger(object sender, TriggerDisplay.TriggerEventArgs e)
+		{
+			if (e.trigger_id_ < 0)
+			{
+				EnableTriggerControls(false);
+				return;
+			}
+			// display cell info
+			TriggerContainer.TriggerDescription trigger = triggers_.descriptions_[e.trigger_id_];
+			property_label_.Text = trigger.name_;
+			name_edt_.Text       = trigger.name_;
+			property_tree_.Nodes.Clear();
+			switch (trigger.state_)
+			{
+				case TriggerState.Checking:
+					property_tree_.Nodes.Add("state: checking");
+					state_lst_.SelectedIndex = 0;
+					break;
+				case TriggerState.Done:
+					property_tree_.Nodes.Add("state: done");
+					state_lst_.SelectedIndex = 1;
+					break;
+				case TriggerState.Sleeping:
+					property_tree_.Nodes.Add("state: sleeping");
+					state_lst_.SelectedIndex = 2;
+					break;
+			}
+			if (null != trigger.action_)
+				AppendActionTreeNode(trigger.action_, property_tree_.Nodes);
+			if (null != trigger.condition_)
+				AppendConditionTreeNode(trigger.condition_, property_tree_.Nodes);
+			property_tree_.ExpandAll();
+			EnableTriggerControls(true);
+		}
+
+		private void MainForm_Load(object sender, System.EventArgs e)
+		{
+//			GetStats();
+//			Application.Exit();
+//			return;
+			// get path
+			string path;
+			if (0 != args_.Length)
+				path = args_[0];
+			else
+			{
+				OpenFileDialog dlg = new OpenFileDialog();
+				dlg.Filter = "trigger file (xml made from scr)|*xml";
+				if (dlg.ShowDialog() != DialogResult.OK)
+				{
+					Close();
+					return;
+				}
+				path = dlg.FileName;
+			}
+			// load the XML file
+			XmlTextReader reader = new XmlTextReader(path);
+			XmlDocument doc = new XmlDocument();
+			doc.Load(reader);
+			reader.Close();
+			// extract data
+			triggers_.Serialize(doc);
+			display_pnl_.Reset(ref triggers_);
+		}
+
+		private void name_edt__TextChanged(object sender, System.EventArgs e)
+		{
+			if (display_pnl_.Selection < 0)
+				return;
+			triggers_.descriptions_[display_pnl_.Selection].name_ = name_edt_.Text;
+			property_label_.Text                   = name_edt_.Text;
+		}
+
+		private void property_panel__Resize(object sender, System.EventArgs e)
+		{
+			int width = property_actions_panel_.Width - name_edt_.Left - 8;
+			name_edt_.Width  = width;
+			state_lst_.Width = width;
+		}
+
+
+		#endregion
+
+		#region data
+
+		private string[]  args_;
+		private TriggerContainer triggers_;
+
+		#endregion
+
 		#region Windows Form Designer generated code
 		/// <summary>
 		/// Required method for Designer support - do not modify
@@ -110,7 +293,6 @@ namespace TriggerEdit
 			// 
 			// display_pnl_
 			// 
-			this.display_pnl_.AutoScroll = true;
 			this.display_pnl_.AutoScrollMinSize = new System.Drawing.Size(512, 512);
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
 			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
@@ -253,180 +435,6 @@ namespace TriggerEdit
 			this.ResumeLayout(false);
 
 		}
-		#endregion
-
-		#region Entry Point
-		/// <summary>
-		/// The main entry point for the application.
-		/// </summary>
-		[STAThread]
-		static void Main(string[] args) 
-		{
-				Application.Run(new MainForm(args));
-		}
-		#endregion
-
-		#region event handlers
-
-		private void action_btn__Click(object sender, System.EventArgs e)
-		{
-			if (display_pnl_.Selection < 0)
-				return;
-			ActionBuilder action_builder = new ActionBuilder();
-			action_builder.Action = triggers_[display_pnl_.Selection].action;
-			action_builder.ShowDialog(this);
-			if (DialogResult.OK == action_builder.DialogResult)
-				triggers_[display_pnl_.Selection].action = action_builder.Action;
-		}
-
-		private void condition_btn__Click(object sender, System.EventArgs e)
-		{
-			if (display_pnl_.Selection < 0)
-				return;
-			ConditionBuilder condition_builder = new ConditionBuilder();
-			condition_builder.Condition = triggers_[display_pnl_.Selection].condition;
-			condition_builder.ShowDialog(this);
-			if (DialogResult.OK == condition_builder.DialogResult)
-				triggers_[display_pnl_.Selection].condition = condition_builder.Condition;
-		}
-
-		private void display_pnl__SelectTrigger(object sender, TriggerDisplay.TriggerEventArgs e)
-		{
-			if (e.trigger_id_ < 0)
-			{
-				EnableTriggerControls(false);
-				return;
-			}
-			// display cell info
-			Trigger trigger = triggers_[e.trigger_id_];
-			property_label_.Text = trigger.name;
-			name_edt_.Text       = trigger.name;
-			property_tree_.Nodes.Clear();
-			switch (trigger.state)
-			{
-				case Trigger.State.Checking:
-					property_tree_.Nodes.Add("state: checking");
-					state_lst_.SelectedIndex = 0;
-					break;
-				case Trigger.State.Done:
-					property_tree_.Nodes.Add("state: done");
-					state_lst_.SelectedIndex = 1;
-					break;
-				case Trigger.State.Sleeping:
-					property_tree_.Nodes.Add("state: sleeping");
-					state_lst_.SelectedIndex = 2;
-					break;
-			}
-//			if (null != trigger.action)
-//				property_tree_.Nodes.Add(trigger.action.GetTreeNode());
-//			if (null != trigger.condition)
-//				property_tree_.Nodes.Add(trigger.condition.GetTreeNode());
-			property_tree_.ExpandAll();
-			EnableTriggerControls(true);
-		}
-
-		private void MainForm_Load(object sender, System.EventArgs e)
-		{
-//			GetStats();
-//			Application.Exit();
-//			return;
-			// get path
-			string path;
-			if (0 != args_.Length)
-				path = args_[0];
-			else
-			{
-				OpenFileDialog dlg = new OpenFileDialog();
-				dlg.Filter = "trigger file (xml made from scr)|*xml";
-				if (dlg.ShowDialog() != DialogResult.OK)
-				{
-					Close();
-					return;
-				}
-				path = dlg.FileName;
-			}
-			// load the XML file
-			XmlTextReader reader = new XmlTextReader(path);
-			XmlDocument doc = new XmlDocument();
-			doc.Load(reader);
-			reader.Close();
-			// extract data
-			{
-				XmlNodeList trigger_nodes = doc.SelectNodes(
-					"//script"                     +
-					"/set[@name=\"TriggerChain\"]" +
-					"/array[@name=\"triggers\"]"   +
-					"/set");
-				triggers_ = new Trigger[trigger_nodes.Count];
-				Hashtable names = new Hashtable();
-				for (int i = 0; i != trigger_nodes.Count; ++i)
-				{
-					XmlNode position = trigger_nodes[i];
-					triggers_[i].color_   = Color.Orange;
-					triggers_[i].outline_ = Color.Orange;
-					triggers_[i].Serialize(position);
-					names.Add(triggers_[i].name, i);
-				}
-				// add links
-				for (int i = 0; i != trigger_nodes.Count; ++i)
-				{
-					XmlNodeList link_nodes = trigger_nodes[i].SelectNodes(
-						"array[@name=\"outcomingLinks\"]/set");
-					triggers_[i].links = new ArrayList();
-					foreach (XmlNode node in link_nodes)
-					{
-						Trigger.Link link = new Trigger.Link();
-						// target
-						link.target = (int)names[node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
-						// color
-						XmlNode color_node = node.SelectSingleNode("value[@name=\"color\"]");
-						if (null != color_node)
-							switch (color_node.InnerText)
-							{
-								case "STRATEGY_BLUE":    link.color = Color.Blue;   break;
-								case "STRATEGY_COLOR_0": link.color = Color.Black;  break;
-								case "STRATEGY_GREEN":   link.color = Color.Green;  break;
-								case "STRATEGY_RED":     link.color = Color.Red;    break;
-								case "STRATEGY_YELLOW":  link.color = Color.Yellow; break;
-								default:                 link.color = Color.Cyan;   break;
-
-							}
-						else
-							link.color = Color.Cyan;
-						// active
-						XmlNode is_active_node = node.SelectSingleNode("value[@name=\"active_\"]");
-						if (null != is_active_node && "true" == is_active_node.InnerText)
-							link.is_active = true;
-						triggers_[i].links.Add(link);
-					}
-				}
-				Array.Sort(triggers_, new TriggerComparer());
-			}
-			display_pnl_.SetTriggers(ref triggers_);
-		}
-
-		private void name_edt__TextChanged(object sender, System.EventArgs e)
-		{
-			if (display_pnl_.Selection < 0)
-				return;
-			triggers_[display_pnl_.Selection].name = name_edt_.Text;
-			property_label_.Text       = name_edt_.Text;
-		}
-
-		private void property_panel__Resize(object sender, System.EventArgs e)
-		{
-			int width = property_actions_panel_.Width - name_edt_.Left - 8;
-			name_edt_.Width  = width;
-			state_lst_.Width = width;
-		}
-
-		#endregion
-
-		#region data
-
-		private string[]  args_;
-		private Trigger[] triggers_;
-
 		#endregion
 
 		#region Component Designer data

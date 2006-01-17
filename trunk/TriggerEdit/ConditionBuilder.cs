@@ -266,6 +266,7 @@ namespace TriggerEdit
 			this.Controls.Add(this.panel2);
 			this.DockPadding.All = 8;
 			this.Name = "ConditionBuilder";
+			this.ShowInTaskbar = false;
 			this.Text = "ConditionBuilder";
 			this.panel1.ResumeLayout(false);
 			this.panel3.ResumeLayout(false);

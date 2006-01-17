@@ -125,8 +125,8 @@ namespace TriggerEdit
 			this.property_grid_ = new System.Windows.Forms.PropertyGrid();
 			this.actions_lst_ = new System.Windows.Forms.ComboBox();
 			this.panel1 = new System.Windows.Forms.Panel();
-			this.ok_btn_ = new System.Windows.Forms.Button();
 			this.cancel_btn_ = new System.Windows.Forms.Button();
+			this.ok_btn_ = new System.Windows.Forms.Button();
 			this.panel1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -166,15 +166,6 @@ namespace TriggerEdit
 			this.panel1.Size = new System.Drawing.Size(276, 40);
 			this.panel1.TabIndex = 2;
 			// 
-			// ok_btn_
-			// 
-			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.ok_btn_.Location = new System.Drawing.Point(192, 8);
-			this.ok_btn_.Name = "ok_btn_";
-			this.ok_btn_.Size = new System.Drawing.Size(72, 23);
-			this.ok_btn_.TabIndex = 0;
-			this.ok_btn_.Text = "OK";
-			// 
 			// cancel_btn_
 			// 
 			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
@@ -183,6 +174,15 @@ namespace TriggerEdit
 			this.cancel_btn_.Size = new System.Drawing.Size(72, 23);
 			this.cancel_btn_.TabIndex = 1;
 			this.cancel_btn_.Text = "Cancel";
+			// 
+			// ok_btn_
+			// 
+			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
+			this.ok_btn_.Location = new System.Drawing.Point(192, 8);
+			this.ok_btn_.Name = "ok_btn_";
+			this.ok_btn_.Size = new System.Drawing.Size(72, 23);
+			this.ok_btn_.TabIndex = 0;
+			this.ok_btn_.Text = "OK";
 			// 
 			// ActionBuilder
 			// 
@@ -193,6 +193,7 @@ namespace TriggerEdit
 			this.Controls.Add(this.actions_lst_);
 			this.DockPadding.All = 8;
 			this.Name = "ActionBuilder";
+			this.ShowInTaskbar = false;
 			this.Text = "ActionBuilder";
 			this.panel1.ResumeLayout(false);
 			this.ResumeLayout(false);
