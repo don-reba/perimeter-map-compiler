@@ -13,7 +13,7 @@ namespace TriggerEdit
 		public MarkerLayout(Font font)
 		{
 			line_height_  = font.Height;
-			text_padding_ = new Size(4, 2);
+			text_padding_ = new Size(2, 1);
 			text_offset_  = new Size(0, 0);
 		}
 
@@ -34,7 +34,7 @@ namespace TriggerEdit
 
 		public int Width
 		{
-			get { return line_height_ * 6 + 2 * text_padding_.Width; }
+			get { return (int)(Height * 3.236f); } // 2 * golden ratio
 		}
 
 		public int Height
@@ -49,7 +49,7 @@ namespace TriggerEdit
 
 		public int TearOffWidth
 		{
-			get { return 8; }
+			get { return 12; }
 		}
 
 		#endregion

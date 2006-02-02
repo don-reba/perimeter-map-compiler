@@ -153,6 +153,9 @@ namespace TriggerEdit
 
 		#region internal implementation
 
+		/// <summary>
+		/// Recrsively draws the tree rooted at the given element.
+		/// </summary>
 		private void DrawElement(Graphics g, LayoutElement e)
 		{
 			g.SmoothingMode = SmoothingMode.None;
@@ -177,6 +180,9 @@ namespace TriggerEdit
 			}
 		}
 
+		/// <summary>
+		/// Recursively calculates position of the element.
+		/// </summary>
 		private void PlaceElement(Graphics g, ref LayoutElement e, Point position)
 		{
 			SizeF size = g.MeasureString(e.Name, Font);
@@ -200,6 +206,10 @@ namespace TriggerEdit
 				child_position.Y += height - height / 2;
 			}
 		}
+
+		/// <summary>
+		/// Gets the element at the given point.
+		/// </summary>
 		private LayoutElement PointToElement(Point point, LayoutElement e)
 		{
 			if (
@@ -219,6 +229,9 @@ namespace TriggerEdit
 			return null;
 		}
 
+		/// <summary>
+		/// Recursively calculates the "size" of the element in the tree.
+		/// </summary>
 		private void SizeElement(ref LayoutElement e)
 		{
 			if (null == e.link_.preconditions)

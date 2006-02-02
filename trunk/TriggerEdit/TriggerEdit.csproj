@@ -35,7 +35,7 @@
                     IncrementalBuild = "false"
                     NoStdLib = "false"
                     NoWarn = ""
-                    Optimize = "false"
+                    Optimize = "true"
                     OutputPath = "bin\Debug\"
                     RegisterForComInterop = "false"
                     RemoveIntegerChecks = "false"
@@ -107,6 +107,11 @@
                     HintPath = "C:\WINNT\Microsoft.NET\Managed DirectX\v9.02.3900\Microsoft.DirectX.Direct3DX.dll"
                     AssemblyFolderKey = "hklm\current managed directx 9.2"
                 />
+                <Reference
+                    Name = "System.Design"
+                    AssemblyName = "System.Design"
+                    HintPath = "C:\WINNT\Microsoft.NET\Framework\v1.1.4322\System.Design.dll"
+                />
             </References>
         </Build>
         <Files>
@@ -136,9 +141,19 @@
                     BuildAction = "Compile"
                 />
                 <File
-                    RelPath = "BSpline.cs"
+                    RelPath = "BitEnum.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "BitEnumEditor.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "BitEnumEditor.resx"
+                    DependentUpon = "BitEnumEditor.cs"
+                    BuildAction = "EmbeddedResource"
                 />
                 <File
                     RelPath = "Camera.cs"

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Diagnostics;
 
 namespace TriggerEdit
 {
@@ -22,23 +23,15 @@ namespace TriggerEdit
 				{
 					bits_     = bits;
 					end_      = end;
-					position_ = position;
+					position_ = position - 1;
 					start_    = position;
 				}
 
 				#region IEnumerator Members
 
-				public void Reset()
-				{
-					position_ = start_;
-				}
-
 				public int Current
 				{
-					get
-					{
-						return position_ - start_;
-					}
+					get { return position_ - start_; }
 				}
 
 				public bool MoveNext()
@@ -103,6 +96,7 @@ namespace TriggerEdit
 			}
 			set
 			{
+				Debug.Assert(row != col);
 				bits_[row * count_ + col] = value;
 			}
 		}
@@ -110,6 +104,30 @@ namespace TriggerEdit
 		public AdjacencyList GetList(int index)
 		{
 			return new AdjacencyList(index, bits_, count_);
+		}
+
+		public void Flip(int row, int col)
+		{
+			int index = row * count_ + col;
+			bits_[index] = !bits_[index];
+		}
+
+		public void Grow(int n)
+		{
+			if (n < 1)
+				throw new ArgumentOutOfRangeException();
+			int new_count = count_ + n;
+			BitArray new_bits  = new BitArray(new_count * new_count);
+			int iter_old = 0;
+			int iter_new = 0;
+			for (int row = 0; row != count_; ++row)
+			{
+				for (int col = 0; col != count_; ++col)
+					new_bits[iter_new++] = bits_[iter_old++];
+				iter_new += n;
+			}
+			count_ = new_count;
+			bits_  = new_bits;
 		}
 
 		public void Insert(int index)
@@ -141,18 +159,17 @@ namespace TriggerEdit
 				throw new ArgumentOutOfRangeException();
 			int      new_count = count_ - 1;
 			BitArray new_bits  = new BitArray(new_count * new_count);
-			int iter_old = 0;
-			int iter_new = 0;
+			int      iter_old  = 0;
+			int      iter_new  = 0;
 			for (int row = 0; row != new_count; ++row)
 			{
-				for (int col = 0; col != new_count; ++col)
-				{
-					new_bits[iter_new++] = bits_[iter_old++];
-					if (col == index)
-						++iter_old;
-				}
 				if (row == index)
-					iter_old += new_count;
+					iter_old += count_;
+				for (int col = 0; col != index; ++col)
+					new_bits[iter_new++] = bits_[iter_old++];
+				++iter_old;
+				for (int col = index; col != new_count; ++col)
+					new_bits[iter_new++] = bits_[iter_old++];
 			}
 			count_ = new_count;
 			bits_  = new_bits;

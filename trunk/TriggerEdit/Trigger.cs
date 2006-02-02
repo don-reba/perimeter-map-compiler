@@ -340,14 +340,13 @@ namespace TriggerEdit
 			DIFFICULTY_HARD,
 			DIFFICULTY_NORMAL
 		}
-		[Flags]
 		public enum FrameStateType
 		{
-			AI_FRAME_STATE_INSTALLED             = 0x1,
-			AI_FRAME_STATE_INSTALLING            = 0x2,
-			AI_FRAME_STATE_SPIRAL_CHARGING       = 0x4,
-			AI_FRAME_STATE_TELEPORTATION_ENABLED = 0x8,
-			AI_FRAME_STATE_TELEPORTATION_STARTED = 0x10
+			AI_FRAME_STATE_INSTALLED,
+			AI_FRAME_STATE_INSTALLING,
+			AI_FRAME_STATE_SPIRAL_CHARGING,
+			AI_FRAME_STATE_TELEPORTATION_ENABLED,
+			AI_FRAME_STATE_TELEPORTATION_STARTED
 		}	
 		public enum Operator
 		{
@@ -401,11 +400,10 @@ namespace TriggerEdit
 			CHOOSE_SQUAD_4,
 			CHOOSE_SQUAD_5
 		}
-		[Flags]
 		public enum SpotType
 		{
-			FILTH = 0x1,
-			GEO   = 0x2
+			FILTH,
+			GEO
 		}
 		public enum SwitchMode
 		{
@@ -429,34 +427,31 @@ namespace TriggerEdit
 			TELEPORTATION_TYPE_ALPHA,
 			TELEPORTATION_TYPE_OMEGA
 		}
-		[Flags]
 		public enum UnitClass
 		{
-			UNIT_CLASS_AIR                   = 0x1,
-			UNIT_CLASS_AIR_FILTH             = 0x2,
-			UNIT_CLASS_AIR_HEAVY             = 0x4,
-			UNIT_CLASS_BASE                  = 0x8,
-			UNIT_CLASS_BLOCK                 = 0x10,
-			UNIT_CLASS_BUILDER               = 0x20,
-			UNIT_CLASS_FRAME                 = 0x40,
-			UNIT_CLASS_GROUND_FILTH          = 0x80,
-			UNIT_CLASS_HEAVY                 = 0x100,
-			UNIT_CLASS_IGNORE                = 0x200,
-			UNIT_CLASS_LIGHT                 = 0x400,
-			UNIT_CLASS_MEDIUM                = 0x800,
-			UNIT_CLASS_MISSILE               = 0x1000,
-			UNIT_CLASS_NATURE                = 0x2000,
-			UNIT_CLASS_STRUCTURE             = 0x4000,
-			UNIT_CLASS_STRUCTURE_CORE        = 0x8000,
-			UNIT_CLASS_STRUCTURE_ENVIRONMENT = 0x10000,
-			UNIT_CLASS_STRUCTURE_GUN         = 0x20000,
-			UNIT_CLASS_STRUCTURE_SPECIAL     = 0x40000,
-			UNIT_CLASS_TRUCK                 = 0x80000,
-			UNIT_CLASS_UNDERGROUND           = 0x100000,
-			UNIT_CLASS_UNDERGROUND_FILTH     = 0x200000
+			UNIT_CLASS_AIR,
+			UNIT_CLASS_AIR_FILTH,
+			UNIT_CLASS_AIR_HEAVY,
+			UNIT_CLASS_BASE,
+			UNIT_CLASS_BLOCK,
+			UNIT_CLASS_BUILDER,
+			UNIT_CLASS_FRAME,
+			UNIT_CLASS_GROUND_FILTH,
+			UNIT_CLASS_HEAVY,
+			UNIT_CLASS_IGNORE,
+			UNIT_CLASS_LIGHT,
+			UNIT_CLASS_MEDIUM,
+			UNIT_CLASS_MISSILE,
+			UNIT_CLASS_NATURE,
+			UNIT_CLASS_STRUCTURE,
+			UNIT_CLASS_STRUCTURE_CORE,
+			UNIT_CLASS_STRUCTURE_ENVIRONMENT,
+			UNIT_CLASS_STRUCTURE_GUN,
+			UNIT_CLASS_STRUCTURE_SPECIAL,
+			UNIT_CLASS_TRUCK,
+			UNIT_CLASS_UNDERGROUND,
+			UNIT_CLASS_UNDERGROUND_FILTH
 		}
-
-		[Flags]
 		public enum UnitType
 		{
 			UNIT_ATTRIBUTE_ANY,
@@ -594,6 +589,26 @@ namespace TriggerEdit
 								condition,
 								Enum.Parse(property.PropertyType, property_node.InnerText),
 								null);
+						else if (property.PropertyType == typeof(BitEnum))
+						{
+							BitEnum bit_enum = (BitEnum)property.GetValue(condition, null);
+							if (null == bit_enum)
+								continue;
+							if (property_node.Name == "disjunction")
+							{
+								XmlNodeList value_nodes = property_node.SelectNodes("value");
+								foreach (XmlNode value_node in value_nodes)
+									bit_enum[Enum.Parse(
+										bit_enum.GetEnumType(),
+										value_node.InnerText)] = true;
+							}
+							else
+							{
+								bit_enum[Enum.Parse(
+									bit_enum.GetEnumType(),
+									property_node.InnerText)] = true;
+							}
+						}
 						else
 							property.SetValue(
 								condition,
@@ -683,8 +698,8 @@ namespace TriggerEdit
 		}
 		public class ConditionActivateSpot : Condition
 		{
-			private SpotType type_;
-			public  SpotType type
+			private BitEnum type_ = new BitEnum(typeof(SpotType));
+			public  BitEnum type
 			{
 				get { return type_; }
 				set { type_ = value; }
@@ -713,8 +728,8 @@ namespace TriggerEdit
 		}
 		public class ConditionCaptureBuilding : Condition
 		{
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -737,8 +752,8 @@ namespace TriggerEdit
 		}
 		public class ConditionClickOnButton : Condition
 		{
-			private ControlID controlID_;
-			public  ControlID controlID
+			private BitEnum controlID_ = new BitEnum(typeof(ControlID));
+			public  BitEnum controlID
 			{
 				get { return controlID_; }
 				set { controlID_ = value; }
@@ -815,8 +830,8 @@ namespace TriggerEdit
 		}
 		public class ConditionKillObject : Condition
 		{
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -845,8 +860,8 @@ namespace TriggerEdit
 		}
 		public class ConditionMutationEnabled : Condition
 		{
-			private UnitType unitType_;
-			public  UnitType unitType
+			private BitEnum unitType_ = new BitEnum(typeof(UnitType));
+			public  BitEnum unitType
 			{
 				get { return unitType_; }
 				set { unitType_ = value; }
@@ -896,8 +911,8 @@ namespace TriggerEdit
 		}
 		public class ConditionObjectExists : Condition
 		{
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -929,8 +944,8 @@ namespace TriggerEdit
 				get { return label_; }
 				set { label_ = value; }
 			}
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -1004,8 +1019,8 @@ namespace TriggerEdit
 				get { return chooseSquadID_; }
 				set { chooseSquadID_ = value; }
 			}
-			private UnitType unitType_;
-			public  UnitType unitType
+			private BitEnum unitType_ = new BitEnum(typeof(UnitType));
+			public  BitEnum unitType
 			{
 				get { return unitType_; }
 				set { unitType_ = value; }
@@ -1106,14 +1121,14 @@ namespace TriggerEdit
 		}
 		public class ConditionUnitClassIsGoingToBeAttacked : Condition
 		{
-			private UnitClass victimUnitClass_;
-			public  UnitClass victimUnitClass
+			private BitEnum victimUnitClass_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum victimUnitClass
 			{
 				get { return victimUnitClass_; }
 				set { victimUnitClass_ = value; }
 			}
-			private UnitClass agressorUnitClass_;
-			public  UnitClass agressorUnitClass
+			private BitEnum agressorUnitClass_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum agressorUnitClass
 			{
 				get { return agressorUnitClass_; }
 				set { agressorUnitClass_ = value; }
@@ -1121,14 +1136,14 @@ namespace TriggerEdit
 		}
 		public class ConditionUnitClassUnderAttack : Condition
 		{
-			private UnitClass victimUnitClass_;
-			public  UnitClass victimUnitClass
+			private BitEnum victimUnitClass_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum victimUnitClass
 			{
 				get { return victimUnitClass_; }
 				set { victimUnitClass_ = value; }
 			}
-			private UnitClass agressorUnitClass_;
-			public  UnitClass agressorUnitClass
+			private BitEnum agressorUnitClass_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum agressorUnitClass
 			{
 				get { return agressorUnitClass_; }
 				set { agressorUnitClass_ = value; }
@@ -1326,14 +1341,14 @@ namespace TriggerEdit
 				get { return weapon_; }
 				set { weapon_ = value; }
 			}
-			private UnitType unitsToAttack_;
-			public  UnitType unitsToAttack
+			private BitEnum unitsToAttack_ = new BitEnum(typeof(UnitType));
+			public  BitEnum unitsToAttack
 			{
 				get { return unitsToAttack_; }
 				set { unitsToAttack_ = value; }
 			}
-			private UnitClass unitClassToAttack_;
-			public  UnitClass unitClassToAttack
+			private BitEnum unitClassToAttack_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum unitClassToAttack
 			{
 				get { return unitClassToAttack_; }
 				set { unitClassToAttack_ = value; }
@@ -1407,8 +1422,8 @@ namespace TriggerEdit
 		}
 		public class ActionKillObject : Action
 		{
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -1582,8 +1597,8 @@ namespace TriggerEdit
 		}
 		public class ActionSetCameraAtObject : Action
 		{
-			private UnitType object_;
-			public  UnitType @object
+			private BitEnum object_ = new BitEnum(typeof(UnitType));
+			public  BitEnum @object
 			{
 				get { return object_; }
 				set { object_ = value; }
@@ -1645,20 +1660,20 @@ namespace TriggerEdit
 				get { return chooseSquadID_; }
 				set { chooseSquadID_ = value; }
 			}
-			private UnitType attackByType_;
-			public  UnitType attackByType
+			private BitEnum attackByType_ = new BitEnum(typeof(UnitType));
+			public  BitEnum attackByType
 			{
 				get { return attackByType_; }
 				set { attackByType_ = value; }
 			}
-			private UnitType unitsToAttack_;
-			public  UnitType unitsToAttack
+			private BitEnum unitsToAttack_ = new BitEnum(typeof(UnitType));
+			public  BitEnum unitsToAttack
 			{
 				get { return unitsToAttack_; }
 				set { unitsToAttack_ = value; }
 			}
-			private UnitClass unitClassToAttack_;
-			public  UnitClass unitClassToAttack
+			private BitEnum unitClassToAttack_ = new BitEnum(typeof(UnitClass));
+			public  BitEnum unitClassToAttack
 			{
 				get { return unitClassToAttack_; }
 				set { unitClassToAttack_ = value; }

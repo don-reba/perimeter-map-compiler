@@ -45,14 +45,15 @@ namespace TriggerEdit
 		private void display_pnl__NewCondition(object sender, ConditionDisplay.ConditionEventArgs e)
 		{
 			selection_parent_             = e.parent_;
+			new_condition_                = true;
 			condition_lst_.SelectedIndex  = -1;
 			property_grid_.SelectedObject = null;
-			new_condition_                = true;
 		}
 		private void display_pnl__SelectCondition(object sender, ConditionDisplay.ConditionEventArgs e)
 		{
 			selection_                    = e.condition_;
 			selection_parent_             = e.parent_;
+			new_condition_                = false;
 			condition_lst_.SelectedIndex  = condition_lst_.FindString(e.condition_.Name);
 			property_grid_.SelectedObject = e.condition_;
 		}
@@ -60,7 +61,7 @@ namespace TriggerEdit
 		{
 			if (null == selection_)
 				return;
-			if (null ==  condition_lst_.SelectedItem)
+			if (null == condition_lst_.SelectedItem)
 				return;
 			string selection_name = condition_lst_.SelectedItem.ToString();
 			if (!new_condition_ && null != selection_ && selection_name == selection_.Name)
@@ -234,7 +235,7 @@ namespace TriggerEdit
 			// 
 			this.ok_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.ok_btn_.Location = new System.Drawing.Point(504, 208);
+			this.ok_btn_.Location = new System.Drawing.Point(416, 208);
 			this.ok_btn_.Name = "ok_btn_";
 			this.ok_btn_.TabIndex = 1;
 			this.ok_btn_.Text = "OK";
@@ -243,7 +244,7 @@ namespace TriggerEdit
 			// 
 			this.cancel_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cancel_btn_.Location = new System.Drawing.Point(416, 208);
+			this.cancel_btn_.Location = new System.Drawing.Point(504, 208);
 			this.cancel_btn_.Name = "cancel_btn_";
 			this.cancel_btn_.TabIndex = 2;
 			this.cancel_btn_.Text = "Cancel";

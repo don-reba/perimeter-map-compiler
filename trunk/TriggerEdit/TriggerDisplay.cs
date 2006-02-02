@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace TriggerEdit
@@ -42,7 +43,9 @@ namespace TriggerEdit
 		private enum DragState
 		{
 			None,
-			DisplaceCamera
+			CopyGhost,
+			DisplaceCamera,
+			DisplaceMarker
 		}
 
 		#endregion
@@ -63,11 +66,18 @@ namespace TriggerEdit
 			Application.Idle += new EventHandler(OnApplicationIdle);
 		}
 
+		public new void Dispose()
+		{
+			device_.Dispose();
+		}
+
 		public void Reset(ref TriggerContainer triggers)
 		{
 			triggers_ = triggers;
+			int t1 = Environment.TickCount;
 			PreprocessVertices(ref triggers_.positions_);
 			NormalizeVertices(ref triggers_.positions_);
+			FitVerticesToGrid(ref triggers_.positions_);
 			// center a camera at the average vertex position
 			PointF average = PointF.Empty;
 			for (int i = 0; i != triggers_.count_; ++i)
@@ -79,13 +89,25 @@ namespace TriggerEdit
 			// set initial marker positions
 			// initalize miscellaneous
 			InitGraphics();
-			bspline_   = new BSpline(triggers_.history_, triggers_.positions_, 32);
-			animation_state_ = AnimationState.FirstStep;
+			animation_state_  = AnimationState.FirstStep;
+			animation_active_ = true;
 		}
 
 		public int Selection
 		{
 			get { return selection_; }
+		}
+
+		public void ToggleAnimation()
+		{
+			ToggleAnimation(!animation_active_);
+		}
+
+		public void ToggleAnimation(bool on)
+		{
+			animation_active_ = on;
+			if (on)
+				last_step_time_ = Environment.TickCount;
 		}
 
 		#endregion
@@ -94,110 +116,41 @@ namespace TriggerEdit
 
 		private void AdvanceAnimation()
 		{
+			if (!animation_active_)
+				return;
 			switch (animation_state_)
 			{
 				case AnimationState.FirstStep:
-				{
-					// shift
-					temperature_ = 1.0f;
-					ShiftVertices(ref triggers_.positions_);
-					// copy positions into the history array
-					for (uint i = 0; i != triggers_.count_; ++i)
-						triggers_.history_[i].point1_ = triggers_.positions_[i];
-					// shift
-					ShiftVertices(ref triggers_.positions_);
-					// copy positions into the history array
-					for (uint i = 0; i != triggers_.count_; ++i)
-						triggers_.history_[i].point2_ = triggers_.positions_[i];
-					// move vertices
-					bspline_.SegmentMode = BSpline.Mode.First;
-					bspline_.Set(0.0f);
-					// advance state
-					animation_state_ = AnimationState.SecondStep;
+					for (int i = 0; i != triggers_.count_; ++i)
+						triggers_.history_[i].Set(triggers_.positions_[i]);
+					triggers_.InterpolationRatio = 0.0f;
+					animation_state_ = AnimationState.Normal;
+					temperature_     = 1.0f;
 					last_step_time_  = Environment.TickCount;
-				} break;
-				case AnimationState.SecondStep:
-				{
-					// calculate the current path position
-					float t = (Environment.TickCount - last_step_time_) / (float)step_duration_;
-					// set new position
-					if (t <= 1.0f)
-						bspline_.Set(t);
-					else
-					{
-						// get last vertex positions
-						for (uint i = 0; i != triggers_.count_; ++i)
-							triggers_.positions_[i] = triggers_.history_[i].point2_;
-						// shift
-						ShiftVertices(ref triggers_.positions_);
-						// copy positions into the history array
-						for (uint i = 0; i != triggers_.count_; ++i)
-							triggers_.history_[i].point3_ = triggers_.positions_[i];
-						// move vertices
-						bspline_.SegmentMode = BSpline.Mode.Middle;
-						bspline_.Set(0.0f);
-						// advance state
-						animation_state_ = AnimationState.Normal;
-						last_step_time_  = Environment.TickCount;
-					}
-				} break;
+					break;
 				case AnimationState.Normal:
-				{
-					// calculate the current path position
-					float t = (Environment.TickCount - last_step_time_) / (float)step_duration_;
-					// set new position
-					if (t <= 1.0f)
-						bspline_.Set(t);
-					else
+					float d = (Environment.TickCount - last_step_time_) * animation_speed_;
+					animation_remainder_ -= d;
+					if (animation_remainder_ < 0)
 					{
-						// recall the more recent positions
-						for (uint i = 0; i != triggers_.count_; ++i)
-							triggers_.positions_[i] = triggers_.history_[i].point3_;
-						// calculate new positions
-						float temperature = ShiftVertices(ref triggers_.positions_);
-						if (temperature <= 3.0f)
+						while (animation_remainder_ < 0)
 						{
-							while (ShiftVertices(ref triggers_.positions_) >= 1.0f);
-							animation_state_ = AnimationState.SecondLastStep;
+							animation_remainder_step_ = ShiftVertices(ref triggers_.positions_);
+							animation_remainder_ += animation_remainder_step_;
+							if (animation_remainder_step_ <= 0.1f)
+								animation_state_ = AnimationState.Done;
+							// cap the time allowed for computing animation
+							if (Environment.TickCount - last_step_time_ > 200)
+								break;
 						}
-						else if (temperature <= 24.0f)
-							while (ShiftVertices(ref triggers_.positions_) > 3.0f);
-						// copy positions into the history array
-						for (uint i = 0; i != triggers_.count_; ++i)
+						for (int i = 0; i != triggers_.count_; ++i)
 							triggers_.history_[i].Add(triggers_.positions_[i]);
-						// move vertices
-						bspline_.Set(0.0f);
-						// advance state
-						last_step_time_ = Environment.TickCount;
 					}
-				} break;
-				case AnimationState.SecondLastStep:
-				{
-					// calculate the current path position
-					float t = (Environment.TickCount - last_step_time_) / (float)step_duration_;
-					// set new position
-					if (t <= 1.0f)
-						bspline_.Set(t);
-					else
-					{
-						// move vertices
-						bspline_.SegmentMode = BSpline.Mode.Last;
-						bspline_.Set(0.0f);
-						// advance state
-						animation_state_ = AnimationState.LastStep;
-						last_step_time_  = Environment.TickCount;
-					}
-				} break;
-				case AnimationState.LastStep:
-				{
-					// calculate the current path position
-					float t = (Environment.TickCount - last_step_time_) / (float)step_duration_;
-					// set new position
-					if (t <= 1.0f)
-						bspline_.Set(t);
-					else
-						animation_state_ = AnimationState.Done;
-				} break;
+					triggers_.InterpolationRatio = Math.Min(
+						1.0f,
+						1.0f - animation_remainder_ / animation_remainder_step_);
+					last_step_time_ = Environment.TickCount;
+					break;
 			}
 		}
 
@@ -229,7 +182,7 @@ namespace TriggerEdit
 			if (index == active_)
 				return;
 			// unhighlight the previous cell and its neighbours
-			if (active_ >= 0)
+			if (active_ >= 0 && active_ < triggers_.count_)
 			{
 				triggers_.descriptions_[active_].status_ &= ~TriggerStatus.Bright;
 				foreach (int link in triggers_.adjacency_.GetList(active_))
@@ -246,31 +199,39 @@ namespace TriggerEdit
 		
 		private bool InitGraphics()
 		{
+			Device.IsUsingEventHandlers = false;
 			// get system specs
 			AdapterInformation adapter_info = Manager.Adapters.Default;
 			int result;
 			int quality_levels = 0;
-			MultiSampleType best_msample_t = (MultiSampleType)16;
-			for (; best_msample_t >= 0; best_msample_t--)
+			MultiSampleType multisample_type = (MultiSampleType)4;
+			for (; multisample_type >= 0; multisample_type--)
 				if (Manager.CheckDeviceMultiSampleType(
 					adapter_info.Adapter,
 					DeviceType.Hardware,
 					adapter_info.CurrentDisplayMode.Format,
 					true,
-					best_msample_t,
+					multisample_type,
 					out result,
 					out quality_levels))
 					break;
+			// get device caps
+			Caps caps = Manager.GetDeviceCaps(adapter_info.Adapter, DeviceType.Hardware);
+			CreateFlags create_flags = 0;
+			if (caps.DeviceCaps.SupportsHardwareTransformAndLight)
+				create_flags |= CreateFlags.HardwareVertexProcessing;
+			else
+				create_flags |= CreateFlags.SoftwareVertexProcessing;
 			// initialize device
 			PresentParameters presentParams = new PresentParameters();
 			presentParams.AutoDepthStencilFormat = DepthFormat.D16;
 			presentParams.BackBufferCount        = 1;
 			presentParams.EnableAutoDepthStencil = true;
-			presentParams.MultiSample            = best_msample_t;
-			presentParams.MultiSampleQuality     = quality_levels - 1;
+			presentParams.MultiSample            = multisample_type;
+			presentParams.MultiSampleQuality     = 0;
 			presentParams.SwapEffect             = SwapEffect.Discard;
 			presentParams.Windowed               = true;
-			if (null ==	 device_)
+			if (null == device_)
 			{
 				try
 				{
@@ -278,14 +239,15 @@ namespace TriggerEdit
 						0,
 						DeviceType.Hardware,
 						this, 
-						CreateFlags.HardwareVertexProcessing,
+						create_flags,
 						presentParams);
+					device_.EvictManagedResources();
 				}
 				catch (InvalidCallException)
 				{
 					MessageBox.Show(
-						"Direct 3D device could not be created. The program will now terminate.\n" +
-						"Please make sure you have Managed DirectX 9.0c installed.",
+						"Direct 3D device could not be created.\n"
+						+ "The program will now terminate.",
 						"Error",
 						MessageBoxButtons.OK,
 						MessageBoxIcon.Error);
@@ -294,10 +256,26 @@ namespace TriggerEdit
 				trigger_renderer_ = new TriggerRenderer(device_, marker_layout_, Font);
 			}
 			else
+			{
+				OnLostDevice();
+				while (!device_.CheckCooperativeLevel())
+					Thread.Sleep(250);
 				device_.Reset(presentParams);
+				OnResetDevice();
+			}
 			device_.RenderState.CullMode = Cull.None;
 			device_.RenderState.Lighting = false;
 			return true;
+		}
+
+		private void OnLostDevice()
+		{
+			trigger_renderer_.OnLostDevice();
+		}
+
+		private void OnResetDevice()
+		{
+			trigger_renderer_.OnResetDevice();
 		}
 
 		private void Render()
@@ -342,14 +320,76 @@ namespace TriggerEdit
 			}
 		}
 
+		private void FitVerticesToGrid(ref PointF[] positions)
+		{
+			float ka_x = cell_spacing_ * 2 + marker_layout_.Width;
+			float ka_y = cell_spacing_ * 2 + marker_layout_.Height;
+			Hashtable hash = new Hashtable(positions.Length);
+			// snap positions to grid
+			for (int i = 0; i != positions.Length; ++i)
+			{
+				Point result = new Point(
+					(int)(positions[i].X / ka_x),
+					(int)(positions[i].Y / ka_y));
+				if (positions[i].X % ka_x > ka_x / 2.0f)
+					++result.X;
+				if (positions[i].Y % ka_y > ka_y / 2.0f)
+					++result.Y;
+				// check if the position is already occupied
+				// NOTE: it is unlikely that the data are hashed efficiently
+				if (hash.Contains(result))
+				{
+					int n = 1;
+					Point neighbour = Point.Empty;
+					bool slot_found = false;
+					do
+					{
+						RandomPermutation permutation = new RandomPermutation(8 * n);
+						foreach (int j in permutation)
+						{
+							int mode   = j % 4;
+							int offset = j / 4;
+							switch (mode)
+							{
+								case 0:
+									neighbour.X = result.X - n + offset;
+									neighbour.Y = result.Y - n;
+									break;
+								case 1:
+									neighbour.X = result.X - n + offset + 1;
+									neighbour.Y = result.Y + n;
+									break;
+								case 2:
+									neighbour.X = result.X - n;
+									neighbour.Y = result.Y - n + offset + 1;
+									break;
+								case 3:
+									neighbour.X = result.X + n;
+									neighbour.Y = result.Y - n + offset;
+									break;
+							}
+							slot_found = !hash.Contains(neighbour);
+							if (slot_found)
+								break;
+						}
+						++n;
+					} while (!slot_found);
+					result = neighbour;
+				}
+				hash.Add(result, null);
+				positions[i].X = result.X * ka_x;
+				positions[i].Y = result.Y * ka_y;
+			}
+		}
+
 		private void PreprocessVertices(ref PointF[] positions)
 		{
 			float ka_x = cell_spacing_ * 2 + marker_layout_.Width;
 			float ka_y = cell_spacing_ * 2 + marker_layout_.Height;
 			// spread the vertices across the initial square
 			// TODO: try circle
-			int range_x = (int)(100.0f * ka_x * (float)Math.Sqrt(positions.Length));
-			int range_y = (int)(100.0f * ka_y * (float)Math.Sqrt(positions.Length));
+			int range_x = (int)(64.0f * ka_x * (float)Math.Sqrt(positions.Length));
+			int range_y = (int)(64.0f * ka_y * (float)Math.Sqrt(positions.Length));
 			Random random = new Random(0);
 			for (int i = 0; i != positions.Length; ++i)
 			{
@@ -425,7 +465,6 @@ namespace TriggerEdit
 		private float ShiftVertices(ref PointF[] positions)
 		{
 			float k = cell_spacing_;
-			float range = (Math.Max(marker_layout_.Width, marker_layout_.Height) + k) * 3;
 			// reset velocities
 			for (int i = 0; i != triggers_.count_; ++i)
 				triggers_.velocities_[i] = PointF.Empty;	
@@ -442,7 +481,7 @@ namespace TriggerEdit
 					ShiftVertices_AdjustLength(ref dy, marker_layout_.Height);
 					float d_sqr = dx * dx + dy * dy;
 					// repulsion
-					if (d_sqr > 0 && d_sqr < range * range)
+					if (d_sqr > 0)
 					{
 						float ratio = k * k / d_sqr;
 						float r_dx = dx * ratio;
@@ -474,7 +513,7 @@ namespace TriggerEdit
 				triggers_.velocities_[i].Y += v_y;
 			}
 			// displace vertices
-			float temperature = k / temperature_;
+			float temperature = 4 / temperature_;
 			for (int i = 0; i != triggers_.count_; ++i)
 			{
 				float v_x = triggers_.velocities_[i].X;
@@ -483,28 +522,19 @@ namespace TriggerEdit
 				if (v_abs != 0)
 				{
 					// set the new coordinates
-//					positions[i].X = positions[i].X + v_x;
-//					positions[i].Y= positions[i].Y + v_y;
 					positions[i].X = positions[i].X + (v_x / v_abs) * Math.Min(v_abs, temperature);
 					positions[i].Y = positions[i].Y + (v_y / v_abs) * Math.Min(v_abs, temperature);
 				}
 			}
-			// cool down, with simmering
-			if (temperature <= 2.0f)
-				temperature_ *= 1.0005f;
-			else if (temperature <= 3.0f)
-				temperature_ *= 1.005f;
-			else
-				temperature_ *= 1.05f;
-//			double energy = 0.0;
-//			foreach (PointF v in triggers_.velocities_)
-//				energy += v.X * v.X + v.Y * v.Y;	
-//			energies.WriteLine(energy);
-//			energies.Flush();
+			// cool down
+			if (temperature > 0.5f)
+			{
+				temperature_ *= 1.002f;
+				if (temperature < 0.5)
+					temperature = 0.5f;
+			}
 			return temperature;
 		}
-
-//		System.IO.StreamWriter energies = new StreamWriter("energy.txt", false, System.Text.Encoding.ASCII);
 
 		private void SnapPoints(ref Point pnt1, ref Point pnt2)
 		{
@@ -572,6 +602,17 @@ namespace TriggerEdit
 			}
 		}
 
+		private void SetSelection(int index)
+		{
+			if (selection_ == index)
+				return;
+			if (selection_ >= 0 && selection_ < triggers_.count_)
+				triggers_.descriptions_[selection_].status_ &= ~TriggerStatus.Selected;
+			if (index >= 0 && index < triggers_.count_)
+				triggers_.descriptions_[index].status_ |= TriggerStatus.Selected;
+			selection_ = index;
+		}
+
 		#endregion
 
 		#region events
@@ -614,7 +655,7 @@ namespace TriggerEdit
 			Point cursor_location = new Point(e.X, e.Y);
 			ScreenToWorld(ref cursor_location);
 			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
-			if ( new_selection < 0)
+			if (new_selection < 0)
 			{
 				drag_start_.X = e.X;
 				drag_start_.Y = e.Y;
@@ -624,16 +665,16 @@ namespace TriggerEdit
 			}
 			else
 			{
-				Capture = false;
-				drag_state_ = DragState.None;
+				PointF position = PointF.Empty;
+				triggers_.GetInterpolatedPosition(new_selection, ref position);
+				float tear_off_x = position.X - marker_layout_.Width / 2 + marker_layout_.TearOffWidth;
+				if (cursor_location.X < tear_off_x)
+					drag_state_ = DragState.DisplaceMarker;
+				else
+					drag_state_ = DragState.CopyGhost;
+				Capture = true;
 			}
-			if (selection_ == new_selection)
-				return;
-			if (selection_ >= 0)
-				triggers_.descriptions_[selection_].status_ &= ~TriggerStatus.Selected;
-			if (new_selection >= 0)
-				triggers_.descriptions_[new_selection].status_ |= TriggerStatus.Selected;
-			selection_ = new_selection;
+			SetSelection(new_selection);
 			// fire the event
 			OnSelectTrigger(new TriggerEventArgs(selection_));
 			base.OnMouseDown(e);
@@ -644,15 +685,66 @@ namespace TriggerEdit
 			if (DesignMode || null == triggers_)
 				return;
 			HighlightTriggers(new Point(e.X, e.Y));
-			if (DragState.DisplaceCamera == drag_state_)
-				camera_.SetPosition(
-					old_camera_position_.X + (drag_start_.X - e.X) * camera_.Zoom,
-					old_camera_position_.Y + (drag_start_.Y - e.Y) * camera_.Zoom);
+			switch (drag_state_)
+			{
+				case DragState.DisplaceCamera:
+					camera_.SetPosition(
+						old_camera_position_.X + (drag_start_.X - e.X) * camera_.Zoom,
+						old_camera_position_.Y + (drag_start_.Y - e.Y) * camera_.Zoom);
+					break;
+				case DragState.DisplaceMarker:
+					if (selection_ < 0)
+						break;
+					triggers_.positions_[selection_] = new Point(e.X, e.Y);
+					ScreenToWorld(ref triggers_.positions_[selection_]);
+					triggers_.history_[selection_].Set(triggers_.positions_[selection_]);
+					break;
+				case DragState.CopyGhost:
+					if (selection_ < 0)
+						break;
+					if (triggers_.ghost_index_ < 0)
+						triggers_.ghost_index_ = selection_;
+					triggers_.ghost_position_ = new Point(e.X, e.Y);
+					ScreenToWorld(ref triggers_.ghost_position_);
+					break;
+			}
 			base.OnMouseMove(e);
 		}
 
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
+			if (DragState.CopyGhost == drag_state_)
+			{
+				// calculate new selection
+				Point cursor_location = new Point(e.X, e.Y);
+				ScreenToWorld(ref cursor_location);
+				int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
+				if (new_selection < 0)
+				{
+					triggers_.ghost_index_ = -1;
+					// create a copy of the selected node
+					triggers_.Duplicate(selection_);
+					triggers_.history_[triggers_.count_ - 1].Set(cursor_location);
+					triggers_.positions_[triggers_.count_ - 1] = cursor_location;
+					SetSelection(triggers_.count_ - 1);
+				}
+				else if (selection_ != new_selection)
+				{
+					if (triggers_.adjacency_[selection_, new_selection])
+					{
+						triggers_.DeleteLink(selection_, new_selection);
+						SetSelection(-1);
+					}
+					else if (triggers_.adjacency_[new_selection, selection_])
+					{
+						triggers_.DeleteLink(new_selection, selection_);
+						SetSelection(-1);
+					}
+					else
+						triggers_.adjacency_[selection_, new_selection] = true;
+				}
+			}
+			triggers_.ghost_index_ = -1;
 			drag_state_ = DragState.None;
 			Capture = false;
 			base.OnMouseUp (e);
@@ -684,6 +776,8 @@ namespace TriggerEdit
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			base.OnSizeChanged(e);
+			if (DesignMode)
+				return;
 			InitGraphics();
 			camera_.ViewportSize = ClientRectangle.Size;
 			Invalidate();
@@ -724,8 +818,7 @@ namespace TriggerEdit
 		#region data
 
 		private int              active_ = -1;
-		private BSpline          bspline_;
-		private int              cell_spacing_ = 64;
+		private int              cell_spacing_ = 96;
 		private Point            drag_start_;
 		private DragState        drag_state_;
 		private MarkerLayout     marker_layout_;
@@ -739,9 +832,12 @@ namespace TriggerEdit
 		// DirectX
 		private Device device_;
 		// animation
-		private const int      step_duration_ = 1000; // milliseconds
-		private int            last_step_time_;
+		private bool           animation_active_;
+		private float          animation_remainder_;
+		private float          animation_remainder_step_;
+		private const float    animation_speed_ = 96.0f / 1000.0f; // pixels per millisecond
 		private AnimationState animation_state_;
+		private int            last_step_time_;
 
 		#endregion
 

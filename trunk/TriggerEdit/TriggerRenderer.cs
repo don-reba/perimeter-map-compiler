@@ -23,14 +23,21 @@ namespace TriggerEdit
 		/// </summary>
 		public void Render(Device device, TriggerContainer triggers)
 		{
+			PointF ghost_position = PointF.Empty;
+			if (triggers.ghost_index_ >= 0)
+			{
+				ghost_position.X = (float)Math.Round(triggers.ghost_position_.X);
+				ghost_position.Y = (float)Math.Round(triggers.ghost_position_.Y);
+			}
 			// create geometry
 			ArrayList vertices = new ArrayList();
 			PointF rounded_start = PointF.Empty;
 			PointF rounded_end   = PointF.Empty;
 			for (int i = 0; i != triggers.count_; ++i)
 			{
-				rounded_start.X = (float)Math.Round(triggers.positions_[i].X);
-				rounded_start.Y = (float)Math.Round(triggers.positions_[i].Y);
+				triggers.GetInterpolatedPosition(i, ref rounded_start);
+				rounded_start.X = (float)Math.Round(rounded_start.X);
+				rounded_start.Y = (float)Math.Round(rounded_start.Y);
 				PushMarker(
 					ref vertices,
 					rounded_start,
@@ -38,9 +45,29 @@ namespace TriggerEdit
 					triggers.descriptions_[i].Outline);
 				foreach (int j in triggers.adjacency_.GetList(i))
 				{
-					rounded_end.X = (float)Math.Round(triggers.positions_[j].X);
-					rounded_end.Y = (float)Math.Round(triggers.positions_[j].Y);
+					triggers.GetInterpolatedPosition(j, ref rounded_end);
+					rounded_end.X = (float)Math.Round(rounded_end.X);
+					rounded_end.Y = (float)Math.Round(rounded_end.Y);
 					PushLine(ref vertices, rounded_start, rounded_end, Color.Red);
+					if (triggers.ghost_index_ == j)
+						PushLine(ref vertices, rounded_start, ghost_position, Color.Red);
+				}
+			}
+			if (triggers.ghost_index_ >= 0)
+			{
+				rounded_start.X = (float)Math.Round(triggers.ghost_position_.X);
+				rounded_start.Y = (float)Math.Round(triggers.ghost_position_.Y);
+				PushMarker(
+					ref vertices,
+					rounded_start,
+					triggers.descriptions_[triggers.ghost_index_].Fill,
+					triggers.descriptions_[triggers.ghost_index_].Outline);
+				foreach (int j in triggers.adjacency_.GetList(triggers.ghost_index_))
+				{
+					triggers.GetInterpolatedPosition(j, ref rounded_end);
+					rounded_end.X = (float)Math.Round(rounded_end.X);
+					rounded_end.Y = (float)Math.Round(rounded_end.Y);
+					PushLine(ref vertices, ghost_position, rounded_end, Color.Red);
 				}
 			}
 			Debug.Assert(vertices.Count % 3 == 0);
@@ -65,9 +92,10 @@ namespace TriggerEdit
 			device.SamplerState[0].MinFilter = TextureFilter.Point;
 			for (int i = 0; i != triggers.count_; ++i)
 			{
+				triggers.GetInterpolatedPosition(i, ref rounded_start);
 				Rectangle rect = new Rectangle(
-					(int)Math.Round(triggers.positions_[i].X - marker_layout_.Width  / 2),
-					(int)Math.Round(triggers.positions_[i].Y - marker_layout_.Height / 2),
+					(int)Math.Round(rounded_start.X - marker_layout_.Width  / 2),
+					(int)Math.Round(rounded_start.Y - marker_layout_.Height / 2),
 					marker_layout_.Width,
 					marker_layout_.Height);
 				rect.Inflate(
@@ -80,10 +108,40 @@ namespace TriggerEdit
 					DrawTextFormat.WordBreak,
 					Color.Black);
 			}
+			if (triggers.ghost_index_ >= 0)
+			{
+				Rectangle rect = new Rectangle(
+					(int)Math.Round(triggers.ghost_position_.X - marker_layout_.Width  / 2),
+					(int)Math.Round(triggers.ghost_position_.Y - marker_layout_.Height / 2),
+					marker_layout_.Width,
+					marker_layout_.Height);
+				rect.Inflate(
+					-marker_layout_.TextOffset.Width,
+					-marker_layout_.TextOffset.Height);
+				font_.DrawText(
+					sprite_,
+					triggers.descriptions_[triggers.ghost_index_].name_,
+					rect,
+					DrawTextFormat.WordBreak,
+					Color.Black);
+			}
 			sprite_.End();
+			vb.Dispose();
 		}
 
-		#endregion
+		public void OnLostDevice()
+		{
+			sprite_.OnLostDevice();
+			font_.OnLostDevice();
+		}
+
+		public void OnResetDevice()
+		{
+			sprite_.OnResetDevice();
+			font_.OnResetDevice();
+		}
+
+		#endregion		
 
 		#region internal implementation
 

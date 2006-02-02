@@ -47,6 +47,13 @@ namespace TriggerEdit
 				Import.SendMessage(m.HWnd, (uint)m.Msg, m.WParam, m.LParam);
 				return true;
 			}
+			if (m.Msg == (int)Import.WindowsMessages.WM_KEYDOWN)
+			{
+				// toggle animation on "space" key press
+				int vcode = (int)m.WParam;
+				if (vcode == (int)Import.VK.SPACE)
+					display_pnl_.ToggleAnimation();
+			}
 			return false;
 		}
 
@@ -241,6 +248,8 @@ namespace TriggerEdit
 			// extract data
 			triggers_.Serialize(doc);
 			display_pnl_.Reset(ref triggers_);
+			// set priority level
+			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
 		}
 
 		private void name_edt__TextChanged(object sender, System.EventArgs e)
