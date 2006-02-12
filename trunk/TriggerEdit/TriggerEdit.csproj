@@ -211,6 +211,11 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "ScriptXmlWriter.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "Trigger.cs"
                     SubType = "Code"
                     BuildAction = "Compile"

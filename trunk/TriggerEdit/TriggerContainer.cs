@@ -68,9 +68,59 @@ namespace TriggerEdit
 					condition_ = Condition.CreateInstance(condition_node);
 			}
 
-			public XmlNode Serialize()
+			public void Serialize(ScriptXmlWriter w, IEnumerable link_names)
 			{
-				return null;
+				// start trigger
+				w.WriteStartElement("set");
+				w.WriteElement("string", "name", name_);
+				// condition
+				if (condition_ != null)
+					condition_.Serialize(w);
+				else
+					w.WriteElement("set", "condition", "");
+				// action
+				if (action_ != null)
+					action_.Serialize(w);
+				else
+					w.WriteElement("int", "action", "0");
+				// outgoing links
+				w.WriteStartNamedElement("array", "outcomingLinks");
+				foreach (string link_name in link_names)
+				{
+					w.WriteStartElement("set");
+					w.WriteElement("string", "triggerName",    link_name);
+					w.WriteElement("value",  "color",          "STRATEGY_RED");
+					w.WriteElement("value",  "type",           "THIN");
+					w.WriteElement("value",  "active_",        "false");
+					w.WriteElement("int",    "parentOffsetX_", "0");
+					w.WriteElement("int",    "parentOffsetY_", "0");
+					w.WriteElement("int",    "childOffsetX_",  "0");
+					w.WriteElement("int",    "childOffsetY_",  "0");
+					w.WritePoint("parentOffset", Point.Empty);
+					w.WritePoint("childOffset", Point.Empty);
+					w.WriteEndElement();
+				}
+				w.WriteEndElement();
+				// state
+				switch (state_)
+				{
+					case State.Checking: w.WriteElement("value", "state_", "CHECKING"); break;
+					case State.Sleeping: w.WriteElement("value", "state_", "SLEEPING"); break;
+					case State.Done:     w.WriteElement("value", "state_", "DONE");     break;
+				}
+				w.WriteElement("int", "executionCounter_", "0");
+				w.WriteElement("int", "internalColor_",    "0");
+				w.WriteElement("int", "cellNumberX",       "0");
+				w.WriteElement("int", "cellNumberY",       "0");
+				w.WriteElement("int", "left_",             "0");
+				w.WriteElement("int", "top_",              "0");
+				w.WriteElement("int", "right_",            "0");
+				w.WriteElement("int", "bottom_",           "0");
+				w.WriteElement("int", "internalColor_",    "0");
+				w.WritePoint("cellIndex", Point.Empty);
+				w.WriteRect("boundingRect", Rectangle.Empty);
+				// end trigger
+				w.WriteEndElement();
 			}
 
 			public Color Fill
@@ -359,8 +409,8 @@ namespace TriggerEdit
 					"array[@name=\"outcomingLinks\"]/set");
 				foreach (XmlNode link_node in link_nodes)
 				{
-						int target = (int)names[
-							link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
+					int target = (int)names[
+						link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
 					if (i != target) // consistency check
 						adjacency_[i, target] = true;
 				}
@@ -369,9 +419,33 @@ namespace TriggerEdit
 			ghost_index_ = -1;
 		}
 
-		public XmlNode Serialize()
+		public void Serialize(ScriptXmlWriter w)
 		{
-			return null;
+			// start script
+			w.WriteStartElement("script");
+			w.WriteStartNamedElement("set", "TriggerChain");
+			// trigger chain name
+			w.WriteElement("string", "name", "");
+			// triggers
+			w.WriteStartNamedElement("array", "triggers");
+			for (int i = 0; i != count_; ++i)
+			{
+				ArrayList link_names = new ArrayList();
+				foreach (int j in adjacency_.GetList(i))
+					link_names.Add(descriptions_[j].name_);
+				descriptions_[i].Serialize(w, link_names);
+			}
+			w.WriteEndElement();
+			// layout info
+			w.WriteElement("int", "left_",   "0");
+			w.WriteElement("int", "top_",    "0");
+			w.WriteElement("int", "right_",  "0");
+			w.WriteElement("int", "bottom_", "0");
+			w.WriteRect("boundingRect", Rectangle.Empty);
+			w.WriteRect("viewRect",     Rectangle.Empty);
+			// end script
+			w.WriteEndElement();
+			w.WriteEndElement();
 		}
 
 		#endregion

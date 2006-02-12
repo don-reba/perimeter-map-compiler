@@ -92,11 +92,6 @@ namespace TriggerEdit
 			{
 				return zoom_;
 			}
-			set
-			{
-				zoom_ = value;
-				CalculateProjection();
-			}
 		}
 
 		#endregion
@@ -122,7 +117,7 @@ namespace TriggerEdit
 
 		private void CalculateZoom()
 		{
-			zoom_ = (float)Math.Pow(1.1, zoom_degree_);
+			zoom_ = (float)Math.Pow(1.05, zoom_degree_);
 			CalculateProjection();
 		}
 

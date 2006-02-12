@@ -27,7 +27,7 @@
                     RemoteDebugEnabled = "false"
                     RemoteDebugMachine = ""
                     StartAction = "Project"
-                    StartArguments = ""
+                    StartArguments = '"F:\My Files\Alexey Badalov\Programming\Edit Perimeter\ScriptConverter\(E)_5alientrance 2.xml"'
                     StartPage = ""
                     StartProgram = ""
                     StartURL = ""

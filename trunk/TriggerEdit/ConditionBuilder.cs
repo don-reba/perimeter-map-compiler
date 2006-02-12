@@ -66,24 +66,32 @@ namespace TriggerEdit
 			string selection_name = condition_lst_.SelectedItem.ToString();
 			if (!new_condition_ && null != selection_ && selection_name == selection_.Name)
 				return;
+			// create a new condition
 			Type condition_type = Type.GetType("TriggerEdit.Definitions.Condition" + selection_name);
 			if (null == condition_type)
 				return;
 			Condition condition = (Condition)Activator.CreateInstance(condition_type);
 			if ("Switcher" == condition.Name)
-				condition.preconditions = new ArrayList();
+				condition.preconditions_ = new ArrayList();
 			if (new_condition_)
 			{
-				selection_parent_.preconditions.Add(condition);
+				selection_parent_.preconditions_.Add(
+					new Precondition(Precondition.Type.NORMAL, condition));
 				new_condition_ = false;
 			}
 			else if (null == selection_parent_)
 				condition_ = condition;
 			else
 			{
-				int i = selection_parent_.preconditions.IndexOf(selection_);
-				if (i >= 0)
-					selection_parent_.preconditions[i] = condition;
+				// find the current selection in the parent's preconditions
+				int i = 0;
+				for (; i != selection_parent_.preconditions_.Count; ++i)
+					if (((Precondition)selection_parent_.preconditions_[i]).condition_ == selection_)
+						break;
+				if (i != selection_parent_.preconditions_.Count)
+					selection_parent_.preconditions_[i] = new Precondition(
+						Precondition.Type.NORMAL,
+						condition);
 			}
 			selection_ = condition;
 			display_pnl_.Condition = condition_;

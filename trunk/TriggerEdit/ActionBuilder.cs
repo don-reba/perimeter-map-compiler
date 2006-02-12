@@ -169,7 +169,7 @@ namespace TriggerEdit
 			// cancel_btn_
 			// 
 			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cancel_btn_.Location = new System.Drawing.Point(104, 8);
+			this.cancel_btn_.Location = new System.Drawing.Point(192, 8);
 			this.cancel_btn_.Name = "cancel_btn_";
 			this.cancel_btn_.Size = new System.Drawing.Size(72, 23);
 			this.cancel_btn_.TabIndex = 1;
@@ -178,7 +178,7 @@ namespace TriggerEdit
 			// ok_btn_
 			// 
 			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.ok_btn_.Location = new System.Drawing.Point(192, 8);
+			this.ok_btn_.Location = new System.Drawing.Point(104, 8);
 			this.ok_btn_.Name = "ok_btn_";
 			this.ok_btn_.Size = new System.Drawing.Size(72, 23);
 			this.ok_btn_.TabIndex = 0;

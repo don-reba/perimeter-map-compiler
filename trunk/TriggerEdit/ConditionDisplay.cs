@@ -234,15 +234,15 @@ namespace TriggerEdit
 		/// </summary>
 		private void SizeElement(ref LayoutElement e)
 		{
-			if (null == e.link_.preconditions)
+			if (null == e.link_.preconditions_)
 			{
 				e.size_ = 1;
 				return;
 			}
-			e.children_ = new ArrayList(e.link_.preconditions.Count + 1);
-			foreach (Condition condition in e.link_.preconditions)
+			e.children_ = new ArrayList(e.link_.preconditions_.Count + 1);
+			foreach (Precondition precondition in e.link_.preconditions_)
 			{
-				LayoutElement child = new LayoutElement(e, condition);
+				LayoutElement child = new LayoutElement(e, precondition.condition_);
 				SizeElement(ref child);
 				e.size_ += child.size_;
 				e.children_.Add(child);

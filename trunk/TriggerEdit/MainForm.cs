@@ -68,7 +68,7 @@ namespace TriggerEdit
 
 		private void AppendConditionTreeNode(Definitions.Condition condition, TreeNodeCollection nodes)
 		{
-			if (null == condition.preconditions || 0 == condition.preconditions.Count)
+			if (null == condition.preconditions_ || 0 == condition.preconditions_.Count)
 			{
 				nodes.Add("Condition: " + condition.Name);
 				return;
@@ -85,9 +85,9 @@ namespace TriggerEdit
 				root.Text = ((Definitions.ConditionSwitcher)condition).type.ToString();
 			else
 				root.Text = condition.Name;
-			if (null != condition.preconditions)
-				foreach (Definitions.Condition precondition in condition.preconditions)
-					AppendConditionTreeNodeRecursive(precondition, root.Nodes);
+			if (null != condition.preconditions_)
+				foreach (Definitions.Precondition precondition in condition.preconditions_)
+					AppendConditionTreeNodeRecursive(precondition.condition_, root.Nodes);
 			nodes.Add(root);
 		}
 
@@ -146,6 +146,22 @@ namespace TriggerEdit
 			state_lst_.Enabled     = enable;
 			condition_btn_.Enabled = enable;
 			action_btn_.Enabled    = enable;
+		}
+
+		private void LoadFile(string path)
+		{
+			// load the XML file
+			XmlTextReader reader = new XmlTextReader(path);
+			XmlDocument doc = new XmlDocument();
+			doc.Load(reader);
+			reader.Close();
+			// extract data
+			triggers_.Serialize(doc);
+			display_pnl_.Reset(ref triggers_);
+			// set priority level
+			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
+			// enable the save button
+			save_btn_.Enabled = true;
 		}
 
 		#endregion
@@ -225,31 +241,8 @@ namespace TriggerEdit
 //			GetStats();
 //			Application.Exit();
 //			return;
-			// get path
-			string path;
 			if (0 != args_.Length)
-				path = args_[0];
-			else
-			{
-				OpenFileDialog dlg = new OpenFileDialog();
-				dlg.Filter = "trigger file (xml made from scr)|*xml";
-				if (dlg.ShowDialog() != DialogResult.OK)
-				{
-					Close();
-					return;
-				}
-				path = dlg.FileName;
-			}
-			// load the XML file
-			XmlTextReader reader = new XmlTextReader(path);
-			XmlDocument doc = new XmlDocument();
-			doc.Load(reader);
-			reader.Close();
-			// extract data
-			triggers_.Serialize(doc);
-			display_pnl_.Reset(ref triggers_);
-			// set priority level
-			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
+				LoadFile(args_[0]);
 		}
 
 		private void name_edt__TextChanged(object sender, System.EventArgs e)
@@ -265,14 +258,66 @@ namespace TriggerEdit
 			int width = property_actions_panel_.Width - name_edt_.Left - 8;
 			name_edt_.Width  = width;
 			state_lst_.Width = width;
+			zoom_udc_.Width  = width;
 		}
 
+		private void toolbar__ButtonClick(object sender, System.Windows.Forms.ToolBarButtonClickEventArgs e)
+		{
+			if (e.Button == load_btn_)
+				OnLoadFile();
+			else if (e.Button == save_btn_)
+				OnSaveFile();
+		}
+
+		private void MainForm_Resize(object sender, System.EventArgs e)
+		{
+			display_pnl_.RenderingEnabled = (WindowState != FormWindowState.Minimized);
+		}
+
+		private void OnLoadFile()
+		{
+			OpenFileDialog dlg = new OpenFileDialog();
+			dlg.Filter = "trigger file (xml made from scr)|*xml";
+			if (dlg.ShowDialog() != DialogResult.OK)
+				return;
+			LoadFile(dlg.FileName);
+		}
+
+		private void OnSaveFile()
+		{
+			SaveFileDialog dlg = new SaveFileDialog();
+			dlg.Filter = "trigger file (xml made from scr)|*xml";
+			if (dlg.ShowDialog() != DialogResult.OK)
+				return;
+			ScriptXmlWriter w = new ScriptXmlWriter(dlg.FileName, System.Text.Encoding.UTF8);
+			w.WriteStartDocument(true);
+			triggers_.Serialize(w);
+			w.WriteEndDocument();
+			w.Close();
+		}
+
+		private void display_pnl__ZoomChanged(object sender, TriggerEdit.TriggerDisplay.ZoomEventArgs e)
+		{
+			zoom_udc_.DecimalPlaces = 3;
+			zoom_udc_.Value = new decimal(1 / e.zoom_);
+		}
+
+		private void zoom_udc__ValueChanged(object sender, System.EventArgs e)
+		{
+			if ((float)zoom_udc_.Value == 0.0f)
+				zoom_udc_.Value = new decimal(1.0f);
+			display_pnl_.Zoom = 1.0f / (float)zoom_udc_.Value;
+		}
 
 		#endregion
 
 		#region data
 
 		private string[]  args_;
+		private System.Windows.Forms.Panel property_actions_panel_;
+		private System.Windows.Forms.GroupBox groupBox1;
+		private System.Windows.Forms.Label label1;
+		private System.Windows.Forms.NumericUpDown zoom_udc_;
 		private TriggerContainer triggers_;
 
 		#endregion
@@ -284,48 +329,72 @@ namespace TriggerEdit
 		/// </summary>
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
+			System.Resources.ResourceManager resources = new System.Resources.ResourceManager(typeof(MainForm));
 			this.display_pnl_ = new TriggerEdit.TriggerDisplay();
 			this.property_panel_ = new System.Windows.Forms.Panel();
+			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_actions_panel_ = new System.Windows.Forms.Panel();
+			this.zoom_udc_ = new System.Windows.Forms.NumericUpDown();
+			this.label1 = new System.Windows.Forms.Label();
+			this.groupBox1 = new System.Windows.Forms.GroupBox();
 			this.state_lst_ = new System.Windows.Forms.ComboBox();
 			this.state_lbl_ = new System.Windows.Forms.Label();
 			this.name_lbl_ = new System.Windows.Forms.Label();
 			this.action_btn_ = new System.Windows.Forms.Button();
 			this.condition_btn_ = new System.Windows.Forms.Button();
 			this.name_edt_ = new System.Windows.Forms.TextBox();
-			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_label_ = new System.Windows.Forms.Label();
 			this.splitter1 = new System.Windows.Forms.Splitter();
+			this.toolbar_ = new System.Windows.Forms.ToolBar();
+			this.save_btn_ = new System.Windows.Forms.ToolBarButton();
+			this.load_btn_ = new System.Windows.Forms.ToolBarButton();
+			this.toolbar_img_lst_ = new System.Windows.Forms.ImageList(this.components);
 			this.property_panel_.SuspendLayout();
 			this.property_actions_panel_.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// display_pnl_
 			// 
-			this.display_pnl_.AutoScrollMinSize = new System.Drawing.Size(512, 512);
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
 			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.display_pnl_.Location = new System.Drawing.Point(211, 8);
+			this.display_pnl_.Location = new System.Drawing.Point(211, 42);
 			this.display_pnl_.Name = "display_pnl_";
-			this.display_pnl_.Size = new System.Drawing.Size(365, 461);
+			this.display_pnl_.RenderingEnabled = true;
+			this.display_pnl_.Size = new System.Drawing.Size(365, 427);
 			this.display_pnl_.TabIndex = 0;
+			this.display_pnl_.ZoomChanged += new TriggerEdit.TriggerDisplay.ZoomChangedEvent(this.display_pnl__ZoomChanged);
 			// 
 			// property_panel_
 			// 
-			this.property_panel_.Controls.Add(this.property_actions_panel_);
 			this.property_panel_.Controls.Add(this.property_tree_);
+			this.property_panel_.Controls.Add(this.property_actions_panel_);
 			this.property_panel_.Controls.Add(this.property_label_);
 			this.property_panel_.Dock = System.Windows.Forms.DockStyle.Left;
 			this.property_panel_.DockPadding.Right = 4;
-			this.property_panel_.Location = new System.Drawing.Point(8, 8);
+			this.property_panel_.Location = new System.Drawing.Point(8, 42);
 			this.property_panel_.Name = "property_panel_";
-			this.property_panel_.Size = new System.Drawing.Size(200, 461);
+			this.property_panel_.Size = new System.Drawing.Size(200, 427);
 			this.property_panel_.TabIndex = 1;
 			this.property_panel_.Resize += new System.EventHandler(this.property_panel__Resize);
 			// 
+			// property_tree_
+			// 
+			this.property_tree_.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.property_tree_.ImageIndex = -1;
+			this.property_tree_.Location = new System.Drawing.Point(0, 32);
+			this.property_tree_.Name = "property_tree_";
+			this.property_tree_.SelectedImageIndex = -1;
+			this.property_tree_.Size = new System.Drawing.Size(196, 238);
+			this.property_tree_.TabIndex = 1;
+			// 
 			// property_actions_panel_
 			// 
+			this.property_actions_panel_.Controls.Add(this.zoom_udc_);
+			this.property_actions_panel_.Controls.Add(this.label1);
+			this.property_actions_panel_.Controls.Add(this.groupBox1);
 			this.property_actions_panel_.Controls.Add(this.state_lst_);
 			this.property_actions_panel_.Controls.Add(this.state_lbl_);
 			this.property_actions_panel_.Controls.Add(this.name_lbl_);
@@ -333,10 +402,56 @@ namespace TriggerEdit
 			this.property_actions_panel_.Controls.Add(this.condition_btn_);
 			this.property_actions_panel_.Controls.Add(this.name_edt_);
 			this.property_actions_panel_.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.property_actions_panel_.Location = new System.Drawing.Point(0, 357);
+			this.property_actions_panel_.Location = new System.Drawing.Point(0, 270);
 			this.property_actions_panel_.Name = "property_actions_panel_";
-			this.property_actions_panel_.Size = new System.Drawing.Size(196, 104);
+			this.property_actions_panel_.Size = new System.Drawing.Size(196, 157);
 			this.property_actions_panel_.TabIndex = 3;
+			// 
+			// zoom_udc_
+			// 
+			this.zoom_udc_.DecimalPlaces = 2;
+			this.zoom_udc_.Increment = new System.Decimal(new int[] {
+																						  5,
+																						  0,
+																						  0,
+																						  131072});
+			this.zoom_udc_.Location = new System.Drawing.Point(56, 128);
+			this.zoom_udc_.Maximum = new System.Decimal(new int[] {
+																						-1,
+																						-1,
+																						-1,
+																						0});
+			this.zoom_udc_.Minimum = new System.Decimal(new int[] {
+																						1,
+																						0,
+																						0,
+																						262144});
+			this.zoom_udc_.Name = "zoom_udc_";
+			this.zoom_udc_.Size = new System.Drawing.Size(128, 20);
+			this.zoom_udc_.TabIndex = 9;
+			this.zoom_udc_.Value = new System.Decimal(new int[] {
+																					 1,
+																					 0,
+																					 0,
+																					 0});
+			this.zoom_udc_.ValueChanged += new System.EventHandler(this.zoom_udc__ValueChanged);
+			// 
+			// label1
+			// 
+			this.label1.Location = new System.Drawing.Point(8, 128);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(40, 16);
+			this.label1.TabIndex = 8;
+			this.label1.Text = "Zoom";
+			// 
+			// groupBox1
+			// 
+			this.groupBox1.Anchor = System.Windows.Forms.AnchorStyles.Top;
+			this.groupBox1.Location = new System.Drawing.Point(16, 104);
+			this.groupBox1.Name = "groupBox1";
+			this.groupBox1.Size = new System.Drawing.Size(168, 8);
+			this.groupBox1.TabIndex = 7;
+			this.groupBox1.TabStop = false;
 			// 
 			// state_lst_
 			// 
@@ -399,16 +514,6 @@ namespace TriggerEdit
 			this.name_edt_.Text = "";
 			this.name_edt_.TextChanged += new System.EventHandler(this.name_edt__TextChanged);
 			// 
-			// property_tree_
-			// 
-			this.property_tree_.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.property_tree_.ImageIndex = -1;
-			this.property_tree_.Location = new System.Drawing.Point(0, 32);
-			this.property_tree_.Name = "property_tree_";
-			this.property_tree_.SelectedImageIndex = -1;
-			this.property_tree_.Size = new System.Drawing.Size(196, 429);
-			this.property_tree_.TabIndex = 1;
-			// 
 			// property_label_
 			// 
 			this.property_label_.Dock = System.Windows.Forms.DockStyle.Top;
@@ -421,11 +526,45 @@ namespace TriggerEdit
 			// 
 			// splitter1
 			// 
-			this.splitter1.Location = new System.Drawing.Point(208, 8);
+			this.splitter1.Location = new System.Drawing.Point(208, 42);
 			this.splitter1.Name = "splitter1";
-			this.splitter1.Size = new System.Drawing.Size(3, 461);
+			this.splitter1.Size = new System.Drawing.Size(3, 427);
 			this.splitter1.TabIndex = 2;
 			this.splitter1.TabStop = false;
+			// 
+			// toolbar_
+			// 
+			this.toolbar_.Appearance = System.Windows.Forms.ToolBarAppearance.Flat;
+			this.toolbar_.Buttons.AddRange(new System.Windows.Forms.ToolBarButton[] {
+																												this.save_btn_,
+																												this.load_btn_});
+			this.toolbar_.Divider = false;
+			this.toolbar_.DropDownArrows = true;
+			this.toolbar_.ImageList = this.toolbar_img_lst_;
+			this.toolbar_.Location = new System.Drawing.Point(8, 8);
+			this.toolbar_.Name = "toolbar_";
+			this.toolbar_.ShowToolTips = true;
+			this.toolbar_.Size = new System.Drawing.Size(568, 34);
+			this.toolbar_.TabIndex = 3;
+			this.toolbar_.TextAlign = System.Windows.Forms.ToolBarTextAlign.Right;
+			this.toolbar_.ButtonClick += new System.Windows.Forms.ToolBarButtonClickEventHandler(this.toolbar__ButtonClick);
+			// 
+			// save_btn_
+			// 
+			this.save_btn_.Enabled = false;
+			this.save_btn_.ImageIndex = 0;
+			this.save_btn_.Text = "Save";
+			// 
+			// load_btn_
+			// 
+			this.load_btn_.ImageIndex = 1;
+			this.load_btn_.Text = "Load";
+			// 
+			// toolbar_img_lst_
+			// 
+			this.toolbar_img_lst_.ImageSize = new System.Drawing.Size(24, 24);
+			this.toolbar_img_lst_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_img_lst_.ImageStream")));
+			this.toolbar_img_lst_.TransparentColor = System.Drawing.Color.Magenta;
 			// 
 			// MainForm
 			// 
@@ -434,33 +573,40 @@ namespace TriggerEdit
 			this.Controls.Add(this.display_pnl_);
 			this.Controls.Add(this.splitter1);
 			this.Controls.Add(this.property_panel_);
+			this.Controls.Add(this.toolbar_);
 			this.DockPadding.All = 8;
 			this.Name = "MainForm";
 			this.Text = "TriggerViewer";
 			this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+			this.Resize += new System.EventHandler(this.MainForm_Resize);
 			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.property_panel_.ResumeLayout(false);
 			this.property_actions_panel_.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).EndInit();
 			this.ResumeLayout(false);
 
 		}
 		#endregion
 
+		private System.ComponentModel.IContainer components;
+
 		#region Component Designer data
 
-		private System.ComponentModel.Container components = null;
 		private System.Windows.Forms.Button   action_btn_;
 		private System.Windows.Forms.Button   condition_btn_;
 		private System.Windows.Forms.ComboBox state_lst_;
 		private System.Windows.Forms.Label    name_lbl_;
 		private System.Windows.Forms.Label    property_label_;
 		private System.Windows.Forms.Label    state_lbl_;
-		private System.Windows.Forms.Panel    property_actions_panel_;
 		private System.Windows.Forms.Panel    property_panel_;
 		private System.Windows.Forms.Splitter splitter1;
 		private System.Windows.Forms.TextBox  name_edt_;
 		private System.Windows.Forms.TreeView property_tree_;
 		private TriggerDisplay                display_pnl_;
+		private System.Windows.Forms.ToolBar toolbar_;
+		private System.Windows.Forms.ImageList toolbar_img_lst_;
+		private System.Windows.Forms.ToolBarButton save_btn_;
+		private System.Windows.Forms.ToolBarButton load_btn_;
 
 		#endregion
 	}

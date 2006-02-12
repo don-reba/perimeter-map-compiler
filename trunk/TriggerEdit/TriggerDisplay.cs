@@ -62,6 +62,7 @@ namespace TriggerEdit
 			drag_start_          = new Point(0, 0);
 			marker_layout_       = new MarkerLayout(Font);
 			old_camera_position_ = new Point(0, 0);
+			rendering_enabled_   = false;
 			// hook event handlers
 			Application.Idle += new EventHandler(OnApplicationIdle);
 		}
@@ -69,6 +70,12 @@ namespace TriggerEdit
 		public new void Dispose()
 		{
 			device_.Dispose();
+		}
+
+		public bool RenderingEnabled
+		{
+			get { return rendering_enabled_; }
+			set { rendering_enabled_ = value; }
 		}
 
 		public void Reset(ref TriggerContainer triggers)
@@ -108,6 +115,21 @@ namespace TriggerEdit
 			animation_active_ = on;
 			if (on)
 				last_step_time_ = Environment.TickCount;
+		}
+
+		public float Zoom
+		{
+			get
+			{
+				return camera_.Zoom;
+			}
+			set
+			{
+				while (camera_.Zoom > value)
+					camera_.DecrementZoom();
+				while (camera_.Zoom < value)
+					camera_.IncrementZoom();
+			}
 		}
 
 		#endregion
@@ -261,7 +283,12 @@ namespace TriggerEdit
 				while (!device_.CheckCooperativeLevel())
 					Thread.Sleep(250);
 				device_.Reset(presentParams);
-				OnResetDevice();
+				try
+				{
+					OnResetDevice();
+				}
+				catch (DriverInternalErrorException)
+				{}
 			}
 			device_.RenderState.CullMode = Cull.None;
 			device_.RenderState.Lighting = false;
@@ -617,6 +644,8 @@ namespace TriggerEdit
 
 		#region events
 
+		#region trigger event
+
 		public class TriggerEventArgs : EventArgs
 		{
 			public TriggerEventArgs(int trigger_id)
@@ -638,12 +667,39 @@ namespace TriggerEdit
 
 		#endregion
 
+		#region zoom event
+
+		public class ZoomEventArgs : EventArgs
+		{
+			public ZoomEventArgs(float zoom)
+			{
+				zoom_ = zoom;
+			}
+			public float zoom_;
+		}
+
+		public delegate void ZoomChangedEvent(object sender, ZoomEventArgs e);
+		
+		public event ZoomChangedEvent ZoomChanged;
+
+		public void OnZoomChanged(ZoomEventArgs e)
+		{
+			if (null != ZoomChanged)
+				ZoomChanged(this, e);
+		}
+
+		#endregion
+
+		#endregion
+
 		#region event handlers
 
 		private void OnApplicationIdle(object sender, EventArgs e)
 		{
 			while (AppStillIdle)
 			{
+				if (!rendering_enabled_)
+					continue;
 				AdvanceAnimation();
 				Render();
 			}
@@ -651,6 +707,8 @@ namespace TriggerEdit
 
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
+			if (!rendering_enabled_ || triggers_ == null)
+				return;
 			// calculate new selection
 			Point cursor_location = new Point(e.X, e.Y);
 			ScreenToWorld(ref cursor_location);
@@ -669,9 +727,9 @@ namespace TriggerEdit
 				triggers_.GetInterpolatedPosition(new_selection, ref position);
 				float tear_off_x = position.X - marker_layout_.Width / 2 + marker_layout_.TearOffWidth;
 				if (cursor_location.X < tear_off_x)
-					drag_state_ = DragState.DisplaceMarker;
-				else
 					drag_state_ = DragState.CopyGhost;
+				else
+					drag_state_ = DragState.DisplaceMarker;
 				Capture = true;
 			}
 			SetSelection(new_selection);
@@ -682,6 +740,8 @@ namespace TriggerEdit
 
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
+			if (!rendering_enabled_ || triggers_ == null)
+				return;
 			if (DesignMode || null == triggers_)
 				return;
 			HighlightTriggers(new Point(e.X, e.Y));
@@ -713,6 +773,8 @@ namespace TriggerEdit
 
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
+			if (!rendering_enabled_ || triggers_ == null)
+				return;
 			if (DragState.CopyGhost == drag_state_)
 			{
 				// calculate new selection
@@ -752,7 +814,10 @@ namespace TriggerEdit
 
 		protected override void OnMouseWheel(MouseEventArgs e)
 		{
+			if (!rendering_enabled_)
+				return;
 			camera_.IncrementZoom(e.Delta / 120);
+			OnZoomChanged(new ZoomEventArgs(camera_.Zoom));
 			base.OnMouseWheel (e);
 		}
 
@@ -764,7 +829,6 @@ namespace TriggerEdit
 				base.OnPaint(e);
 				return;
 			}
-			Render();
 		}
 
 		protected override void OnPaintBackground(PaintEventArgs pevent)
@@ -778,7 +842,7 @@ namespace TriggerEdit
 			base.OnSizeChanged(e);
 			if (DesignMode)
 				return;
-			InitGraphics();
+//			InitGraphics();
 			camera_.ViewportSize = ClientRectangle.Size;
 			Invalidate();
 		}
@@ -826,6 +890,7 @@ namespace TriggerEdit
 		private float            temperature_;
 		private TriggerContainer triggers_;
 		private TriggerRenderer  trigger_renderer_;
+		private bool             rendering_enabled_;
 		// camera
 		private Camera camera_;
 		private PointF old_camera_position_;
@@ -848,7 +913,6 @@ namespace TriggerEdit
 		/// </summary>
 		private void InitializeComponent()
 		{
-
 		}
 
 		#endregion
