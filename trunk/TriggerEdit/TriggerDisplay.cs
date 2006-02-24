@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -22,12 +23,13 @@ namespace TriggerEdit
 
 		#endregion
 
-	/// <summary>
-	/// Summary description for TriggerDisplay.
-	/// </summary>
 	public class TriggerDisplay : System.Windows.Forms.Panel
 	{
-		#region nested types
+		//-------------
+		// nested types
+		//-------------
+
+		#region
 
 		private enum AnimationState
 		{
@@ -43,14 +45,20 @@ namespace TriggerEdit
 		private enum DragState
 		{
 			None,
-			CopyGhost,
-			DisplaceCamera,
-			DisplaceMarker
+			Bud,
+			Clone,
+			Link,
+			MoveCamera,
+			MoveMarker
 		}
 
 		#endregion
 
-		#region interface
+		//----------
+		// interface
+		//----------
+
+		#region
 
 		public TriggerDisplay()
 		{
@@ -63,6 +71,29 @@ namespace TriggerEdit
 			marker_layout_       = new MarkerLayout(Font);
 			old_camera_position_ = new Point(0, 0);
 			rendering_enabled_   = false;
+			// initialize the disc control
+			disk_control_        = new DiscControl(
+				(float)marker_layout_.Width,
+				(float)marker_layout_.Height);
+			Assembly a = Assembly.GetExecutingAssembly();
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.link.png")),
+				new EventHandler(BeginTriggerLink));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.collapse.png")),
+				new EventHandler(CollapseTrigger));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.condition.png")),
+				new EventHandler(OnConditionSelected));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.action.png")),
+				new EventHandler(OnActionSelected));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.clone.png")),
+				new EventHandler(BeginTriggerClone));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.bud.png")),
+				new EventHandler(BeginTriggerBud));
 			// hook event handlers
 			Application.Idle += new EventHandler(OnApplicationIdle);
 		}
@@ -85,14 +116,8 @@ namespace TriggerEdit
 			PreprocessVertices(ref triggers_.positions_);
 			NormalizeVertices(ref triggers_.positions_);
 			FitVerticesToGrid(ref triggers_.positions_);
-			// center a camera at the average vertex position
-			PointF average = PointF.Empty;
-			for (int i = 0; i != triggers_.count_; ++i)
-			{
-				average.X += triggers_.positions_[i].X / triggers.count_;
-				average.Y += triggers_.positions_[i].Y / triggers.count_;
-			}
-			camera_.Position = average;
+			// center camera at the root node
+			camera_.Position = triggers_.positions_[0];
 			// set initial marker positions
 			// initalize miscellaneous
 			InitGraphics();
@@ -103,6 +128,12 @@ namespace TriggerEdit
 		public int Selection
 		{
 			get { return selection_; }
+		}
+
+		public bool ShowFrameRate
+		{
+			get { return show_frame_rate_; }	
+			set { show_frame_rate_ = value; }
 		}
 
 		public void ToggleAnimation()
@@ -134,7 +165,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region implementation
+		//---------------
+		// implementation
+		//---------------
+
+		#region
 
 		private void AdvanceAnimation()
 		{
@@ -292,12 +327,19 @@ namespace TriggerEdit
 			}
 			device_.RenderState.CullMode = Cull.None;
 			device_.RenderState.Lighting = false;
+			// initialize FPS data
+			fps_sprite_ = new Sprite(device_);
+			fps_font_   = new Microsoft.DirectX.Direct3D.Font(device_, this.Font);
+			// lay out the disk control
+			disk_control_.Layout(device_);
 			return true;
 		}
 
 		private void OnLostDevice()
 		{
 			trigger_renderer_.OnLostDevice();
+			fps_font_.OnLostDevice();
+			fps_sprite_.OnLostDevice();
 		}
 
 		private void OnResetDevice()
@@ -315,9 +357,39 @@ namespace TriggerEdit
 			device_.Clear(ClearFlags.ZBuffer, 0x0,         1.0f, 0);
 			device_.BeginScene();
 			// matrices
-			device_.Transform.View = camera_.View;
+			device_.Transform.View       = camera_.View;
 			device_.Transform.Projection = camera_.Projection;
+			// render disk
+			if (selection_ >= 0 && disk_control_.Visible)
+			{
+				float x, y;
+				triggers_.GetInterpolatedPosition(selection_, out x, out y);
+				device_.Transform.World = Microsoft.DirectX.Matrix.Translation(x, y, 0);
+				disk_control_.Render(device_);
+				device_.Transform.World = Microsoft.DirectX.Matrix.Identity;
+			}
+			// render the trigger graph
 			trigger_renderer_.Render(device_, triggers_);
+			// render fps
+			if (show_frame_rate_)
+			{
+				int frame_time = Environment.TickCount;
+				if (frame_time - last_frame_time_ >= 128)
+				{
+					float fps        = frames_passed_ * 1000.0f / (frame_time - last_frame_time_);
+					float ratio      = 0.1f;
+					last_frame_time_ = frame_time;
+					fps_             = (1 - ratio) * fps_ + ratio * fps;
+					frames_passed_   = 0;
+				}
+				else
+					++frames_passed_;
+				string fps_text = string.Format("{0:.0} FPS", fps_);
+				fps_sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.AlphaBlend);
+				fps_font_.DrawText(fps_sprite_, fps_text, 2, 2, Color.Gold);
+				fps_sprite_.End();
+			}
+			// end the scene
 			device_.EndScene();
 			try
 			{
@@ -633,6 +705,7 @@ namespace TriggerEdit
 		{
 			if (selection_ == index)
 				return;
+			disk_control_.Visible = (index > 0 && index < triggers_.count_);
 			if (selection_ >= 0 && selection_ < triggers_.count_)
 				triggers_.descriptions_[selection_].status_ &= ~TriggerStatus.Selected;
 			if (index >= 0 && index < triggers_.count_)
@@ -640,9 +713,210 @@ namespace TriggerEdit
 			selection_ = index;
 		}
 
+		private void BeginCameraMove(object sender, EventArgs e)
+		{
+			drag_start_ = Cursor.Position;
+			old_camera_position_ = camera_.Position;
+			drag_state_ = DragState.MoveCamera;
+			Capture = true;
+		}
+
+		private void BeginTriggerBud(object sender, EventArgs e)
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// create a new marker ghost
+			TriggerContainer.TriggerDescription description = new TriggerContainer.TriggerDescription();
+			description.name_ = "[new]";
+			triggers_.AddMarkerGhost(description, cursor);
+			// create the link between the source marker and the ghost
+			triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition(selection_), cursor);
+			// modify environment
+			drag_state_ = DragState.Bud;
+			Capture = true;
+		}
+
+		private void MoveTriggerBud()
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// move the marker ghost
+			triggers_.g_marker_positions_[0] = cursor;
+			// move the ghost link
+			triggers_.SetLinkGhost(0, triggers_.GetInterpolatedPosition(selection_), cursor);
+		}
+
+		private void EndTriggerBud(object sender, EventArgs e)
+		{
+			// modify environment
+			drag_state_ = DragState.None;
+			// create a new node
+			triggers_.AddNew();
+			triggers_.descriptions_[triggers_.count_ - 1]
+				= (TriggerContainer.TriggerDescription)triggers_.g_marker_descriptions_[0];
+			triggers_.adjacency_[selection_, triggers_.count_ - 1] = true;
+			triggers_.history_[triggers_.count_ - 1].Set((PointF)triggers_.g_marker_positions_[0]);
+			triggers_.positions_[triggers_.count_ - 1] = (PointF)triggers_.g_marker_positions_[0];
+			// remove the ghosts
+			triggers_.RemoveMarkerGhosts();
+			triggers_.RemoveLinkGhosts();
+		}
+
+		private void BeginTriggerClone(object sender, EventArgs e)
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// create a new marker ghost
+			triggers_.AddMarkerGhost(triggers_.descriptions_[selection_], cursor);
+			// copy the links
+			foreach (int tail in triggers_.adjacency_.GetList(selection_))
+				triggers_.AddLinkGhost(cursor, triggers_.positions_[tail]);
+			for (int tail = 0; tail != triggers_.count_; ++tail)
+				if (triggers_.adjacency_[tail, selection_])
+					triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition(tail), cursor);
+			// modify environment
+			drag_state_ = DragState.Clone;
+			Capture = true;
+		}
+
+		private void MoveTriggerClone()
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// move the marker ghost
+			triggers_.g_marker_positions_[0] = cursor;
+			// move the links
+			int i = 0;
+			foreach (int tail in triggers_.adjacency_.GetList(selection_))
+				triggers_.SetLinkGhost(
+					i++,
+					cursor,
+					triggers_.positions_[tail]);
+			for (int tail = 0; tail != triggers_.count_; ++tail)
+				if (triggers_.adjacency_[tail, selection_])
+					triggers_.SetLinkGhost(
+						i++,
+						triggers_.GetInterpolatedPosition(tail),
+						cursor);
+		}
+
+		private void EndTriggerClone(object sender, EventArgs e)
+		{
+			// modify environment
+			drag_state_ = DragState.None;
+			// create a copy of the selected node
+			triggers_.Duplicate(selection_);
+			triggers_.history_[triggers_.count_ - 1].Set((PointF)triggers_.g_marker_positions_[0]);
+			triggers_.positions_[triggers_.count_ - 1] = (PointF)triggers_.g_marker_positions_[0];
+			// remove the ghosts
+			triggers_.RemoveMarkerGhosts();
+			triggers_.RemoveLinkGhosts();
+		}
+
+		private void BeginTriggerLink(object sender, EventArgs e)
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// create the link ghost connecting the source with the cursor
+			TriggerContainer.Link link;
+			link.head_      = triggers_.GetInterpolatedPosition(selection_);
+			link.tail_      = cursor;
+			link.snap_head_ = true;
+			link.snap_tail_ = false;
+			triggers_.AddLinkGhost(link);
+			// modify environment
+			drag_state_ = DragState.Link;
+		}
+
+		private void MoveTriggerLink()
+		{
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// create the link ghost connecting the source with the cursor
+			TriggerContainer.Link link;
+			link.head_      = triggers_.GetInterpolatedPosition(selection_);
+			link.tail_      = cursor;
+			link.snap_head_ = true;
+			link.snap_tail_ = false;
+			triggers_.SetLinkGhost(0, link);
+		}
+
+		private void EndTriggerLink(object sender, EventArgs e)
+		{
+			// modify environment
+			drag_state_ = DragState.None;
+			triggers_.RemoveLinkGhosts();
+			// get cursor location
+			Point int_cursor = Cursor.Position;
+			int_cursor = PointToClient(int_cursor);
+			PointF cursor = new PointF(
+				(float)int_cursor.X,
+				(float)int_cursor.Y);
+			ScreenToWorld(ref cursor);
+			// find the target trigger
+			int new_selection = triggers_.GetIndex(cursor, marker_layout_);
+			if (new_selection < 0)
+				return;
+			// carry out the link operation
+			if (0 == new_selection)
+			{
+				triggers_.adjacency_[0, selection_] = !triggers_.adjacency_[0, selection_];
+				triggers_.adjacency_[selection_, 0] = false;
+			}
+			else
+				triggers_.adjacency_[selection_, new_selection]
+					= !triggers_.adjacency_[selection_, new_selection];
+		}
+
+		private void BeginTriggerMove(object sender, EventArgs e)
+		{
+			drag_state_ = DragState.MoveMarker;
+			Capture = true;
+		}
+
+		private void CollapseTrigger(object sender, EventArgs e)
+		{
+			triggers_.Collapse(selection_);
+			selection_ = -1;
+		}
+
 		#endregion
 
-		#region events
+		//-------
+		// events
+		//-------
+
+		#region
 
 		#region trigger event
 
@@ -690,9 +964,37 @@ namespace TriggerEdit
 
 		#endregion
 
+		#region action event
+
+		public event EventHandler ActionSelected;
+
+		public void OnActionSelected(object sender, EventArgs e)
+		{
+			if (null != ActionSelected)
+				ActionSelected(this, e);
+		}
+
 		#endregion
 
-		#region event handlers
+		#region condition event
+
+		public event EventHandler ConditionSelected;
+
+		public void OnConditionSelected(object sender, EventArgs e)
+		{
+			if (null != ConditionSelected)
+				ConditionSelected(this, e);
+		}
+
+		#endregion
+
+		#endregion
+
+		//---------------
+		// event handlers
+		//---------------
+
+		#region
 
 		private void OnApplicationIdle(object sender, EventArgs e)
 		{
@@ -715,24 +1017,23 @@ namespace TriggerEdit
 			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
 			if (new_selection < 0)
 			{
-				drag_start_.X = e.X;
-				drag_start_.Y = e.Y;
-				old_camera_position_ = camera_.Position;
-				drag_state_ = DragState.DisplaceCamera;
-				Capture = true;
+				bool drag_empty = true;
+				// call the disk control event handler
+				if (-1 != selection_)
+				{
+					float x, y;
+					triggers_.GetInterpolatedPosition(selection_, out x, out y);
+					drag_empty = !disk_control_.OnMouseClick(cursor_location.X - x, cursor_location.Y - y);
+				}
+				// begin dragging the camera
+				if (drag_empty && DragState.None == drag_state_)
+					BeginCameraMove(this, EventArgs.Empty);
 			}
 			else
 			{
-				PointF position = PointF.Empty;
-				triggers_.GetInterpolatedPosition(new_selection, ref position);
-				float tear_off_x = position.X - marker_layout_.Width / 2 + marker_layout_.TearOffWidth;
-				if (cursor_location.X < tear_off_x)
-					drag_state_ = DragState.CopyGhost;
-				else
-					drag_state_ = DragState.DisplaceMarker;
-				Capture = true;
+				SetSelection(new_selection);
+				BeginTriggerMove(this, EventArgs.Empty);
 			}
-			SetSelection(new_selection);
 			// fire the event
 			OnSelectTrigger(new TriggerEventArgs(selection_));
 			base.OnMouseDown(e);
@@ -745,27 +1046,37 @@ namespace TriggerEdit
 			if (DesignMode || null == triggers_)
 				return;
 			HighlightTriggers(new Point(e.X, e.Y));
+			if (-1 != selection_)
+			{
+				float ex = e.X;
+				float ey = e.Y;
+				ScreenToWorld(ref ex, ref ey);
+				float x, y;
+				triggers_.GetInterpolatedPosition(selection_, out x, out y);
+				disk_control_.OnMouseMove(ex - x, ey - y);
+			}
 			switch (drag_state_)
 			{
-				case DragState.DisplaceCamera:
+				case DragState.MoveCamera:
 					camera_.SetPosition(
-						old_camera_position_.X + (drag_start_.X - e.X) * camera_.Zoom,
-						old_camera_position_.Y + (drag_start_.Y - e.Y) * camera_.Zoom);
+						old_camera_position_.X + (drag_start_.X - Cursor.Position.X) * camera_.Zoom,
+						old_camera_position_.Y + (drag_start_.Y - Cursor.Position.Y) * camera_.Zoom);
 					break;
-				case DragState.DisplaceMarker:
+				case DragState.MoveMarker:
 					if (selection_ < 0)
 						break;
 					triggers_.positions_[selection_] = new Point(e.X, e.Y);
 					ScreenToWorld(ref triggers_.positions_[selection_]);
 					triggers_.history_[selection_].Set(triggers_.positions_[selection_]);
 					break;
-				case DragState.CopyGhost:
-					if (selection_ < 0)
-						break;
-					if (triggers_.ghost_index_ < 0)
-						triggers_.ghost_index_ = selection_;
-					triggers_.ghost_position_ = new Point(e.X, e.Y);
-					ScreenToWorld(ref triggers_.ghost_position_);
+				case DragState.Bud:
+					MoveTriggerBud();
+					break;
+				case DragState.Clone:
+					MoveTriggerClone();
+					break;
+				case DragState.Link:
+					MoveTriggerLink();
 					break;
 			}
 			base.OnMouseMove(e);
@@ -775,41 +1086,26 @@ namespace TriggerEdit
 		{
 			if (!rendering_enabled_ || triggers_ == null)
 				return;
-			if (DragState.CopyGhost == drag_state_)
+			switch (drag_state_)
 			{
-				// calculate new selection
-				Point cursor_location = new Point(e.X, e.Y);
-				ScreenToWorld(ref cursor_location);
-				int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
-				if (new_selection < 0)
-				{
-					triggers_.ghost_index_ = -1;
-					// create a copy of the selected node
-					triggers_.Duplicate(selection_);
-					triggers_.history_[triggers_.count_ - 1].Set(cursor_location);
-					triggers_.positions_[triggers_.count_ - 1] = cursor_location;
-					SetSelection(triggers_.count_ - 1);
-				}
-				else if (selection_ != new_selection)
-				{
-					if (triggers_.adjacency_[selection_, new_selection])
-					{
-						triggers_.DeleteLink(selection_, new_selection);
-						SetSelection(-1);
-					}
-					else if (triggers_.adjacency_[new_selection, selection_])
-					{
-						triggers_.DeleteLink(new_selection, selection_);
-						SetSelection(-1);
-					}
-					else
-						triggers_.adjacency_[selection_, new_selection] = true;
-				}
+				case DragState.MoveCamera:
+					drag_state_ = DragState.None;
+					break;
+				case DragState.MoveMarker:
+					drag_state_ = DragState.None;
+					break;
+				case DragState.Bud:
+					EndTriggerBud(this, EventArgs.Empty);
+					break;
+				case DragState.Clone:
+					EndTriggerClone(this, EventArgs.Empty);
+					break;
+				case DragState.Link:
+					EndTriggerLink(this, EventArgs.Empty);
+					break;
 			}
-			triggers_.ghost_index_ = -1;
-			drag_state_ = DragState.None;
 			Capture = false;
-			base.OnMouseUp (e);
+			base.OnMouseUp(e);
 		}
 
 		protected override void OnMouseWheel(MouseEventArgs e)
@@ -849,7 +1145,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region utilities
+		//--------
+		// utility
+		//--------
+
+		#region
 
 		Point Center(Rectangle rect)
 		{
@@ -865,24 +1165,41 @@ namespace TriggerEdit
 			return Rectangle.FromLTRB(x - radius_h, y - radius_v, x + radius_h, y + radius_v);
 		}
 
+		private void ScreenToWorld(ref float x, ref float y)
+		{
+			x = x * camera_.Zoom + camera_.Position.X - ClientRectangle.Width  * camera_.Zoom / 2;
+			y = y * camera_.Zoom + camera_.Position.Y - ClientRectangle.Height * camera_.Zoom / 2;
+		}
+
 		private void ScreenToWorld(ref Point point)
 		{
-			point.X = (int)(point.X * camera_.Zoom + camera_.Position.X - ClientRectangle.Width  * camera_.Zoom / 2);
-			point.Y = (int)(point.Y * camera_.Zoom + camera_.Position.Y - ClientRectangle.Height * camera_.Zoom / 2);
+			float x = (float)point.X;
+			float y = (float)point.Y;
+			ScreenToWorld(ref x, ref y);
+			point.X = (int)x;
+			point.Y = (int)y;
 		}
 
 		private void ScreenToWorld(ref PointF point)
 		{
-			point.X = point.X * camera_.Zoom + camera_.Position.X - ClientRectangle.Width  * camera_.Zoom / 2;
-			point.Y = point.Y * camera_.Zoom + camera_.Position.Y - ClientRectangle.Height * camera_.Zoom / 2;
+			float x = point.X;
+			float y = point.Y;
+			ScreenToWorld(ref x, ref y);
+			point.X = x;
+			point.Y = y;
 		}
 
 		#endregion
 
-		#region data
+		//-----
+		// data
+		//-----
+
+		#region
 
 		private int              active_ = -1;
 		private int              cell_spacing_ = 96;
+		private DiscControl      disk_control_;
 		private Point            drag_start_;
 		private DragState        drag_state_;
 		private MarkerLayout     marker_layout_;
@@ -896,6 +1213,13 @@ namespace TriggerEdit
 		private PointF old_camera_position_;
 		// DirectX
 		private Device device_;
+		// FPS
+		float                           fps_;
+		Microsoft.DirectX.Direct3D.Font fps_font_;
+		Sprite                          fps_sprite_;
+		int                             frames_passed_;
+		int                             last_frame_time_;
+		bool                            show_frame_rate_;
 		// animation
 		private bool           animation_active_;
 		private float          animation_remainder_;
@@ -906,18 +1230,28 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region Component Designer generated code
+		//----------------------------------
+		// Component Designer generated code
+		//----------------------------------
+
+		#region
+
 		/// <summary>
 		/// Required method for Designer support - do not modify 
 		/// the contents of this method with the code editor.
 		/// </summary>
 		private void InitializeComponent()
 		{
+
 		}
 
 		#endregion
+
+		//------------------------
+		// Component Designer data
+		//------------------------
 		
-		#region Component Designer data
+		#region
 
 		private System.ComponentModel.IContainer components = null;
 

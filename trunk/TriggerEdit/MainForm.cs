@@ -27,7 +27,10 @@ namespace TriggerEdit
 			// Required for Windows Form Designer support
 			InitializeComponent();
 			args_      = args;
-			display_pnl_.SelectTrigger +=new TriggerEdit.TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
+			display_pnl_.SelectTrigger
+				+= new TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
+			display_pnl_.ActionSelected += new EventHandler(OnAction);
+			display_pnl_.ConditionSelected += new EventHandler(OnCondition);
 			triggers_  = new TriggerContainer();
 			Application.AddMessageFilter(this);
 		}
@@ -53,6 +56,8 @@ namespace TriggerEdit
 				int vcode = (int)m.WParam;
 				if (vcode == (int)Import.VK.SPACE)
 					display_pnl_.ToggleAnimation();
+				else if (vcode == (int)Import.VK.ALPHA_F)
+					display_pnl_.ShowFrameRate = !display_pnl_.ShowFrameRate;
 			}
 			return false;
 		}
@@ -142,10 +147,7 @@ namespace TriggerEdit
 
 		private void EnableTriggerControls(bool enable)
 		{
-			name_edt_.Enabled      = enable;
-			state_lst_.Enabled     = enable;
-			condition_btn_.Enabled = enable;
-			action_btn_.Enabled    = enable;
+			name_edt_.Enabled = enable;
 		}
 
 		private void LoadFile(string path)
@@ -156,7 +158,8 @@ namespace TriggerEdit
 			doc.Load(reader);
 			reader.Close();
 			// extract data
-			triggers_.Serialize(doc);
+			if (!triggers_.Serialize(doc))
+				return;
 			display_pnl_.Reset(ref triggers_);
 			// set priority level
 			Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
@@ -179,7 +182,7 @@ namespace TriggerEdit
 
 		#region event handlers
 
-		private void action_btn__Click(object sender, System.EventArgs e)
+		private void OnAction(object sender, System.EventArgs e)
 		{
 			if (display_pnl_.Selection < 0)
 				return;
@@ -190,7 +193,7 @@ namespace TriggerEdit
 				triggers_.descriptions_[display_pnl_.Selection].action_ = action_builder.Action;
 		}
 
-		private void condition_btn__Click(object sender, System.EventArgs e)
+		private void OnCondition(object sender, System.EventArgs e)
 		{
 			if (display_pnl_.Selection < 0)
 				return;
@@ -212,28 +215,22 @@ namespace TriggerEdit
 			TriggerContainer.TriggerDescription trigger = triggers_.descriptions_[e.trigger_id_];
 			property_label_.Text = trigger.name_;
 			name_edt_.Text       = trigger.name_;
+			property_tree_.SuspendLayout();
 			property_tree_.Nodes.Clear();
-			switch (trigger.state_)
+			if (trigger.is_virtual_)
+				property_tree_.Nodes.Add("virtual");
+			else
 			{
-				case TriggerState.Checking:
-					property_tree_.Nodes.Add("state: checking");
-					state_lst_.SelectedIndex = 0;
-					break;
-				case TriggerState.Done:
-					property_tree_.Nodes.Add("state: done");
-					state_lst_.SelectedIndex = 1;
-					break;
-				case TriggerState.Sleeping:
-					property_tree_.Nodes.Add("state: sleeping");
-					state_lst_.SelectedIndex = 2;
-					break;
+				if (null != trigger.action_)
+					AppendActionTreeNode(trigger.action_, property_tree_.Nodes);
+				if (null != trigger.condition_)
+					AppendConditionTreeNode(trigger.condition_, property_tree_.Nodes);
+				property_tree_.ExpandAll();
 			}
-			if (null != trigger.action_)
-				AppendActionTreeNode(trigger.action_, property_tree_.Nodes);
-			if (null != trigger.condition_)
-				AppendConditionTreeNode(trigger.condition_, property_tree_.Nodes);
-			property_tree_.ExpandAll();
+			property_tree_.ResumeLayout(true);
 			EnableTriggerControls(true);
+			// enable/disable buttons
+			EnableTriggerControls(!trigger.is_virtual_);
 		}
 
 		private void MainForm_Load(object sender, System.EventArgs e)
@@ -256,9 +253,8 @@ namespace TriggerEdit
 		private void property_panel__Resize(object sender, System.EventArgs e)
 		{
 			int width = property_actions_panel_.Width - name_edt_.Left - 8;
-			name_edt_.Width  = width;
-			state_lst_.Width = width;
-			zoom_udc_.Width  = width;
+			name_edt_.Width = width;
+			zoom_udc_.Width = width;
 		}
 
 		private void toolbar__ButtonClick(object sender, System.Windows.Forms.ToolBarButtonClickEventArgs e)
@@ -289,7 +285,9 @@ namespace TriggerEdit
 			dlg.Filter = "trigger file (xml made from scr)|*xml";
 			if (dlg.ShowDialog() != DialogResult.OK)
 				return;
-			ScriptXmlWriter w = new ScriptXmlWriter(dlg.FileName, System.Text.Encoding.UTF8);
+			ScriptXmlWriter w = new ScriptXmlWriter(
+				dlg.FileName,
+				System.Text.ASCIIEncoding.GetEncoding(1251));
 			w.WriteStartDocument(true);
 			triggers_.Serialize(w);
 			w.WriteEndDocument();
@@ -338,11 +336,7 @@ namespace TriggerEdit
 			this.zoom_udc_ = new System.Windows.Forms.NumericUpDown();
 			this.label1 = new System.Windows.Forms.Label();
 			this.groupBox1 = new System.Windows.Forms.GroupBox();
-			this.state_lst_ = new System.Windows.Forms.ComboBox();
-			this.state_lbl_ = new System.Windows.Forms.Label();
 			this.name_lbl_ = new System.Windows.Forms.Label();
-			this.action_btn_ = new System.Windows.Forms.Button();
-			this.condition_btn_ = new System.Windows.Forms.Button();
 			this.name_edt_ = new System.Windows.Forms.TextBox();
 			this.property_label_ = new System.Windows.Forms.Label();
 			this.splitter1 = new System.Windows.Forms.Splitter();
@@ -363,8 +357,10 @@ namespace TriggerEdit
 			this.display_pnl_.Location = new System.Drawing.Point(211, 42);
 			this.display_pnl_.Name = "display_pnl_";
 			this.display_pnl_.RenderingEnabled = true;
+			this.display_pnl_.ShowFrameRate = false;
 			this.display_pnl_.Size = new System.Drawing.Size(365, 427);
 			this.display_pnl_.TabIndex = 0;
+			this.display_pnl_.Zoom = 1F;
 			this.display_pnl_.ZoomChanged += new TriggerEdit.TriggerDisplay.ZoomChangedEvent(this.display_pnl__ZoomChanged);
 			// 
 			// property_panel_
@@ -387,7 +383,7 @@ namespace TriggerEdit
 			this.property_tree_.Location = new System.Drawing.Point(0, 32);
 			this.property_tree_.Name = "property_tree_";
 			this.property_tree_.SelectedImageIndex = -1;
-			this.property_tree_.Size = new System.Drawing.Size(196, 238);
+			this.property_tree_.Size = new System.Drawing.Size(196, 291);
 			this.property_tree_.TabIndex = 1;
 			// 
 			// property_actions_panel_
@@ -395,16 +391,12 @@ namespace TriggerEdit
 			this.property_actions_panel_.Controls.Add(this.zoom_udc_);
 			this.property_actions_panel_.Controls.Add(this.label1);
 			this.property_actions_panel_.Controls.Add(this.groupBox1);
-			this.property_actions_panel_.Controls.Add(this.state_lst_);
-			this.property_actions_panel_.Controls.Add(this.state_lbl_);
 			this.property_actions_panel_.Controls.Add(this.name_lbl_);
-			this.property_actions_panel_.Controls.Add(this.action_btn_);
-			this.property_actions_panel_.Controls.Add(this.condition_btn_);
 			this.property_actions_panel_.Controls.Add(this.name_edt_);
 			this.property_actions_panel_.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.property_actions_panel_.Location = new System.Drawing.Point(0, 270);
+			this.property_actions_panel_.Location = new System.Drawing.Point(0, 323);
 			this.property_actions_panel_.Name = "property_actions_panel_";
-			this.property_actions_panel_.Size = new System.Drawing.Size(196, 157);
+			this.property_actions_panel_.Size = new System.Drawing.Size(196, 104);
 			this.property_actions_panel_.TabIndex = 3;
 			// 
 			// zoom_udc_
@@ -415,7 +407,7 @@ namespace TriggerEdit
 																						  0,
 																						  0,
 																						  131072});
-			this.zoom_udc_.Location = new System.Drawing.Point(56, 128);
+			this.zoom_udc_.Location = new System.Drawing.Point(56, 72);
 			this.zoom_udc_.Maximum = new System.Decimal(new int[] {
 																						-1,
 																						-1,
@@ -438,7 +430,7 @@ namespace TriggerEdit
 			// 
 			// label1
 			// 
-			this.label1.Location = new System.Drawing.Point(8, 128);
+			this.label1.Location = new System.Drawing.Point(8, 72);
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(40, 16);
 			this.label1.TabIndex = 8;
@@ -447,67 +439,24 @@ namespace TriggerEdit
 			// groupBox1
 			// 
 			this.groupBox1.Anchor = System.Windows.Forms.AnchorStyles.Top;
-			this.groupBox1.Location = new System.Drawing.Point(16, 104);
+			this.groupBox1.Location = new System.Drawing.Point(16, 48);
 			this.groupBox1.Name = "groupBox1";
 			this.groupBox1.Size = new System.Drawing.Size(168, 8);
 			this.groupBox1.TabIndex = 7;
 			this.groupBox1.TabStop = false;
 			// 
-			// state_lst_
-			// 
-			this.state_lst_.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			this.state_lst_.Enabled = false;
-			this.state_lst_.Items.AddRange(new object[] {
-																		  "checking",
-																		  "done",
-																		  "sleeping"});
-			this.state_lst_.Location = new System.Drawing.Point(56, 40);
-			this.state_lst_.Name = "state_lst_";
-			this.state_lst_.Size = new System.Drawing.Size(128, 21);
-			this.state_lst_.TabIndex = 6;
-			// 
-			// state_lbl_
-			// 
-			this.state_lbl_.Location = new System.Drawing.Point(8, 40);
-			this.state_lbl_.Name = "state_lbl_";
-			this.state_lbl_.Size = new System.Drawing.Size(40, 16);
-			this.state_lbl_.TabIndex = 5;
-			this.state_lbl_.Text = "State";
-			// 
 			// name_lbl_
 			// 
-			this.name_lbl_.Location = new System.Drawing.Point(8, 8);
+			this.name_lbl_.Location = new System.Drawing.Point(8, 16);
 			this.name_lbl_.Name = "name_lbl_";
 			this.name_lbl_.Size = new System.Drawing.Size(40, 16);
 			this.name_lbl_.TabIndex = 4;
 			this.name_lbl_.Text = "Name";
 			// 
-			// action_btn_
-			// 
-			this.action_btn_.Anchor = System.Windows.Forms.AnchorStyles.Top;
-			this.action_btn_.Enabled = false;
-			this.action_btn_.Location = new System.Drawing.Point(104, 72);
-			this.action_btn_.Name = "action_btn_";
-			this.action_btn_.Size = new System.Drawing.Size(72, 23);
-			this.action_btn_.TabIndex = 3;
-			this.action_btn_.Text = "Action";
-			this.action_btn_.Click += new System.EventHandler(this.action_btn__Click);
-			// 
-			// condition_btn_
-			// 
-			this.condition_btn_.Anchor = System.Windows.Forms.AnchorStyles.Top;
-			this.condition_btn_.Enabled = false;
-			this.condition_btn_.Location = new System.Drawing.Point(24, 72);
-			this.condition_btn_.Name = "condition_btn_";
-			this.condition_btn_.Size = new System.Drawing.Size(72, 23);
-			this.condition_btn_.TabIndex = 2;
-			this.condition_btn_.Text = "Condition";
-			this.condition_btn_.Click += new System.EventHandler(this.condition_btn__Click);
-			// 
 			// name_edt_
 			// 
 			this.name_edt_.Enabled = false;
-			this.name_edt_.Location = new System.Drawing.Point(56, 8);
+			this.name_edt_.Location = new System.Drawing.Point(56, 16);
 			this.name_edt_.Name = "name_edt_";
 			this.name_edt_.Size = new System.Drawing.Size(128, 20);
 			this.name_edt_.TabIndex = 0;
@@ -553,15 +502,16 @@ namespace TriggerEdit
 			// 
 			this.save_btn_.Enabled = false;
 			this.save_btn_.ImageIndex = 0;
-			this.save_btn_.Text = "Save";
+			this.save_btn_.Text = "&Save";
 			// 
 			// load_btn_
 			// 
 			this.load_btn_.ImageIndex = 1;
-			this.load_btn_.Text = "Load";
+			this.load_btn_.Text = "&Open";
 			// 
 			// toolbar_img_lst_
 			// 
+			this.toolbar_img_lst_.ColorDepth = System.Windows.Forms.ColorDepth.Depth24Bit;
 			this.toolbar_img_lst_.ImageSize = new System.Drawing.Size(24, 24);
 			this.toolbar_img_lst_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_img_lst_.ImageStream")));
 			this.toolbar_img_lst_.TransparentColor = System.Drawing.Color.Magenta;
@@ -576,7 +526,7 @@ namespace TriggerEdit
 			this.Controls.Add(this.toolbar_);
 			this.DockPadding.All = 8;
 			this.Name = "MainForm";
-			this.Text = "TriggerViewer";
+			this.Text = "Trigger Editor";
 			this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 			this.Resize += new System.EventHandler(this.MainForm_Resize);
 			this.Load += new System.EventHandler(this.MainForm_Load);
@@ -592,12 +542,8 @@ namespace TriggerEdit
 
 		#region Component Designer data
 
-		private System.Windows.Forms.Button   action_btn_;
-		private System.Windows.Forms.Button   condition_btn_;
-		private System.Windows.Forms.ComboBox state_lst_;
 		private System.Windows.Forms.Label    name_lbl_;
 		private System.Windows.Forms.Label    property_label_;
-		private System.Windows.Forms.Label    state_lbl_;
 		private System.Windows.Forms.Panel    property_panel_;
 		private System.Windows.Forms.Splitter splitter1;
 		private System.Windows.Forms.TextBox  name_edt_;

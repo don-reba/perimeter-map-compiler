@@ -21,7 +21,7 @@ namespace TriggerEdit
 		{
 			get
 			{
-				text_offset_.Width  = text_padding_.Width + TearOffWidth;
+				text_offset_.Width  = text_padding_.Width;
 				text_offset_.Height = text_padding_.Height;
 				return text_offset_;
 			}
@@ -45,11 +45,6 @@ namespace TriggerEdit
 		public Size Size
 		{
 			get { return new Size(Width, Height); }
-		}
-
-		public int TearOffWidth
-		{
-			get { return 12; }
 		}
 
 		#endregion

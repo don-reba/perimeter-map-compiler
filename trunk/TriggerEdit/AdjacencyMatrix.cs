@@ -6,7 +6,11 @@ namespace TriggerEdit
 {
 	public class AdjacencyMatrix
 	{
-		#region nested types
+		//-------------
+		// nested types
+		//-------------
+
+		#region
 
 		public class AdjacencyList
 		{
@@ -68,7 +72,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region interface
+		//----------
+		// interface
+		//----------
+
+		#region
 
 		public AdjacencyMatrix()
 			:this(0)
@@ -96,7 +104,8 @@ namespace TriggerEdit
 			}
 			set
 			{
-				Debug.Assert(row != col);
+				if (row == col)
+					return;
 				bits_[row * count_ + col] = value;
 			}
 		}
@@ -153,10 +162,31 @@ namespace TriggerEdit
 			bits_  = new_bits;
 		}
 
+		public void Collapse(int index)
+		{
+			// add connections of the index vertex to each vertex adjoint to it
+			int in_index    = index;
+			int index_start = index * count_;
+			int index_end   = index_start + count_;
+			for (int row = 0; row != count_; ++row)
+			{
+				if (bits_[in_index])
+				{
+					int i = row * count_;
+					for (int index_i = index_start; index_i != index_end; ++index_i)
+					{
+						bits_[i] = bits_[i] || bits_[index_i];
+						++i;
+					}
+				}
+				in_index += count_;
+			}
+			// delete the index vertex
+			Delete(index);
+		}
+
 		public void Delete(int index)
 		{
-			if (index < 0)
-				throw new ArgumentOutOfRangeException();
 			int      new_count = count_ - 1;
 			BitArray new_bits  = new BitArray(new_count * new_count);
 			int      iter_old  = 0;
@@ -175,9 +205,22 @@ namespace TriggerEdit
 			bits_  = new_bits;
 		}
 
+		public void Duplicate(int index)
+		{
+			Grow(1);
+			for (int i = 0; i != count_; ++i)
+				this[count_ - 1, i] = this[index, i];
+			for (int i = 0; i != count_; ++i)
+				this[i, count_ - 1] = this[i, index];
+		}
+
 		#endregion
 
-		#region data
+		//-----
+		// data
+		//-----
+
+		#region
 
 		private BitArray bits_;
 		private int      count_;

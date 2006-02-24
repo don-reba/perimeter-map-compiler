@@ -16,6 +16,7 @@ namespace TriggerEdit
 			font_          = new Microsoft.DirectX.Direct3D.Font(device, font);
 			marker_layout_ = marker_layout;
 			sprite_        = new Sprite(device);
+			vertices_      = new CustomVertex.PositionColored[64];
 		}
 		
 		/// <summary>
@@ -23,79 +24,70 @@ namespace TriggerEdit
 		/// </summary>
 		public void Render(Device device, TriggerContainer triggers)
 		{
-			PointF ghost_position = PointF.Empty;
-			if (triggers.ghost_index_ >= 0)
-			{
-				ghost_position.X = (float)Math.Round(triggers.ghost_position_.X);
-				ghost_position.Y = (float)Math.Round(triggers.ghost_position_.Y);
-			}
 			// create geometry
-			ArrayList vertices = new ArrayList();
-			PointF rounded_start = PointF.Empty;
-			PointF rounded_end   = PointF.Empty;
+			StartVertices();
+			PointF head = PointF.Empty;
+			PointF tail = PointF.Empty;
 			for (int i = 0; i != triggers.count_; ++i)
 			{
-				triggers.GetInterpolatedPosition(i, ref rounded_start);
-				rounded_start.X = (float)Math.Round(rounded_start.X);
-				rounded_start.Y = (float)Math.Round(rounded_start.Y);
+				triggers.GetInterpolatedPosition(i, ref head);
 				PushMarker(
-					ref vertices,
-					rounded_start,
+					head,
 					triggers.descriptions_[i].Fill,
 					triggers.descriptions_[i].Outline);
 				foreach (int j in triggers.adjacency_.GetList(i))
 				{
-					triggers.GetInterpolatedPosition(j, ref rounded_end);
-					rounded_end.X = (float)Math.Round(rounded_end.X);
-					rounded_end.Y = (float)Math.Round(rounded_end.Y);
-					PushLine(ref vertices, rounded_start, rounded_end, Color.Red);
-					if (triggers.ghost_index_ == j)
-						PushLine(ref vertices, rounded_start, ghost_position, Color.Red);
+					triggers.GetInterpolatedPosition(j, ref tail);
+					PushSnappedLine(head, tail, Color.Red);
 				}
 			}
-			if (triggers.ghost_index_ >= 0)
+			for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
 			{
-				rounded_start.X = (float)Math.Round(triggers.ghost_position_.X);
-				rounded_start.Y = (float)Math.Round(triggers.ghost_position_.Y);
-				PushMarker(
-					ref vertices,
-					rounded_start,
-					triggers.descriptions_[triggers.ghost_index_].Fill,
-					triggers.descriptions_[triggers.ghost_index_].Outline);
-				foreach (int j in triggers.adjacency_.GetList(triggers.ghost_index_))
-				{
-					triggers.GetInterpolatedPosition(j, ref rounded_end);
-					rounded_end.X = (float)Math.Round(rounded_end.X);
-					rounded_end.Y = (float)Math.Round(rounded_end.Y);
-					PushLine(ref vertices, ghost_position, rounded_end, Color.Red);
-				}
+				PointF point
+					= (PointF)triggers.g_marker_positions_[i];
+				TriggerContainer.TriggerDescription description
+					= (TriggerContainer.TriggerDescription)triggers.g_marker_descriptions_[i];
+				PushMarker(point, description.Fill, description.Outline);
 			}
-			Debug.Assert(vertices.Count % 3 == 0);
+			for (int i = 0; i != triggers.g_links_.Count; ++i)
+			{
+				TriggerContainer.Link link = triggers.GetLinkGhost(i);
+				PushLine(
+					link.head_,
+					link.tail_,
+					link.snap_head_,
+					link.snap_tail_,
+					Color.Red);
+			}
+			EndVertices();
+			if (0 == current_vertex_)
+				return;
 			// create the vertex buffer
 			VertexBuffer vb = new VertexBuffer(
 				typeof(CustomVertex.PositionColored),
-				vertices.Count,
+				vertices_.Length,
 				device,
 				Usage.WriteOnly,
 				CustomVertex.PositionColored.Format,
 				Pool.Managed);
+			GraphicsStream vb_stream = vb.Lock(0, 0, LockFlags.None);
+			vb_stream.Write(vertices_);
+			vb.Unlock();
 			device.SetStreamSource(0, vb, 0);
 			device.VertexFormat = CustomVertex.PositionColored.Format;
-			GraphicsStream vb_stream = vb.Lock(0, 0, LockFlags.None);
-			vb_stream.Write(vertices.ToArray(typeof(CustomVertex.PositionColored)));
-			vb.Unlock();
 			// output geometry
-			device.DrawPrimitives(PrimitiveType.TriangleList, 0, vertices.Count / 3);
+			device.DrawPrimitives(PrimitiveType.TriangleList, 0, current_vertex_ / 3);
 			vb.Dispose();
 			// draw text
 			sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.SortTexture | SpriteFlags.ObjectSpace);
 			device.SamplerState[0].MinFilter = TextureFilter.Point;
+			device.SamplerState[0].MagFilter = TextureFilter.Point;
 			for (int i = 0; i != triggers.count_; ++i)
 			{
-				triggers.GetInterpolatedPosition(i, ref rounded_start);
+				triggers.GetInterpolatedPosition(i, ref head);
 				Rectangle rect = new Rectangle(
-					(int)Math.Round(rounded_start.X - marker_layout_.Width  / 2),
-					(int)Math.Round(rounded_start.Y - marker_layout_.Height / 2),
+					(int)(head.X - marker_layout_.Width  / 2),
+					(int)(head.Y - marker_layout_.Height / 2),
 					marker_layout_.Width,
 					marker_layout_.Height);
 				rect.Inflate(
@@ -108,11 +100,15 @@ namespace TriggerEdit
 					DrawTextFormat.WordBreak,
 					Color.Black);
 			}
-			if (triggers.ghost_index_ >= 0)
+			for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
 			{
+				PointF point
+					= (PointF)triggers.g_marker_positions_[i];
+				TriggerContainer.TriggerDescription description
+					= (TriggerContainer.TriggerDescription)triggers.g_marker_descriptions_[i];
 				Rectangle rect = new Rectangle(
-					(int)Math.Round(triggers.ghost_position_.X - marker_layout_.Width  / 2),
-					(int)Math.Round(triggers.ghost_position_.Y - marker_layout_.Height / 2),
+					(int)(point.X - marker_layout_.Width  / 2),
+					(int)(point.Y - marker_layout_.Height / 2),
 					marker_layout_.Width,
 					marker_layout_.Height);
 				rect.Inflate(
@@ -120,7 +116,7 @@ namespace TriggerEdit
 					-marker_layout_.TextOffset.Height);
 				font_.DrawText(
 					sprite_,
-					triggers.descriptions_[triggers.ghost_index_].name_,
+					description.name_,
 					rect,
 					DrawTextFormat.WordBreak,
 					Color.Black);
@@ -145,37 +141,78 @@ namespace TriggerEdit
 
 		#region internal implementation
 
-		private void MakeRectangle(ref ArrayList vertices, PointF position, SizeF radius, float z, Color color)
+		private void PushRectangle(PointF position, SizeF radius, float z, Color color)
 		{
 			CustomVertex.PositionColored vertex = new CustomVertex.PositionColored();
 			vertex.Color = color.ToArgb();
 			vertex.Z = z;
 			vertex.X = position.X - radius.Width;
 			vertex.Y = position.Y + radius.Height;
-			vertices.Add(vertex);
+			AddVertex(vertex);
 			vertex.X = position.X + radius.Width;
 			vertex.Y = position.Y + radius.Height;
-			vertices.Add(vertex);
+			AddVertex(vertex);
 			vertex.X = position.X -radius.Width;
 			vertex.Y = position.Y + -radius.Height;
-			vertices.Add(vertex);
-			vertices.Add(vertex);
+			AddVertex(vertex);
+			AddVertex(vertex);
 			vertex.X = position.X + radius.Width;
 			vertex.Y = position.Y + -radius.Height;
-			vertices.Add(vertex);
+			AddVertex(vertex);
 			vertex.X = position.X + radius.Width;
 			vertex.Y = position.Y + radius.Height;
-			vertices.Add(vertex);
+			AddVertex(vertex);
 		}
 
 		// [-0.1,0)
-		private void PushLine(ref ArrayList vertices, PointF start, PointF end, Color color)
+		private void PushSnappedLine(
+			PointF head,
+			PointF tail,
+			Color color)
 		{
-			SnapPoints(ref start, ref end);
+			SnapPoints(ref head, ref tail);
+			PushLine(head, tail, color);
+		}
+
+		// [-0.1,0)
+		private void PushLine(
+			PointF head,
+			PointF tail,
+			bool snap_head,
+			bool snap_tail,
+			Color color)
+		{
+			if (snap_head && snap_tail)
+			{
+				PushSnappedLine(head, tail, color);
+				return;
+			}
+			if (snap_head)
+			{
+				PointF temp = tail;
+				SnapPoints(ref head, ref temp);
+				PushLine(head, tail, color);
+				return;
+			}
+			if (snap_tail)
+			{
+				PointF temp = head;
+				SnapPoints(ref temp, ref tail);
+				PushLine(head, tail, color);
+				return;
+			}
+		}
+
+		// [-0.1,0)
+		private void PushLine(
+			PointF head,
+			PointF tail,
+			Color color)
+		{
 			// calculate new coordinate system
 			Vector2 dx = new Vector2(
-				end.X - start.X,
-				end.Y - start.Y);
+				tail.X - head.X,
+				tail.Y - head.Y);
 			dx.Normalize();
 			Vector2 dy = dx;
 			float new_y = -dy.X;
@@ -188,56 +225,43 @@ namespace TriggerEdit
 			CustomVertex.PositionColored vertex = new CustomVertex.PositionColored();
 			vertex.Color = color.ToArgb();
 			vertex.Z = -0.1f;
-			vertex.X = start.X - offset.X;
-			vertex.Y = start.Y - offset.Y;
-			vertices.Add(vertex);
-			vertex.X = end.X - offset.X;
-			vertex.Y = end.Y - offset.Y;
-			vertices.Add(vertex);
-			vertex.X = end.X + offset.X;
-			vertex.Y = end.Y + offset.Y;
-			vertices.Add(vertex);
-			vertices.Add(vertex);
-			vertex.X = start.X - offset.X;
-			vertex.Y = start.Y - offset.Y;
-			vertices.Add(vertex);
-			vertex.X = start.X + offset.X;
-			vertex.Y = start.Y + offset.Y;
-			vertices.Add(vertex);
+			vertex.X = head.X - offset.X;
+			vertex.Y = head.Y - offset.Y;
+			AddVertex(vertex);
+			vertex.X = tail.X - offset.X - dx.X * 8.0f;
+			vertex.Y = tail.Y - offset.Y - dx.Y * 8.0f;
+			AddVertex(vertex);
+			vertex.X = tail.X + offset.X - dx.X * 8.0f;
+			vertex.Y = tail.Y + offset.Y - dx.Y * 8.0f;
+			AddVertex(vertex);
+			AddVertex(vertex);
+			vertex.X = head.X - offset.X;
+			vertex.Y = head.Y - offset.Y;
+			AddVertex(vertex);
+			vertex.X = head.X + offset.X;
+			vertex.Y = head.Y + offset.Y;
+			AddVertex(vertex);
 			// build the arrow
 			Vector2 corner1 = dx * -12.0f + dy * 4.0f;
 			Vector2 corner2 = dx * -12.0f - dy * 4.0f;
-			vertex.X = end.X;
-			vertex.Y = end.Y;
-			vertices.Add(vertex);
-			vertex.X = end.X + corner1.X;
-			vertex.Y = end.Y + corner1.Y;
-			vertices.Add(vertex);
-			vertex.X = end.X + corner2.X;
-			vertex.Y = end.Y + corner2.Y;
-			vertices.Add(vertex);
+			vertex.X = tail.X;
+			vertex.Y = tail.Y;
+			AddVertex(vertex);
+			vertex.X = tail.X + corner1.X;
+			vertex.Y = tail.Y + corner1.Y;
+			AddVertex(vertex);
+			vertex.X = tail.X + corner2.X;
+			vertex.Y = tail.Y + corner2.Y;
+			AddVertex(vertex);
 		}
 
 		// [-0.2,-0.1)
-		private void PushMarker(ref ArrayList vertices, PointF position, Color color, Color outline)
+		private void PushMarker(PointF position, Color color, Color outline)
 		{
 			SizeF radius = new SizeF(
 				marker_layout_.Width  / 2.0f,
 				marker_layout_.Height / 2.0f);
-			MakeRectangle(ref vertices, position, radius, -0.20f, outline);
-			radius.Width  -= 1.0f;
-			radius.Height -= 1.0f;
-			MakeRectangle(ref vertices, position, radius, -0.17f, color);
-			MakeRectangle(
-				ref vertices,
-				new PointF(
-					position.X - radius.Width + marker_layout_.TearOffWidth,
-					position.Y),
-				new SizeF(
-					0.5f,
-					marker_layout_.Height / 2.0f - 1.0f),
-				-0.13f,
-				Color.Black);
+			PushRectangle(position, radius, -0.17f, color);
 		}
 
 		private void SnapPoints(ref PointF pnt1, ref PointF pnt2)
@@ -306,13 +330,66 @@ namespace TriggerEdit
 			}
 		}
 
+		#region vertex management
+
+		//---------------------------------------------------------------------
+		// Memory policy:
+		// Buffer size is equal to the maximum amount of memory used.
+		//
+		// Keep data in a fixed-size array.
+		// In case of overflow, measure the amount of space needed
+		// by using a variable-size array, then commit to the fixed-size array.
+		//---------------------------------------------------------------------
+
+		private void StartVertices()
+		{
+			current_vertex_ = 0;
+		}
+
+		private void AddVertex(CustomVertex.PositionColored vertex)
+		{
+			if (null != vertices_temp_)
+			{
+				vertices_temp_.Add(vertex);
+				return;
+			}
+			if (current_vertex_ < vertices_.Length)
+			{
+				vertices_[current_vertex_] = vertex;
+				++current_vertex_;
+				return;
+			}
+			Debug.WriteLine("! hit: " + vertices_.Length.ToString());
+			vertices_temp_ = new ArrayList(vertices_);
+			vertices_temp_.Add(vertex);
+		}
+
+		private void EndVertices()
+		{
+			if (null != vertices_temp_)
+			{
+				vertices_
+					= (CustomVertex.PositionColored[])
+					vertices_temp_.ToArray(typeof(CustomVertex.PositionColored));
+				current_vertex_ = vertices_.Length;
+				vertices_temp_ = null;
+			}
+		}
+
+		#endregion
+
 		#endregion
 
 		#region data
 
+		// DX
 		Microsoft.DirectX.Direct3D.Font font_;
 		MarkerLayout                    marker_layout_;
 		Sprite                          sprite_;
+		// vertex management
+		CustomVertex.PositionColored[]  vertices_;
+		ArrayList                       vertices_temp_;
+		int                             current_vertex_;
 
 		#endregion
 	}

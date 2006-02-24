@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
+using System.Windows.Forms;
 using System.Xml;
 using TriggerEdit.Definitions;
 
@@ -10,7 +11,19 @@ namespace TriggerEdit
 {
 	public class TriggerContainer
 	{
-		#region nested types
+		//-------------
+		// nested types
+		//-------------
+
+		#region
+
+		public struct Link
+		{
+			public PointF head_;
+			public PointF tail_;
+			public bool   snap_head_;
+			public bool   snap_tail_;
+		}
 
 		public struct TriggerDescription
 		{
@@ -38,7 +51,7 @@ namespace TriggerEdit
 
 			#region interface
 
-			public void Serialize(XmlNode node, out Point point)
+			public void Serialize(XmlNode node, out Point point, out State state)
 			{
 				// read coordinates
 				point = new Point(
@@ -52,11 +65,12 @@ namespace TriggerEdit
 				// read state
 				XmlNode state_node = node.SelectSingleNode(
 					"value[@name=\"state_\"]");
+				state = State.Sleeping;
 				switch (state_node.InnerText)
 				{
-					case "CHECKING": state_ = State.Checking; break;
-					case "SLEEPING": state_ = State.Sleeping; break;
-					case "DONE":     state_ = State.Done;     break;
+					case "CHECKING": state = State.Checking; break;
+					case "SLEEPING": state = State.Sleeping; break;
+					case "DONE":     state = State.Done;     break;
 				}
 				// read action
 				XmlNode action_node = node.SelectSingleNode("set[@name=\"action\"]");
@@ -68,7 +82,7 @@ namespace TriggerEdit
 					condition_ = Condition.CreateInstance(condition_node);
 			}
 
-			public void Serialize(ScriptXmlWriter w, IEnumerable link_names)
+			public void Serialize(ScriptXmlWriter w, IEnumerable link_names, State state)
 			{
 				// start trigger
 				w.WriteStartElement("set");
@@ -102,7 +116,7 @@ namespace TriggerEdit
 				}
 				w.WriteEndElement();
 				// state
-				switch (state_)
+				switch (state)
 				{
 					case State.Checking: w.WriteElement("value", "state_", "CHECKING"); break;
 					case State.Sleeping: w.WriteElement("value", "state_", "SLEEPING"); break;
@@ -140,7 +154,7 @@ namespace TriggerEdit
 				get
 				{
 					if (0 != (status_ & Status.Selected))
-						return Color.Yellow;
+						return Color.Orange;
 					return Fill;
 				}
 			}
@@ -162,8 +176,8 @@ namespace TriggerEdit
 			public Action    action_;
 			public Condition condition_;
 			public string    name_;
-			public State     state_;
 			public Status    status_;
+			public bool      is_virtual_;
 
 			#endregion
 		}
@@ -187,7 +201,7 @@ namespace TriggerEdit
 				point2_ = point;
 				point3_ = point;
 			}
-			public float Norm(float x, float y)
+			private float Norm(float x, float y)
 			{
 				return x * x + y * y;
 			}
@@ -200,84 +214,56 @@ namespace TriggerEdit
 
 		#endregion
 
+		//----------
+		// interface
+		//----------
+
 		#region interface
 
 		public TriggerContainer()
 		{
-			ghost_index_ = -1;
+			g_marker_descriptions_ = new ArrayList();
+			g_marker_positions_    = new ArrayList();
+			g_links_               = new ArrayList();
+		}
+
+		public void Collapse(int index)
+		{
+			adjacency_.Collapse   (index);
+			DeleteDescriptionEntry(index);
+			DeleteHistoryEntry    (index);
+			DeletePositionEntry   (index);
+			DeleteVelocityEntry   (index);
+			--count_;
+		}
+
+		public void AddNew()
+		{
+			adjacency_.Grow(1);
+			CreateDescriptionEntry();
+			CreateHistoryEntry();
+			CreatePositionEntry();
+			CreateVelocityEntry();
+			++count_;
 		}
 
 		public void Delete(int index)
 		{
-			// adjacency
-			string before = "";
-			for (int row = 0; row != adjacency_.Count; ++row)
-			{
-				for (int col = 0; col != adjacency_.Count; ++col)
-					before += adjacency_[row, col] ? '-' : '-';
-				before += '\n';
-			}
-			adjacency_.Delete(index);
-			string after = "";
-			for (int row = 0; row != adjacency_.Count; ++row)
-			{
-				for (int col = 0; col != adjacency_.Count; ++col)
-					after += adjacency_[row, col] ? '-' : '-';
-				after += '\n';
-			}
-			// descriptions
-			TriggerDescription[] new_descriptions = new TriggerDescription[count_ - 1];
-			Array.Copy(descriptions_, 0, new_descriptions, 0, index);
-			Array.Copy(descriptions_, index  + 1, new_descriptions, index, count_ - index - 1);
-			descriptions_ = new_descriptions;
-			// history
-			PositionHistory[] new_history = new PositionHistory[count_ - 1];
-			Array.Copy(history_, 0, new_history, 0, index);
-			Array.Copy(history_, index  + 1, new_history, index, count_ - index - 1);
-			history_ = new_history;
-			// positions
-			PointF[] new_positions = new PointF[count_ - 1];
-			Array.Copy(positions_, 0, new_positions, 0, index);
-			Array.Copy(positions_, index  + 1, new_positions, index, count_ - index - 1);
-			positions_ = new_positions;
-			// velocities
-			PointF[] new_velocities = new PointF[count_ - 1];
-			Array.Copy(velocities_, 0, new_velocities, 0, index);
-			Array.Copy(velocities_, index  + 1, new_velocities, index, count_ - index - 1);
-			velocities_ = new_velocities;
-			// count
+			adjacency_.Delete     (index);
+			DeleteDescriptionEntry(index);
+			DeleteHistoryEntry    (index);
+			DeletePositionEntry   (index);
+			DeleteVelocityEntry   (index);
 			--count_;
 		}
 
 		public void Duplicate(int index)
 		{
-			// adjacency
-			adjacency_.Grow(1);
-			for (int i = 0; i != count_; ++i)
-				adjacency_[count_, i] = adjacency_[index, i];
-			for (int i = 0; i != count_; ++i)
-				adjacency_[i, count_] = adjacency_[i, index];
-			// descriptions
-			TriggerDescription[] new_descriptions = new TriggerDescription[count_ + 1];
-			descriptions_.CopyTo(new_descriptions, 0);
-			new_descriptions[count_] = descriptions_[index];
-			descriptions_ = new_descriptions;
-			// history
-			PositionHistory[] new_history = new PositionHistory[count_ + 1];
-			history_.CopyTo(new_history, 0);
-			new_history[count_] = history_[index];
-			history_ = new_history;
-			// positions
-			PointF[] new_positions = new PointF[count_ + 1];
-			positions_.CopyTo(new_positions, 0);
-			new_positions[count_] = positions_[index];
-			positions_ = new_positions;
-			// velocities
-			PointF[] new_velocities = new PointF[count_ + 1];
-			velocities_.CopyTo(new_velocities, 0);
-			new_velocities[count_] = velocities_[index];
-			velocities_ = new_velocities;
-			// count
+			adjacency_.Duplicate     (index);
+			DuplicateDescriptionEntry(index);
+			DuplicateHistoryEntry    (index);
+			DuplicatePositionEntry   (index);
+			DuplicateVelocityEntrty  (index);
 			++count_;
 		}
 
@@ -303,11 +289,21 @@ namespace TriggerEdit
 			return (positions_.Length == index) ? -1 : index;
 		}
 
-		public void GetInterpolatedPosition(int index, ref PointF point)
+		public void GetInterpolatedPosition(int index, out float x, out float y)
 		{
 			PositionHistory src = history_[index];
-			point.X = src.point1_.X * r0_ + src.point2_.X * r1_ + src.point3_.X * r2_;
-			point.Y = src.point1_.Y * r0_ + src.point2_.Y * r1_ + src.point3_.Y * r2_;
+			x = (float)Math.Round(
+				src.point1_.X * r0_ + src.point2_.X * r1_ + src.point3_.X * r2_);
+			y = (float)Math.Round(
+				src.point1_.Y * r0_ + src.point2_.Y * r1_ + src.point3_.Y * r2_);
+		}
+
+		public void GetInterpolatedPosition(int index, ref PointF point)
+		{
+			float x, y;
+			GetInterpolatedPosition(index, out x, out y);
+			point.X = x;
+			point.Y = y;
 		}
 
 		public PointF GetInterpolatedPosition(int index)
@@ -322,48 +318,48 @@ namespace TriggerEdit
 			if (tail == head)
 				throw new ArgumentException("tail must not equal head");
 			adjacency_[tail, head] = false;
-			bool connected;
-			connected = false;
-			// switch head and tail, so that tail is greater than head
-			if (head > tail)
-			{
-				int temp = tail;
-				tail     = head;
-				head     = temp;
-			}
-			// remove the tail if it becomes disconnected
-			for (int i = 0; i != count_; ++i)
-				if (adjacency_[tail, i])
-				{
-					connected = true;
-					break;
-				}
-			if (!connected)
-				for (int i = 0; i != count_; ++i)
-					if (adjacency_[i, tail])
-					{
-						connected = true;
-						break;
-					}
-			if (!connected)
-				Delete(tail);
-			// remove the head if it becomes disconnected
-			connected = false;
-			for (int i = 0; i != count_; ++i)
-				if (adjacency_[head, i])
-				{
-					connected = true;
-					break;
-				}
-			if (!connected)
-				for (int i = 0; i != count_; ++i)
-					if (adjacency_[i, head])
-					{
-						connected = true;
-						break;
-					}
-			if (!connected)
-				Delete(head);
+//			bool connected;
+//			connected = false;
+//			// switch head and tail, so that tail is greater than head
+//			if (head > tail)
+//			{
+//				int temp = tail;
+//				tail     = head;
+//				head     = temp;
+//			}
+//			// remove the tail if it becomes disconnected
+//			for (int i = 0; i != count_; ++i)
+//				if (adjacency_[tail, i])
+//				{
+//					connected = true;
+//					break;
+//				}
+//			if (!connected)
+//				for (int i = 0; i != count_; ++i)
+//					if (adjacency_[i, tail])
+//					{
+//						connected = true;
+//						break;
+//					}
+//			if (!connected)
+//				Delete(tail);
+//			// remove the head if it becomes disconnected
+//			connected = false;
+//			for (int i = 0; i != count_; ++i)
+//				if (adjacency_[head, i])
+//				{
+//					connected = true;
+//					break;
+//				}
+//			if (!connected)
+//				for (int i = 0; i != count_; ++i)
+//					if (adjacency_[i, head])
+//					{
+//						connected = true;
+//						break;
+//					}
+//			if (!connected)
+//				Delete(head);
 		}
 
 		public float InterpolationRatio
@@ -379,7 +375,7 @@ namespace TriggerEdit
 			}
 		}
 
-		public void Serialize(XmlNode node)
+		public bool Serialize(XmlNode node)
 		{
 			// extract data
 			XmlNodeList trigger_nodes = node.SelectNodes(
@@ -387,7 +383,7 @@ namespace TriggerEdit
 				"/set[@name=\"TriggerChain\"]" +
 				"/array[@name=\"triggers\"]"   +
 				"/set");
-			count_ = trigger_nodes.Count;
+			count_ = trigger_nodes.Count + 1; // + the root trigger
 			// initialize state variables
 			adjacency_    = new AdjacencyMatrix(count_);
 			descriptions_ = new TriggerDescription[count_];
@@ -396,27 +392,50 @@ namespace TriggerEdit
 			velocities_   = new PointF[count_];
 			// serialize triggers and read in names
 			Hashtable names = new Hashtable(count_);
-			for (int i = 0; i != count_; ++i)
+			descriptions_[0].name_       = "[root]";
+			descriptions_[0].is_virtual_ = true;
+			for (int i = 1; i != count_; ++i)
 			{
 				Point point;
-				descriptions_[i].Serialize(trigger_nodes[i], out point);
+				TriggerDescription.State state;
+				descriptions_[i].Serialize(trigger_nodes[i - 1], out point, out state);
+				if (state == TriggerDescription.State.Checking)
+					adjacency_[0, i] = true;
 				names.Add(descriptions_[i].name_, i);
 			}
 			// add links
-			for (int i = 0; i != count_; ++i)
+			for (int i = 1; i != count_; ++i)
 			{
-				XmlNodeList link_nodes = trigger_nodes[i].SelectNodes(
+				XmlNodeList link_nodes = trigger_nodes[i - 1].SelectNodes(
 					"array[@name=\"outcomingLinks\"]/set");
 				foreach (XmlNode link_node in link_nodes)
 				{
-					int target = (int)names[
-						link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText];
-					if (i != target) // consistency check
-						adjacency_[i, target] = true;
+					try
+					{
+						string ref_name = link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText;
+						if (!names.Contains(ref_name))
+							continue;
+						int target = (int)names[ref_name];
+						if (i != target) // consistency check
+							adjacency_[i, target] = true;
+					}
+					catch (Exception e)
+					{
+						string msg = e.ToString();
+						if (
+							DialogResult.OK != MessageBox.Show(
+								"Invalid message link in \""
+								+ descriptions_[i].name_
+								+ "\".",
+								"Warning",
+								MessageBoxButtons.OKCancel,
+								MessageBoxIcon.Warning)
+							)
+							return false;
+					}
 				}
 			}
-			// other initialization
-			ghost_index_ = -1;
+			return true;
 		}
 
 		public void Serialize(ScriptXmlWriter w)
@@ -428,12 +447,17 @@ namespace TriggerEdit
 			w.WriteElement("string", "name", "");
 			// triggers
 			w.WriteStartNamedElement("array", "triggers");
-			for (int i = 0; i != count_; ++i)
+			for (int i = 1; i != count_; ++i)
 			{
 				ArrayList link_names = new ArrayList();
 				foreach (int j in adjacency_.GetList(i))
 					link_names.Add(descriptions_[j].name_);
-				descriptions_[i].Serialize(w, link_names);
+				TriggerDescription.State state;
+				if (adjacency_[0, i])
+					state = TriggerDescription.State.Checking;
+				else
+					state = TriggerDescription.State.Sleeping;
+				descriptions_[i].Serialize(w, link_names, state);
 			}
 			w.WriteEndElement();
 			// layout info
@@ -448,22 +472,208 @@ namespace TriggerEdit
 			w.WriteEndElement();
 		}
 
+		#region ghosts
+
+		public void AddMarkerGhost(TriggerDescription description, PointF position)
+		{
+			g_marker_descriptions_.Add(description);
+			g_marker_positions_.Add(position);
+		}
+
+		public void SetMarkerGhost(int index, TriggerDescription description, PointF position)
+		{
+			g_marker_descriptions_[index] = description;
+			g_marker_positions_   [index] = position;
+		}
+
+		public TriggerDescription GetMarkerGhostDescription(int index)
+		{
+			return (TriggerDescription)g_marker_descriptions_[index];
+		}
+
+		public PointF GetMarkerGhostPosition(int index)
+		{
+			return (PointF)g_marker_positions_[index];
+		}
+
+		public void RemoveMarkerGhosts()
+		{
+			g_marker_descriptions_.Clear();
+			g_marker_positions_.Clear();
+		}
+
+		public void AddLinkGhost(PointF head, PointF tail)
+		{
+			Link link;
+			link.head_      = head;
+			link.tail_      = tail;
+			link.snap_head_ = true;
+			link.snap_tail_ = true;
+			g_links_.Add(link);
+		}
+
+		public void AddLinkGhost(Link link)
+		{
+			g_links_.Add(link);
+		}
+
+		public Link GetLinkGhost(int index)
+		{
+			return (Link)g_links_[index];
+		}
+
+		public void SetLinkGhost(int index, PointF head, PointF tail)
+		{
+			Link link;
+			link.head_      = head;
+			link.tail_      = tail;
+			link.snap_head_ = true;
+			link.snap_tail_ = true;
+			g_links_[index] = link;
+		}
+
+		public void SetLinkGhost(int index, Link link)
+		{
+			g_links_[index] = link;
+		}
+
+		public void RemoveLinkGhosts()
+		{
+			g_links_.Clear();
+		}
+
+		#endregion
+		
 		#endregion
 
-		#region data
+		//---------------
+		// implementation
+		//---------------
 
+		#region
+
+		#region entry creation
+
+		private void CreateDescriptionEntry()
+		{
+			TriggerDescription[] new_descriptions = new TriggerDescription[count_ + 1];
+			descriptions_.CopyTo(new_descriptions, 0);
+			descriptions_ = new_descriptions;
+		}
+
+		private void CreateHistoryEntry()
+		{
+			PositionHistory[] new_history = new PositionHistory[count_ + 1];
+			history_.CopyTo(new_history, 0);
+			history_ = new_history;
+		}
+
+		private void CreatePositionEntry()
+		{
+			PointF[] new_positions = new PointF[count_ + 1];
+			positions_.CopyTo(new_positions, 0);
+			positions_ = new_positions;
+		}
+
+		private void CreateVelocityEntry()
+		{
+			PointF[] new_velocities = new PointF[count_ + 1];
+			velocities_.CopyTo(new_velocities, 0);
+			velocities_ = new_velocities;
+		}
+
+		#endregion
+
+		#region entry deletion
+
+		private void DeleteDescriptionEntry(int index)
+		{
+			TriggerDescription[] new_descriptions = new TriggerDescription[count_ - 1];
+			Array.Copy(descriptions_, 0, new_descriptions, 0, index);
+			Array.Copy(descriptions_, index  + 1, new_descriptions, index, count_ - index - 1);
+			descriptions_ = new_descriptions;
+		}
+
+		private void DeleteHistoryEntry(int index)
+		{
+			PositionHistory[] new_history = new PositionHistory[count_ - 1];
+			Array.Copy(history_, 0, new_history, 0, index);
+			Array.Copy(history_, index  + 1, new_history, index, count_ - index - 1);
+			history_ = new_history;
+		}
+
+		private void DeletePositionEntry(int index)
+		{
+			PointF[] new_positions = new PointF[count_ - 1];
+			Array.Copy(positions_, 0, new_positions, 0, index);
+			Array.Copy(positions_, index  + 1, new_positions, index, count_ - index - 1);
+			positions_ = new_positions;
+		}
+
+		private void DeleteVelocityEntry(int index)
+		{
+			PointF[] new_velocities = new PointF[count_ - 1];
+			Array.Copy(velocities_, 0, new_velocities, 0, index);
+			Array.Copy(velocities_, index  + 1, new_velocities, index, count_ - index - 1);
+			velocities_ = new_velocities;
+		}
+
+		#endregion
+
+		#region entry duplication
+
+		private void DuplicateDescriptionEntry(int index)
+		{
+			CreateDescriptionEntry();
+			descriptions_[count_] = descriptions_[index];
+		}
+
+		private void DuplicateHistoryEntry(int index)
+		{
+			CreateHistoryEntry();
+			history_[count_] = history_[index];
+		}
+
+		private void DuplicatePositionEntry(int index)
+		{
+			CreatePositionEntry();
+			positions_[count_] = positions_[index];
+		}
+
+		private void DuplicateVelocityEntrty(int index)
+		{
+			CreateVelocityEntry();
+			velocities_[count_] = velocities_[index];
+		}
+
+		#endregion
+
+		#endregion
+
+		//-----
+		// data
+		//-----
+
+		#region
+
+		// state
 		public AdjacencyMatrix      adjacency_;
 		public int                  count_;
 		public TriggerDescription[] descriptions_;
-		public int                  ghost_index_;
-		public PointF               ghost_position_;
 		public PositionHistory[]    history_;
 		public PointF[]             positions_;
-		private float               ratio_;
-		private float               r0_;
-		private float               r1_;
-		private float               r2_;
 		public PointF[]             velocities_;
+
+		// interpolation constants
+		private float ratio_;
+		private float r0_;
+		private float r1_;
+		private float r2_;
+
+		// ghosts
+		public ArrayList g_marker_descriptions_;
+		public ArrayList g_marker_positions_;
+		public ArrayList g_links_;
 
 		#endregion
 	}

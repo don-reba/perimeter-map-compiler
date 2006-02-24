@@ -39,7 +39,7 @@
                     OutputPath = "bin\Debug\"
                     RegisterForComInterop = "false"
                     RemoveIntegerChecks = "false"
-                    TreatWarningsAsErrors = "false"
+                    TreatWarningsAsErrors = "true"
                     WarningLevel = "4"
                 />
                 <Config
@@ -186,6 +186,11 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "DiscControl.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "Import.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
@@ -239,6 +244,30 @@
                     RelPath = "TriggerRenderer.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "img\action.png"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "img\bud.png"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "img\clone.png"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "img\collapse.png"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "img\condition.png"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "img\link.png"
+                    BuildAction = "EmbeddedResource"
                 />
                 <File
                     RelPath = "VTune\TriggerEdit.vpj"

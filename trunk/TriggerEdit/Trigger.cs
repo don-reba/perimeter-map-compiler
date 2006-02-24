@@ -865,9 +865,7 @@ namespace TriggerEdit
 
 			public void Serialize(ScriptXmlWriter w)
 			{
-				w.WriteStartElement("set");
 				condition_.Serialize(w);
-				w.WriteEndElement();
 			}
 
 			#endregion
@@ -1038,7 +1036,7 @@ namespace TriggerEdit
 						w.WriteStartNamedElement("disjunction", property.Name);
 						ArrayList fields = ((BitEnum)property.GetValue(this, null)).GetList();
 						foreach (object field in fields)
-							w.WriteElementString("value", field.ToString());
+							w.WriteElementString("value", field.ToString	());
 						w.WriteEndElement();
 					}
 					else
