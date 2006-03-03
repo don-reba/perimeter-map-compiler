@@ -95,7 +95,8 @@ namespace TriggerEdit
 				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.bud.png")),
 				new EventHandler(BeginTriggerBud));
 			// hook event handlers
-			Application.Idle += new EventHandler(OnApplicationIdle);
+			if (!DesignMode)
+				Application.Idle += new EventHandler(OnApplicationIdle);
 		}
 
 		public new void Dispose()
