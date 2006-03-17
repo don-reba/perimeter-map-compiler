@@ -15,13 +15,17 @@ using System.Windows.Forms;
 
 namespace TriggerEdit
 {
-		#region using
+	//------
+	// using
+	//------
 
-		using TriggerDescription = TriggerContainer.TriggerDescription;
-		using TriggerState       = TriggerContainer.TriggerDescription.State;
-		using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
+	#region
 
-		#endregion
+	using TriggerDescription = TriggerContainer.TriggerDescription;
+	using TriggerState       = TriggerContainer.TriggerDescription.State;
+	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
+
+	#endregion
 
 	public class TriggerDisplay : System.Windows.Forms.Panel
 	{
@@ -49,7 +53,22 @@ namespace TriggerEdit
 			Clone,
 			Link,
 			MoveCamera,
-			MoveMarker
+			MoveMarker,
+			Selection
+		}
+
+		private enum SelectionState
+		{
+			None,
+			Select,
+			Zoom
+		}
+
+		private enum SelectionMode
+		{
+			Replace,
+			Add,
+			Substract
 		}
 
 		#endregion
@@ -67,33 +86,15 @@ namespace TriggerEdit
 			// initialize variables
 			animation_state_     = AnimationState.Off;
 			camera_              = new Camera();
+			drag_offset_         = PointF.Empty;
 			drag_start_          = new Point(0, 0);
 			marker_layout_       = new MarkerLayout(Font);
 			old_camera_position_ = new Point(0, 0);
 			rendering_enabled_   = false;
+			selection_           = new ArrayList();
+			selection_rect_      = RectangleF.Empty;
 			// initialize the disc control
-			disk_control_        = new DiscControl(
-				(float)marker_layout_.Width,
-				(float)marker_layout_.Height);
-			Assembly a = Assembly.GetExecutingAssembly();
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.link.png")),
-				new EventHandler(BeginTriggerLink));
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.collapse.png")),
-				new EventHandler(CollapseTrigger));
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.condition.png")),
-				new EventHandler(OnConditionSelected));
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.action.png")),
-				new EventHandler(OnActionSelected));
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.clone.png")),
-				new EventHandler(BeginTriggerClone));
-			disk_control_.AddButton(
-				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.bud.png")),
-				new EventHandler(BeginTriggerBud));
+			InitializeDiskControl();
 			// hook event handlers
 			if (!DesignMode)
 				Application.Idle += new EventHandler(OnApplicationIdle);
@@ -114,9 +115,15 @@ namespace TriggerEdit
 		{
 			triggers_ = triggers;
 			int t1 = Environment.TickCount;
-			PreprocessVertices(ref triggers_.positions_);
-			NormalizeVertices(ref triggers_.positions_);
-			FitVerticesToGrid(ref triggers_.positions_);
+			if (!ArePositionsSane(triggers_.positions_))
+			{
+				PreprocessVertices(triggers_.positions_);
+				NormalizeVertices(triggers_.positions_);
+				FitVerticesToGrid(triggers_.positions_);
+			}
+			// remove selection
+			active_    = -1;
+			selection_.Clear();
 			// center camera at the root node
 			camera_.Position = triggers_.positions_[0];
 			// set initial marker positions
@@ -124,17 +131,6 @@ namespace TriggerEdit
 			InitGraphics();
 			animation_state_  = AnimationState.FirstStep;
 			animation_active_ = true;
-		}
-
-		public int Selection
-		{
-			get { return selection_; }
-		}
-
-		public bool ShowFrameRate
-		{
-			get { return show_frame_rate_; }	
-			set { show_frame_rate_ = value; }
 		}
 
 		public void ToggleAnimation()
@@ -147,6 +143,80 @@ namespace TriggerEdit
 			animation_active_ = on;
 			if (on)
 				last_step_time_ = Environment.TickCount;
+		}
+
+		public void ZoomToFit()
+		{
+			// initialize bounds
+			float min_x = float.MaxValue;
+			float max_x = float.MinValue;
+			float min_y = float.MaxValue;
+			float max_y = float.MinValue;
+			// calculate bounds around all trigger positions
+			for (int i = 0; i != triggers_.positions_.Length; ++i)
+			{
+				if (triggers_.positions_[i].X < min_x) min_x = triggers_.positions_[i].X;
+				if (triggers_.positions_[i].X > max_x) max_x = triggers_.positions_[i].X;
+				if (triggers_.positions_[i].Y < min_y) min_y = triggers_.positions_[i].Y;
+				if (triggers_.positions_[i].Y > max_y) max_y = triggers_.positions_[i].Y;
+			}
+			// offset bounds to include trigger size
+			min_x -= marker_layout_.Width  / 2;
+			max_x += marker_layout_.Width  / 2;
+			min_y -= marker_layout_.Height / 2;
+			max_y += marker_layout_.Height / 2;
+			// set zoom
+			ZoomRect = RectangleF.FromLTRB(min_x, min_y, max_x, max_y);
+		}
+
+		public void ZoomToSelection()
+		{
+			selection_state_ = SelectionState.Zoom;
+		}
+
+		//-----------
+		// properties
+		//-----------
+
+		#region
+
+		/// <summary>
+		/// Animation speed in pixels per second.
+		/// </summary>
+		public float AnimationSpeed
+		{
+			get { return animation_speed_ * 1000.0f; }
+			set { animation_speed_ = value / 1000.0f; }
+		}
+
+		public int MarkerLineCount
+		{
+			get { return marker_layout_.LineCount; }
+			set
+			{
+				if (marker_layout_.LineCount != value)
+				{
+					marker_layout_.LineCount = value;
+					InitializeDiskControl();
+				}
+			}
+		}
+
+		public float MarkerSpacing
+		{
+			get { return cell_spacing_; }
+			set { cell_spacing_ = value; }
+		}
+
+		public ArrayList Selection
+		{
+			get { return ArrayList.ReadOnly(selection_); }
+		}
+
+		public bool ShowFrameRate
+		{
+			get { return show_frame_rate_; }	
+			set { show_frame_rate_ = value; }
 		}
 
 		public float Zoom
@@ -164,6 +234,28 @@ namespace TriggerEdit
 			}
 		}
 
+		public RectangleF ZoomRect
+		{
+			set
+			{
+				// calculate ratio
+				float ratio = (float)Math.Max(
+					value.Width  / ClientRectangle.Width,
+					value.Height / ClientRectangle.Height);
+				// set camera
+				camera_.Position = new PointF(
+					value.Left / 2.0f + value.Right  / 2.0f,
+					value.Top  / 2.0f + value.Bottom / 2.0f);
+				while (camera_.Zoom > ratio)
+					camera_.DecrementZoom();
+				while (camera_.Zoom < ratio)
+					camera_.IncrementZoom();
+				OnZoomChanged(new ZoomEventArgs(camera_.Zoom));
+			}
+		}
+
+		#endregion
+
 		#endregion
 
 		//---------------
@@ -174,8 +266,6 @@ namespace TriggerEdit
 
 		private void AdvanceAnimation()
 		{
-			if (!animation_active_)
-				return;
 			switch (animation_state_)
 			{
 				case AnimationState.FirstStep:
@@ -188,28 +278,67 @@ namespace TriggerEdit
 					break;
 				case AnimationState.Normal:
 					float d = (Environment.TickCount - last_step_time_) * animation_speed_;
-					animation_remainder_ -= d;
-					if (animation_remainder_ < 0)
+					if (d > 0.0f)
 					{
-						while (animation_remainder_ < 0)
+						animation_remainder_ -= d;
+						if (animation_remainder_ < 0)
 						{
-							animation_remainder_step_ = ShiftVertices(ref triggers_.positions_);
-							animation_remainder_ += animation_remainder_step_;
-							if (animation_remainder_step_ <= 0.1f)
-								animation_state_ = AnimationState.Done;
-							// cap the time allowed for computing animation
-							if (Environment.TickCount - last_step_time_ > 200)
-								break;
+							while (animation_remainder_ < 0)
+							{
+								animation_remainder_step_ = ShiftVertices(ref triggers_.positions_);
+								animation_remainder_ += animation_remainder_step_;
+								if (animation_remainder_step_ <= 0.1f)
+									animation_state_ = AnimationState.Done;
+								// cap the time allowed for computing animation
+								if (Environment.TickCount - last_step_time_ > 200)
+									break;
+							}
+							for (int i = 0; i != triggers_.count_; ++i)
+								triggers_.history_[i].Add(triggers_.positions_[i]);
 						}
-						for (int i = 0; i != triggers_.count_; ++i)
-							triggers_.history_[i].Add(triggers_.positions_[i]);
+						triggers_.InterpolationRatio = Math.Min(
+							1.0f,
+							1.0f - animation_remainder_ / animation_remainder_step_);
+						last_step_time_ = Environment.TickCount;
 					}
-					triggers_.InterpolationRatio = Math.Min(
-						1.0f,
-						1.0f - animation_remainder_ / animation_remainder_step_);
-					last_step_time_ = Environment.TickCount;
 					break;
 			}
+		}
+
+		private void InitializeDiskControl()
+		{
+			// remember visibility of the disk control
+			bool visible = false;
+			if (null != disk_control_ && disk_control_.Visible)
+				visible = true;
+			// create a new disk control
+			disk_control_ = new DiscControl(
+				(float)marker_layout_.Width,
+				(float)marker_layout_.Height);
+			Assembly a = Assembly.GetExecutingAssembly();
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.link.png")),
+				new EventHandler(BeginTriggerLink));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.collapse.png")),
+				new EventHandler(CollapseTrigger));
+//			disk_control_.AddButton(
+//				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.condition.png")),
+//				new EventHandler(OnConditionSelected));
+//			disk_control_.AddButton(
+//				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.action.png")),
+//				new EventHandler(OnActionSelected));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.clone.png")),
+				new EventHandler(BeginTriggerClone));
+			disk_control_.AddButton(
+				new Bitmap(a.GetManifestResourceStream("TriggerEdit.img.bud.png")),
+				new EventHandler(BeginTriggerBud));
+			// lay out the disk control
+			if (null != device_ && device_.CheckCooperativeLevel())
+				disk_control_.Layout(device_);
+			// set visibility
+			disk_control_.Visible = visible;
 		}
 
 		private bool AppStillIdle
@@ -237,7 +366,9 @@ namespace TriggerEdit
 			// find the cell under cursor
 			ScreenToWorld(ref position);
 			int index = triggers_.GetIndex(position, marker_layout_);
-			if (index == active_)
+			if (disk_control_.Selection >= 0)
+				index = -1;
+			else if (index == active_)
 				return;
 			// unhighlight the previous cell and its neighbours
 			if (active_ >= 0 && active_ < triggers_.count_)
@@ -254,7 +385,7 @@ namespace TriggerEdit
 			foreach (int link in triggers_.adjacency_.GetList(index))
 				triggers_.descriptions_[link].status_ |= TriggerStatus.Dim;
 		}
-		
+
 		private bool InitGraphics()
 		{
 			Device.IsUsingEventHandlers = false;
@@ -360,17 +491,18 @@ namespace TriggerEdit
 			// matrices
 			device_.Transform.View       = camera_.View;
 			device_.Transform.Projection = camera_.Projection;
+			// render the trigger graph
+			device_.Transform.World = Microsoft.DirectX.Matrix.Translation(0.0f, 0.0f, -1.0f);
+			trigger_renderer_.Render(device_, triggers_);
 			// render disk
-			if (selection_ >= 0 && disk_control_.Visible)
+			if (selection_.Count == 1 && disk_control_.Visible)
 			{
 				float x, y;
-				triggers_.GetInterpolatedPosition(selection_, out x, out y);
-				device_.Transform.World = Microsoft.DirectX.Matrix.Translation(x, y, 0);
+				triggers_.GetInterpolatedPosition((int)selection_[0], out x, out y);
+				device_.Transform.World = Microsoft.DirectX.Matrix.Translation(x, y, 0.0f);
 				disk_control_.Render(device_);
 				device_.Transform.World = Microsoft.DirectX.Matrix.Identity;
 			}
-			// render the trigger graph
-			trigger_renderer_.Render(device_, triggers_);
 			// render fps
 			if (show_frame_rate_)
 			{
@@ -390,6 +522,11 @@ namespace TriggerEdit
 				fps_font_.DrawText(fps_sprite_, fps_text, 2, 2, Color.Gold);
 				fps_sprite_.End();
 			}
+			// render the selection rectangle
+			if (DragState.Selection == drag_state_
+				&& selection_rect_.Width  > 0.0f
+				&& selection_rect_.Height > 0.0f)
+				RenderSelectioRect();
 			// end the scene
 			device_.EndScene();
 			try
@@ -402,7 +539,81 @@ namespace TriggerEdit
 			}
 		}
 
-		private void NormalizeVertices(ref PointF[] positions)
+		private void RenderSelectioRect()
+		{
+			float offset = 0.5f * camera_.Zoom;
+			// initialize vertices
+			CustomVertex.PositionColored[] vertices = new CustomVertex.PositionColored[10];
+			for (int i = 0; i != 10; ++i)
+			{
+				vertices[i].Z     = 0.0f;
+				vertices[i].Color = Color.Yellow.ToArgb();
+			}
+			// 0
+			vertices[0].X = selection_rect_.Left - offset;
+			vertices[0].Y = selection_rect_.Top  - offset;
+			// 1
+			vertices[1].X = selection_rect_.Left + offset;
+			vertices[1].Y = selection_rect_.Top  + offset;
+			// 2
+			vertices[2].X = selection_rect_.Right + offset;
+			vertices[2].Y = selection_rect_.Top   - offset;
+			// 3
+			vertices[3].X = selection_rect_.Right - offset;
+			vertices[3].Y = selection_rect_.Top   + offset;
+			// 4
+			vertices[4].X = selection_rect_.Right  + offset;
+			vertices[4].Y = selection_rect_.Bottom + offset;
+			// 5
+			vertices[5].X = selection_rect_.Right  - offset;
+			vertices[5].Y = selection_rect_.Bottom - offset;
+			// 6
+			vertices[6].X = selection_rect_.Left   - offset;
+			vertices[6].Y = selection_rect_.Bottom + offset;
+			// 7
+			vertices[7].X = selection_rect_.Left   + offset;
+			vertices[7].Y = selection_rect_.Bottom - offset;
+			// 8
+			vertices[8].X = selection_rect_.Left - offset;
+			vertices[8].Y = selection_rect_.Top  - offset;
+			// 9
+			vertices[9].X = selection_rect_.Left + offset;
+			vertices[9].Y = selection_rect_.Top  + offset;
+			// create the vertex buffer
+			VertexBuffer vb = new VertexBuffer(
+				typeof(CustomVertex.PositionColored),
+				10,
+				device_,
+				Usage.WriteOnly,
+				CustomVertex.PositionColored.Format,
+				Pool.Managed);
+			GraphicsStream vb_stream = vb.Lock(0, 0, LockFlags.None);
+			vb_stream.Write(vertices);
+			vb.Unlock();
+			device_.SetStreamSource(0, vb, 0);
+			device_.VertexFormat = CustomVertex.PositionColored.Format;
+			// output geometry
+			device_.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 8);
+			vb.Dispose();
+		}
+
+		private bool ArePositionsSane(PointF[] positions)
+		{
+			const int sample_size    = 8;
+			const int faults_allowed = 2;
+			// if there are few entries, we are good
+			if (positions.Length < 8)
+				return true;
+			// filter out duplicate elements among the first sample_size entries
+			SortedList list = new SortedList(new PointFComparer());
+			for (int i = 0; i != sample_size; ++i)
+				if (!list.ContainsKey(positions[i]))
+					list.Add(positions[i], null);
+			// return true if there were not more than faults_allowed duplicates
+			return list.Count >= sample_size - faults_allowed;
+		}
+
+		private void NormalizeVertices(PointF[] positions)
 		{
 			float min_x = float.MaxValue;
 			float min_y = float.MaxValue;
@@ -420,7 +631,7 @@ namespace TriggerEdit
 			}
 		}
 
-		private void FitVerticesToGrid(ref PointF[] positions)
+		private void FitVerticesToGrid(PointF[] positions)
 		{
 			float ka_x = cell_spacing_ * 2 + marker_layout_.Width;
 			float ka_y = cell_spacing_ * 2 + marker_layout_.Height;
@@ -482,7 +693,7 @@ namespace TriggerEdit
 			}
 		}
 
-		private void PreprocessVertices(ref PointF[] positions)
+		private void PreprocessVertices(PointF[] positions)
 		{
 			float ka_x = cell_spacing_ * 2 + marker_layout_.Width;
 			float ka_y = cell_spacing_ * 2 + marker_layout_.Height;
@@ -547,16 +758,21 @@ namespace TriggerEdit
 			}
 		}
 
+		/// <summary>
+		/// Shortens length to the distance from the offset.
+		/// </summary>
+		/// <param name="length">Distance from zero.</param>
+		/// <param name="offset">Radius of a ball around zero.</param>
 		private void ShiftVertices_AdjustLength(ref float length, float offset)
 		{
 			if (length > 0)
 				if (length < offset)
-					length = 0;
+					length = 0.1f;
 				else
 					length -= offset;
 			else
 				if (length > -offset)
-					length = 0;
+					length = -0.1f;
 				else
 					length += offset;
 		}
@@ -580,6 +796,8 @@ namespace TriggerEdit
 					ShiftVertices_AdjustLength(ref dx, marker_layout_.Width);
 					ShiftVertices_AdjustLength(ref dy, marker_layout_.Height);
 					float d_sqr = dx * dx + dy * dy;
+					if (0 == d_sqr)
+						v_x += marker_layout_.Width + k;
 					// repulsion
 					if (d_sqr > 0)
 					{
@@ -605,8 +823,6 @@ namespace TriggerEdit
 							triggers_.velocities_[j].X -= a_dx;
 							triggers_.velocities_[j].Y -= a_dy;
 						}
-//						else
-//							v_x += marker_layout_.Width + k;
 					}
 				}
 				triggers_.velocities_[i].X += v_x;
@@ -704,14 +920,66 @@ namespace TriggerEdit
 
 		private void SetSelection(int index)
 		{
-			if (selection_ == index)
+			if (SelectionMode.Replace == selection_mode_)
+			{
+				// clear selected flags for previuos selection
+				for (int i = 0; i != selection_.Count; ++i)
+					triggers_.descriptions_[(int)selection_[i]].status_ &= ~TriggerStatus.Selected;
+				selection_.Clear();
+			}
+			if (index < 0)
 				return;
-			disk_control_.Visible = (index > 0 && index < triggers_.count_);
-			if (selection_ >= 0 && selection_ < triggers_.count_)
-				triggers_.descriptions_[selection_].status_ &= ~TriggerStatus.Selected;
-			if (index >= 0 && index < triggers_.count_)
+			if (  SelectionMode.Replace == selection_mode_
+				|| SelectionMode.Add     == selection_mode_)
+			{
+				// add selection
 				triggers_.descriptions_[index].status_ |= TriggerStatus.Selected;
-			selection_ = index;
+				selection_.Add(index);
+			} 
+			else if (SelectionMode.Substract == selection_mode_)
+			{
+				// remove selection
+				if (selection_.Contains(index))
+				{
+					triggers_.descriptions_[index].status_ &= ~TriggerStatus.Selected;
+					selection_.Remove(index);
+				}
+			}
+		}
+
+		private void SetSelection(ArrayList list)
+		{
+			if (SelectionMode.Replace == selection_mode_)
+			{
+				// clear selected flags for previuos selection
+				for (int i = 0; i != selection_.Count; ++i)
+					triggers_.descriptions_[(int)selection_[i]].status_ &= ~TriggerStatus.Selected;
+				// set the new selection
+				selection_ = list;
+				for (int i = 0; i != selection_.Count; ++i)
+					triggers_.descriptions_[(int)selection_[i]].status_ |= TriggerStatus.Selected;
+			}
+			if (SelectionMode.Add == selection_mode_)
+			{
+				for (int i = 0; i != list.Count; ++i)
+					triggers_.descriptions_[(int)list[i]].status_ |= TriggerStatus.Selected;
+				selection_.AddRange(list);
+			}
+			if (SelectionMode.Substract == selection_mode_)
+			{
+				// create a list of nodes not in "list", and deselect others
+				list.Sort();
+				ArrayList not_list = new ArrayList();
+				for (int i = 0; i != selection_.Count; ++i)
+				{
+					if (list.BinarySearch(selection_[i]) < 0)
+						not_list.Add(selection_[i]);
+					else
+						triggers_.descriptions_[(int)selection_[i]].status_ &= ~TriggerStatus.Selected;
+				}
+				// make this list the current selection
+				selection_ = not_list;
+			}
 		}
 
 		private void BeginCameraMove(object sender, EventArgs e)
@@ -736,7 +1004,7 @@ namespace TriggerEdit
 			description.name_ = "[new]";
 			triggers_.AddMarkerGhost(description, cursor);
 			// create the link between the source marker and the ghost
-			triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition(selection_), cursor);
+			triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition((int)selection_[0]), cursor);
 			// modify environment
 			drag_state_ = DragState.Bud;
 			Capture = true;
@@ -754,7 +1022,7 @@ namespace TriggerEdit
 			// move the marker ghost
 			triggers_.g_marker_positions_[0] = cursor;
 			// move the ghost link
-			triggers_.SetLinkGhost(0, triggers_.GetInterpolatedPosition(selection_), cursor);
+			triggers_.SetLinkGhost(0, triggers_.GetInterpolatedPosition((int)selection_[0]), cursor);
 		}
 
 		private void EndTriggerBud(object sender, EventArgs e)
@@ -765,7 +1033,7 @@ namespace TriggerEdit
 			triggers_.AddNew();
 			triggers_.descriptions_[triggers_.count_ - 1]
 				= (TriggerContainer.TriggerDescription)triggers_.g_marker_descriptions_[0];
-			triggers_.adjacency_[selection_, triggers_.count_ - 1] = true;
+			triggers_.adjacency_[(int)selection_[0], triggers_.count_ - 1] = true;
 			triggers_.history_[triggers_.count_ - 1].Set((PointF)triggers_.g_marker_positions_[0]);
 			triggers_.positions_[triggers_.count_ - 1] = (PointF)triggers_.g_marker_positions_[0];
 			// remove the ghosts
@@ -783,12 +1051,12 @@ namespace TriggerEdit
 				(float)int_cursor.Y);
 			ScreenToWorld(ref cursor);
 			// create a new marker ghost
-			triggers_.AddMarkerGhost(triggers_.descriptions_[selection_], cursor);
+			triggers_.AddMarkerGhost(triggers_.descriptions_[(int)selection_[0]], cursor);
 			// copy the links
-			foreach (int tail in triggers_.adjacency_.GetList(selection_))
+			foreach (int tail in triggers_.adjacency_.GetList((int)selection_[0]))
 				triggers_.AddLinkGhost(cursor, triggers_.positions_[tail]);
 			for (int tail = 0; tail != triggers_.count_; ++tail)
-				if (triggers_.adjacency_[tail, selection_])
+				if (triggers_.adjacency_[tail, (int)selection_[0]])
 					triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition(tail), cursor);
 			// modify environment
 			drag_state_ = DragState.Clone;
@@ -808,13 +1076,13 @@ namespace TriggerEdit
 			triggers_.g_marker_positions_[0] = cursor;
 			// move the links
 			int i = 0;
-			foreach (int tail in triggers_.adjacency_.GetList(selection_))
+			foreach (int tail in triggers_.adjacency_.GetList((int)selection_[0]))
 				triggers_.SetLinkGhost(
 					i++,
 					cursor,
 					triggers_.positions_[tail]);
 			for (int tail = 0; tail != triggers_.count_; ++tail)
-				if (triggers_.adjacency_[tail, selection_])
+				if (triggers_.adjacency_[tail, (int)selection_[0]])
 					triggers_.SetLinkGhost(
 						i++,
 						triggers_.GetInterpolatedPosition(tail),
@@ -826,7 +1094,7 @@ namespace TriggerEdit
 			// modify environment
 			drag_state_ = DragState.None;
 			// create a copy of the selected node
-			triggers_.Duplicate(selection_);
+			triggers_.Duplicate((int)selection_[0]);
 			triggers_.history_[triggers_.count_ - 1].Set((PointF)triggers_.g_marker_positions_[0]);
 			triggers_.positions_[triggers_.count_ - 1] = (PointF)triggers_.g_marker_positions_[0];
 			// remove the ghosts
@@ -845,7 +1113,7 @@ namespace TriggerEdit
 			ScreenToWorld(ref cursor);
 			// create the link ghost connecting the source with the cursor
 			TriggerContainer.Link link;
-			link.head_      = triggers_.GetInterpolatedPosition(selection_);
+			link.head_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
 			link.tail_      = cursor;
 			link.snap_head_ = true;
 			link.snap_tail_ = false;
@@ -865,7 +1133,7 @@ namespace TriggerEdit
 			ScreenToWorld(ref cursor);
 			// create the link ghost connecting the source with the cursor
 			TriggerContainer.Link link;
-			link.head_      = triggers_.GetInterpolatedPosition(selection_);
+			link.head_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
 			link.tail_      = cursor;
 			link.snap_head_ = true;
 			link.snap_tail_ = false;
@@ -891,24 +1159,100 @@ namespace TriggerEdit
 			// carry out the link operation
 			if (0 == new_selection)
 			{
-				triggers_.adjacency_[0, selection_] = !triggers_.adjacency_[0, selection_];
-				triggers_.adjacency_[selection_, 0] = false;
+				triggers_.adjacency_[0, (int)selection_[0]] = !triggers_.adjacency_[0, (int)selection_[0]];
+				triggers_.adjacency_[(int)selection_[0], 0] = false;
 			}
 			else
-				triggers_.adjacency_[selection_, new_selection]
-					= !triggers_.adjacency_[selection_, new_selection];
+				triggers_.adjacency_[(int)selection_[0], new_selection]
+					= !triggers_.adjacency_[(int)selection_[0], new_selection];
 		}
 
 		private void BeginTriggerMove(object sender, EventArgs e)
 		{
+			// get cursor location
+			Point cursor = Cursor.Position;
+			cursor = PointToClient(cursor);
+			ScreenToWorld(ref cursor);
+			// get trigger location
+			PointF trigger = triggers_.GetInterpolatedPosition((int)selection_[0]);
+			// set drag offset
+			drag_offset_.X = trigger.X - cursor.X;
+			drag_offset_.Y = trigger.Y - cursor.Y;
+			// set state
 			drag_state_ = DragState.MoveMarker;
 			Capture = true;
 		}
 
+		private void MoveTrigger()
+		{
+			// get cursor location
+			Point cursor = Cursor.Position;
+			cursor = PointToClient(cursor);
+			ScreenToWorld(ref cursor);
+			// change positoin
+			triggers_.positions_[(int)selection_[0]] = new PointF(
+				cursor.X + drag_offset_.X,
+				cursor.Y + drag_offset_.Y);
+			triggers_.history_[(int)selection_[0]].Set(triggers_.positions_[(int)selection_[0]]);
+		}
+
 		private void CollapseTrigger(object sender, EventArgs e)
 		{
-			triggers_.Collapse(selection_);
-			selection_ = -1;
+			disk_control_.Visible = false;
+			triggers_.Collapse((int)selection_[0]);
+			selection_.Clear();
+		}
+
+		private void BeginTriggerSelection(object sender, EventArgs e)
+		{
+			// get cursor location
+			Point cursor = Cursor.Position;
+			cursor = PointToClient(cursor);
+			ScreenToWorld(ref cursor);
+			// remember the coordinates
+			drag_start_ = cursor;
+			// set state
+			drag_state_      = DragState.Selection;
+			selection_state_ = SelectionState.Select;
+			SetSelection(new ArrayList());
+		}
+
+		private void MoveTriggerSelection()
+		{
+			// get cursor location
+			Point cursor = Cursor.Position;
+			cursor = PointToClient(cursor);
+			ScreenToWorld(ref cursor);
+			// set the rectangle
+			selection_rect_ = RectangleF.FromLTRB(
+				(float)Math.Min(drag_start_.X, cursor.X),
+				(float)Math.Min(drag_start_.Y, cursor.Y),
+				(float)Math.Max(drag_start_.X, cursor.X),
+				(float)Math.Max(drag_start_.Y, cursor.Y));
+			// find out which triggers are within the rectangle
+			ArrayList list = new ArrayList();
+			float w = marker_layout_.Width  / 2;
+			float h = marker_layout_.Height / 2;
+			for (int i = 0; i != triggers_.count_; ++i)
+			{
+				PointF p = triggers_.GetInterpolatedPosition(i);
+				if (  p.X - w >= selection_rect_.Left
+					&& p.X + w <= selection_rect_.Right
+					&& p.Y - h >= selection_rect_.Top
+					&& p.Y + h <= selection_rect_.Bottom)
+					list.Add(i);
+			}
+			SetSelection(list);
+		}
+
+		private void EndTriggerSelection(object sender, EventArgs e)
+		{
+			selection_rect_       = RectangleF.Empty;
+			drag_state_           = DragState.None;
+			selection_state_      = SelectionState.None;
+			disk_control_.Visible = selection_.Count == 1;
+			OnSelectTrigger(new TriggerEventArgs(selection_));
+			
 		}
 
 		#endregion
@@ -923,11 +1267,19 @@ namespace TriggerEdit
 
 		public class TriggerEventArgs : EventArgs
 		{
-			public TriggerEventArgs(int trigger_id)
+			public TriggerEventArgs(ArrayList ids)
 			{
-				trigger_id_ = trigger_id;
+				ids_ = ids;
 			}
-			public int trigger_id_;
+			public int this[int index]
+			{
+				get { return (int)ids_[index]; }
+			}
+			public int Count
+			{
+				get { return ids_.Count; }
+			}
+			private ArrayList ids_;
 		}
 
 		public delegate void SelectTriggerEvent(object sender, TriggerEventArgs e);
@@ -1001,7 +1353,7 @@ namespace TriggerEdit
 		{
 			while (AppStillIdle)
 			{
-				if (!rendering_enabled_)
+				if (!rendering_enabled_ || !animation_active_)
 					continue;
 				AdvanceAnimation();
 				Render();
@@ -1012,32 +1364,87 @@ namespace TriggerEdit
 		{
 			if (!rendering_enabled_ || triggers_ == null)
 				return;
-			// calculate new selection
+			switch (e.Button)
+			{
+				case MouseButtons.Left:   OnMouseLeftDown(e);   break;
+				case MouseButtons.Middle: OnMouseMiddleDown(e); break;
+				case MouseButtons.Right:  OnMouseRightDown(e);  break;
+			}
+			base.OnMouseDown(e);
+			return;
+		}
+
+		private void OnMouseLeftDown(MouseEventArgs e)
+		{
+			// get cursor location
 			Point cursor_location = new Point(e.X, e.Y);
 			ScreenToWorld(ref cursor_location);
-			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
-			if (new_selection < 0)
+			// handle zoom selection
+			if (selection_state_ == SelectionState.Zoom)
 			{
-				bool drag_empty = true;
-				// call the disk control event handler
-				if (-1 != selection_)
-				{
-					float x, y;
-					triggers_.GetInterpolatedPosition(selection_, out x, out y);
-					drag_empty = !disk_control_.OnMouseClick(cursor_location.X - x, cursor_location.Y - y);
-				}
-				// begin dragging the camera
-				if (drag_empty && DragState.None == drag_state_)
-					BeginCameraMove(this, EventArgs.Empty);
+				drag_start_     = cursor_location;
+				selection_rect_ = RectangleF.Empty;
+				drag_state_     = DragState.Selection;
+				return;
 			}
-			else
+			// handle disk click
+			if (disk_control_.Visible)
+			{
+				float x, y;
+				triggers_.GetInterpolatedPosition((int)selection_[0], out x, out y);
+				if (disk_control_.OnMouseClick(
+					cursor_location.X - x,
+					cursor_location.Y - y))
+				{
+					return;
+				}
+			}
+			// find the marker under the cursor
+			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
+			// set selection mode, depending on the modifier key pressed
+			switch (Control.ModifierKeys)
+			{
+				case Keys.Shift:   selection_mode_ = SelectionMode.Add;       break;
+				case Keys.Control: selection_mode_ = SelectionMode.Substract; break;
+				default:           selection_mode_ = SelectionMode.Replace;   break;
+			}
+			// handle marker dragging
+			if (new_selection >= 0
+				&& selection_.Count == 1
+				&& (int)selection_[0] == new_selection)
+			{
+				BeginTriggerMove(this, EventArgs.Empty);
+				return;
+			}
+			// handle selection change
+			if (new_selection >= 0)
 			{
 				SetSelection(new_selection);
-				BeginTriggerMove(this, EventArgs.Empty);
+				disk_control_.Visible
+					= (1 == selection_.Count)
+					&& !triggers_.descriptions_[new_selection].is_virtual_;
+				OnSelectTrigger(new TriggerEventArgs(selection_));
+				return;
 			}
-			// fire the event
-			OnSelectTrigger(new TriggerEventArgs(selection_));
-			base.OnMouseDown(e);
+			// handle marker selection
+			if (new_selection < 0)
+			{
+				disk_control_.Visible = false;
+				BeginTriggerSelection(this, EventArgs.Empty);
+				return;
+			}
+		}
+
+		private void OnMouseMiddleDown(MouseEventArgs e)
+		{
+			Zoom = 1.0f;
+		}
+
+		private void OnMouseRightDown(MouseEventArgs e)
+		{
+			// begin dragging the camera
+			if (DragState.None == drag_state_)
+				BeginCameraMove(this, EventArgs.Empty);
 		}
 
 		protected override void OnMouseMove(MouseEventArgs e)
@@ -1046,16 +1453,16 @@ namespace TriggerEdit
 				return;
 			if (DesignMode || null == triggers_)
 				return;
-			HighlightTriggers(new Point(e.X, e.Y));
-			if (-1 != selection_)
+			if (disk_control_.Visible)
 			{
 				float ex = e.X;
 				float ey = e.Y;
 				ScreenToWorld(ref ex, ref ey);
 				float x, y;
-				triggers_.GetInterpolatedPosition(selection_, out x, out y);
+				triggers_.GetInterpolatedPosition((int)selection_[0], out x, out y);
 				disk_control_.OnMouseMove(ex - x, ey - y);
 			}
+			HighlightTriggers(new Point(e.X, e.Y));
 			switch (drag_state_)
 			{
 				case DragState.MoveCamera:
@@ -1064,11 +1471,7 @@ namespace TriggerEdit
 						old_camera_position_.Y + (drag_start_.Y - Cursor.Position.Y) * camera_.Zoom);
 					break;
 				case DragState.MoveMarker:
-					if (selection_ < 0)
-						break;
-					triggers_.positions_[selection_] = new Point(e.X, e.Y);
-					ScreenToWorld(ref triggers_.positions_[selection_]);
-					triggers_.history_[selection_].Set(triggers_.positions_[selection_]);
+					MoveTrigger();
 					break;
 				case DragState.Bud:
 					MoveTriggerBud();
@@ -1079,6 +1482,25 @@ namespace TriggerEdit
 				case DragState.Link:
 					MoveTriggerLink();
 					break;
+				case DragState.Selection:
+				{
+					switch (selection_state_)
+					{
+						case SelectionState.Zoom:
+							float ex = e.X;
+							float ey = e.Y;
+							ScreenToWorld(ref ex, ref ey);
+							selection_rect_ = RectangleF.FromLTRB(
+								(float)Math.Min(drag_start_.X, ex),
+								(float)Math.Min(drag_start_.Y, ey),
+								(float)Math.Max(drag_start_.X, ex),
+								(float)Math.Max(drag_start_.Y, ey));
+							break;
+						case SelectionState.Select:
+							MoveTriggerSelection();
+							break;
+					}
+				} break;
 			}
 			base.OnMouseMove(e);
 		}
@@ -1104,6 +1526,21 @@ namespace TriggerEdit
 				case DragState.Link:
 					EndTriggerLink(this, EventArgs.Empty);
 					break;
+				case DragState.Selection:
+				{
+					switch (selection_state_)
+					{
+						case SelectionState.Zoom:
+							ZoomRect         = selection_rect_;
+							selection_rect_  = RectangleF.Empty;
+							drag_state_      = DragState.None;
+							selection_state_ = SelectionState.None;
+							break;
+						case SelectionState.Select:
+							EndTriggerSelection(this, EventArgs.Empty);
+							break;
+					}
+				} break;
 			}
 			Capture = false;
 			base.OnMouseUp(e);
@@ -1132,6 +1569,7 @@ namespace TriggerEdit
 		{
 			if (DesignMode || null == triggers_)
 				base.OnPaintBackground(pevent);
+			Render();
 		}
 
 		protected override void OnSizeChanged(EventArgs e)
@@ -1139,7 +1577,7 @@ namespace TriggerEdit
 			base.OnSizeChanged(e);
 			if (DesignMode)
 				return;
-//			InitGraphics();
+			InitGraphics();
 			camera_.ViewportSize = ClientRectangle.Size;
 			Invalidate();
 		}
@@ -1198,17 +1636,22 @@ namespace TriggerEdit
 
 		#region
 
-		private int              active_ = -1;
-		private int              cell_spacing_ = 96;
+		private float            cell_spacing_ = 96;
 		private DiscControl      disk_control_;
-		private Point            drag_start_;
-		private DragState        drag_state_;
 		private MarkerLayout     marker_layout_;
-		private int              selection_ = -1;
-		private float            temperature_;
 		private TriggerContainer triggers_;
 		private TriggerRenderer  trigger_renderer_;
 		private bool             rendering_enabled_;
+		// dragging
+		private Point     drag_start_;
+		private DragState drag_state_;
+		private PointF    drag_offset_;
+		// selection
+		private int            active_ = -1;
+		private ArrayList      selection_;
+		private SelectionMode  selection_mode_;
+		private SelectionState selection_state_;
+		private RectangleF     selection_rect_;
 		// camera
 		private Camera camera_;
 		private PointF old_camera_position_;
@@ -1225,9 +1668,10 @@ namespace TriggerEdit
 		private bool           animation_active_;
 		private float          animation_remainder_;
 		private float          animation_remainder_step_;
-		private const float    animation_speed_ = 96.0f / 1000.0f; // pixels per millisecond
+		private float          animation_speed_ = 96.0f / 1000.0f; // pixels per millisecond
 		private AnimationState animation_state_;
 		private int            last_step_time_;
+		private float          temperature_;
 
 		#endregion
 

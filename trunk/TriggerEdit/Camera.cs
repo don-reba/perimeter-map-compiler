@@ -112,7 +112,7 @@ namespace TriggerEdit
 				-viewport_size_.Width  * zoom_,
 				-viewport_size_.Height * zoom_,
 				0.1f,
-				2.0f);
+				3.0f);
 		}
 
 		private void CalculateZoom()

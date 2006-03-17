@@ -211,12 +211,22 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "PointFComparer.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "RandomPermutation.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />
                 <File
                     RelPath = "ScriptXmlWriter.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "SelectionCollection.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
                 />
@@ -238,6 +248,16 @@
                 <File
                     RelPath = "TriggerDisplay.resx"
                     DependentUpon = "TriggerDisplay.cs"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "TriggerEditProperties.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "TriggerEditProperties.resx"
+                    DependentUpon = "TriggerEditProperties.cs"
                     BuildAction = "EmbeddedResource"
                 />
                 <File

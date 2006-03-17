@@ -12,9 +12,16 @@ namespace TriggerEdit
 
 		public MarkerLayout(Font font)
 		{
+			line_count_   = 2;
 			line_height_  = font.Height;
 			text_padding_ = new Size(2, 1);
 			text_offset_  = new Size(0, 0);
+		}
+
+		public int LineCount
+		{
+			get { return line_count_; }
+			set { line_count_ = value; }
 		}
 
 		public Size TextOffset
@@ -39,7 +46,7 @@ namespace TriggerEdit
 
 		public int Height
 		{
-			get { return line_height_ * 2 + 2 * text_padding_.Height; }
+			get { return line_height_ * line_count_ + 2 * text_padding_.Height; }
 		}
 
 		public Size Size
@@ -51,7 +58,8 @@ namespace TriggerEdit
 
 		#region data
 
-		private int line_height_;
+		private int  line_count_;
+		private int  line_height_;
 		private Size text_padding_;
 		private Size text_offset_;
 

@@ -51,14 +51,13 @@ namespace TriggerEdit
 
 			#region interface
 
-			public void Serialize(XmlNode node, out Point point, out State state)
+			/// <summary>
+			/// Input from XML.
+			/// </summary>
+			/// <param name="node">Root XML node for the trigger.</param>
+			/// <param name="state">State of the trigger.</param>
+			public void Serialize(XmlNode node, out State state, out PointF position)
 			{
-				// read coordinates
-				point = new Point(
-					int.Parse(node.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"x\"]").InnerText),
-					int.Parse(node.SelectSingleNode(
-						"set[@name=\"cellIndex\"]/int[@name=\"y\"]").InnerText));
 				// read name
 				name_ = node.SelectSingleNode(
 					"string[@name=\"name\"]").InnerText;
@@ -80,9 +79,23 @@ namespace TriggerEdit
 				XmlNode condition_node = node.SelectSingleNode("set[@name=\"condition\"]");
 				if (null != condition_node)
 					condition_ = Condition.CreateInstance(condition_node);
+				// read position
+				position = PointF.Empty;
+				try
+				{
+					position.X = float.Parse(node.SelectSingleNode(
+						"set[@name=\"position\"]/float[@name=\"x\"]").InnerText);
+					position.Y = float.Parse(node.SelectSingleNode(
+						"set[@name=\"position\"]/float[@name=\"y\"]").InnerText);
+				}
+				catch {}
 			}
 
-			public void Serialize(ScriptXmlWriter w, IEnumerable link_names, State state)
+			public void Serialize(
+				ScriptXmlWriter w,
+				IEnumerable     link_names,
+				State           state,
+				PointF          position)
 			{
 				// start trigger
 				w.WriteStartElement("set");
@@ -133,6 +146,12 @@ namespace TriggerEdit
 				w.WriteElement("int", "internalColor_",    "0");
 				w.WritePoint("cellIndex", Point.Empty);
 				w.WriteRect("boundingRect", Rectangle.Empty);
+				// write the position
+				w.WriteStartNamedElement("set", "position");
+				w.WriteAttributeString("usage", "private");
+				w.WriteElement("float", "x", position.X.ToString());
+				w.WriteElement("float", "y", position.Y.ToString());
+				w.WriteEndElement();
 				// end trigger
 				w.WriteEndElement();
 			}
@@ -141,6 +160,8 @@ namespace TriggerEdit
 			{
 				get
 				{
+					if (0 != (status_ & Status.Selected))
+						return Color.Yellow;
 					if (0 != (status_ & Status.Bright))
 						return Color.Yellow;
 					if (0 != (status_ & Status.Dim))
@@ -218,7 +239,7 @@ namespace TriggerEdit
 		// interface
 		//----------
 
-		#region interface
+		#region
 
 		public TriggerContainer()
 		{
@@ -318,48 +339,6 @@ namespace TriggerEdit
 			if (tail == head)
 				throw new ArgumentException("tail must not equal head");
 			adjacency_[tail, head] = false;
-//			bool connected;
-//			connected = false;
-//			// switch head and tail, so that tail is greater than head
-//			if (head > tail)
-//			{
-//				int temp = tail;
-//				tail     = head;
-//				head     = temp;
-//			}
-//			// remove the tail if it becomes disconnected
-//			for (int i = 0; i != count_; ++i)
-//				if (adjacency_[tail, i])
-//				{
-//					connected = true;
-//					break;
-//				}
-//			if (!connected)
-//				for (int i = 0; i != count_; ++i)
-//					if (adjacency_[i, tail])
-//					{
-//						connected = true;
-//						break;
-//					}
-//			if (!connected)
-//				Delete(tail);
-//			// remove the head if it becomes disconnected
-//			connected = false;
-//			for (int i = 0; i != count_; ++i)
-//				if (adjacency_[head, i])
-//				{
-//					connected = true;
-//					break;
-//				}
-//			if (!connected)
-//				for (int i = 0; i != count_; ++i)
-//					if (adjacency_[i, head])
-//					{
-//						connected = true;
-//						break;
-//					}
-//			if (!connected)
-//				Delete(head);
 		}
 
 		public float InterpolationRatio
@@ -375,14 +354,36 @@ namespace TriggerEdit
 			}
 		}
 
+		public void Reset()
+		{
+			count_ = 2;
+			// initialize state variables
+			adjacency_    = new AdjacencyMatrix(count_);
+			descriptions_ = new TriggerDescription[count_];
+			history_      = new PositionHistory[count_];
+			positions_    = new PointF[count_];
+			velocities_   = new PointF[count_];
+			// initialize the root node
+			descriptions_[0].name_       = "[root]";
+			descriptions_[0].is_virtual_ = true;
+			// initialize the first node
+			descriptions_[1].name_ = "[new]";
+			adjacency_[0, 1] = true;
+		}
+
+		/// <summary>
+		/// Input from XML.
+		/// </summary>
+		/// <param name="node">Script root.</param>
+		/// <returns>Whether the serialization was successful.</returns>
 		public bool Serialize(XmlNode node)
 		{
 			// extract data
 			XmlNodeList trigger_nodes = node.SelectNodes(
-				"//script"                     +
-				"/set[@name=\"TriggerChain\"]" +
-				"/array[@name=\"triggers\"]"   +
-				"/set");
+				"//script"
+				+ "/set[@name=\"TriggerChain\"]"
+				+ "/array[@name=\"triggers\"]"
+				+ "/set");
 			count_ = trigger_nodes.Count + 1; // + the root trigger
 			// initialize state variables
 			adjacency_    = new AdjacencyMatrix(count_);
@@ -390,18 +391,32 @@ namespace TriggerEdit
 			history_      = new PositionHistory[count_];
 			positions_    = new PointF[count_];
 			velocities_   = new PointF[count_];
-			// serialize triggers and read in names
-			Hashtable names = new Hashtable(count_);
+			// creat the root node
 			descriptions_[0].name_       = "[root]";
 			descriptions_[0].is_virtual_ = true;
+			try
+			{
+				XmlNode root_node = node.SelectSingleNode(
+					"//script"
+					+ "/set[@name=\"TriggerChain\"]"
+					+ "/set[@name=\"[root]\"]"
+					+ "/set[@name=\"position\"]");
+				positions_[0].X = float.Parse(root_node.SelectSingleNode(
+					"float[@name=\"x\"]").InnerText);
+				positions_[0].Y = float.Parse(root_node.SelectSingleNode(
+					"float[@name=\"y\"]").InnerText);
+			}
+			catch {}
+			// serialize triggers and read in names
+			Hashtable names = new Hashtable(count_);
 			for (int i = 1; i != count_; ++i)
 			{
-				Point point;
 				TriggerDescription.State state;
-				descriptions_[i].Serialize(trigger_nodes[i - 1], out point, out state);
+				descriptions_[i].Serialize(trigger_nodes[i - 1], out state, out positions_[i]);
 				if (state == TriggerDescription.State.Checking)
 					adjacency_[0, i] = true;
-				names.Add(descriptions_[i].name_, i);
+				if (!names.Contains(descriptions_[i].name_))
+					names.Add(descriptions_[i].name_, i);
 			}
 			// add links
 			for (int i = 1; i != count_; ++i)
@@ -438,6 +453,9 @@ namespace TriggerEdit
 			return true;
 		}
 
+		/// <summary>
+		/// Output to XML.
+		/// </summary>
 		public void Serialize(ScriptXmlWriter w)
 		{
 			// start script
@@ -445,6 +463,14 @@ namespace TriggerEdit
 			w.WriteStartNamedElement("set", "TriggerChain");
 			// trigger chain name
 			w.WriteElement("string", "name", "");
+			// root node
+			w.WriteStartNamedElement("set", "[root]");
+			w.WriteAttributeString("usage", "private");
+			w.WriteStartNamedElement("set", "position");
+			w.WriteElement("float", "x", positions_[0].X.ToString());
+			w.WriteElement("float", "y", positions_[0].Y.ToString());
+			w.WriteEndElement();
+			w.WriteEndElement();
 			// triggers
 			w.WriteStartNamedElement("array", "triggers");
 			for (int i = 1; i != count_; ++i)
@@ -457,7 +483,7 @@ namespace TriggerEdit
 					state = TriggerDescription.State.Checking;
 				else
 					state = TriggerDescription.State.Sleeping;
-				descriptions_[i].Serialize(w, link_names, state);
+				descriptions_[i].Serialize(w, link_names, state, positions_[i]);
 			}
 			w.WriteEndElement();
 			// layout info

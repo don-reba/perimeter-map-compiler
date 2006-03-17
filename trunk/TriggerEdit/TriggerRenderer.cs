@@ -9,7 +9,12 @@ namespace TriggerEdit
 {
 	public class TriggerRenderer
 	{
-		#region interface
+
+		//----------
+		// interface
+		//----------
+
+		#region
 
 		public TriggerRenderer(Device device, MarkerLayout marker_layout, System.Drawing.Font font)
 		{
@@ -139,7 +144,11 @@ namespace TriggerEdit
 
 		#endregion		
 
-		#region internal implementation
+		//---------------
+		// implementation
+		//---------------
+
+		#region
 
 		private void PushRectangle(PointF position, SizeF radius, float z, Color color)
 		{
@@ -220,7 +229,7 @@ namespace TriggerEdit
 			dy.Y = new_y;
 			// calculate offset
 			Vector2 offset = dy;
-			offset *= 0.5f;
+			offset *= 0.5f; // 1 unit thick
 			// build the line
 			CustomVertex.PositionColored vertex = new CustomVertex.PositionColored();
 			vertex.Color = color.ToArgb();
@@ -380,7 +389,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region data
+		//-----
+		// data
+		//-----
+
+		#region
 
 		// DX
 		Microsoft.DirectX.Direct3D.Font font_;

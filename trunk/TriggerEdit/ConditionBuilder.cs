@@ -9,7 +9,12 @@ namespace TriggerEdit
 {
 	public class ConditionBuilder : System.Windows.Forms.Form
 	{
-		#region interface
+
+		//----------
+		// interface
+		//----------
+			
+		#region
 
 		public ConditionBuilder()
 		{
@@ -28,7 +33,10 @@ namespace TriggerEdit
 			set
 			{
 				if (null == value)
+				{
 					condition_ = new ConditionSwitcher();
+					condition_.preconditions_ = new ArrayList();
+				}
 				else
 					condition_ = (Condition)value.Clone();
 				selection_                    = condition_;
@@ -40,7 +48,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region event handlers
+		//---------------
+		// event handlers
+		//---------------
+
+		#region
 
 		private void display_pnl__NewCondition(object sender, ConditionDisplay.ConditionEventArgs e)
 		{
@@ -48,6 +60,8 @@ namespace TriggerEdit
 			new_condition_                = true;
 			condition_lst_.SelectedIndex  = -1;
 			property_grid_.SelectedObject = null;
+			if (apply_cb_.Checked)
+				OnConditionChanged(EventArgs.Empty);
 		}
 		private void display_pnl__SelectCondition(object sender, ConditionDisplay.ConditionEventArgs e)
 		{
@@ -56,6 +70,8 @@ namespace TriggerEdit
 			new_condition_                = false;
 			condition_lst_.SelectedIndex  = condition_lst_.FindString(e.condition_.Name);
 			property_grid_.SelectedObject = e.condition_;
+			if (apply_cb_.Checked)
+				OnConditionChanged(EventArgs.Empty);
 		}
 		private void condition_lst__SelectedValueChanged(object sender, System.EventArgs e)
 		{
@@ -96,11 +112,34 @@ namespace TriggerEdit
 			selection_ = condition;
 			display_pnl_.Condition = condition_;
 			property_grid_.SelectedObject = selection_;
+			if (apply_cb_.Checked)
+				OnConditionChanged(EventArgs.Empty);
+		}
+
+		private void apply_cb__CheckedChanged(object sender, System.EventArgs e)
+		{
+			apply_btn_.Enabled = !apply_cb_.Checked;
+		}
+
+		private void apply_btn__Click(object sender, System.EventArgs e)
+		{
+			OnConditionChanged(EventArgs.Empty);
+		}
+
+		protected override bool ProcessDialogKey(Keys keyData)
+		{
+			if (keyData == Keys.Escape)
+				Close();
+			return base.ProcessDialogKey (keyData);
 		}
 
 		#endregion
 
-		#region implementation
+		//---------------
+		// implementation
+		//---------------
+
+		#region
 
 		protected override void Dispose( bool disposing )
 		{
@@ -155,6 +194,41 @@ namespace TriggerEdit
 
 		#endregion
 
+		//-------
+		// events
+		//-------
+
+		#region
+
+		public event EventHandler ConditionChanged;
+
+		protected void OnConditionChanged(EventArgs e)
+		{
+			if (null != ConditionChanged)
+				ConditionChanged(this, e);
+		}
+
+		#endregion
+
+		//-----
+		// data
+		//-----
+
+		#region
+
+		bool      new_condition_;
+		Condition condition_;
+		Condition selection_;
+		private System.Windows.Forms.Button apply_btn_;
+		private System.Windows.Forms.CheckBox apply_cb_;
+		Condition selection_parent_;
+
+		#endregion
+
+		//----------
+		// generated
+		//----------
+
 		#region Windows Form Designer generated code
 		/// <summary>
 		/// Required method for Designer support - do not modify
@@ -168,11 +242,12 @@ namespace TriggerEdit
 			this.panel3 = new System.Windows.Forms.Panel();
 			this.property_grid_ = new System.Windows.Forms.PropertyGrid();
 			this.condition_lst_ = new System.Windows.Forms.ComboBox();
-			this.ok_btn_ = new System.Windows.Forms.Button();
-			this.cancel_btn_ = new System.Windows.Forms.Button();
 			this.panel2 = new System.Windows.Forms.Panel();
+			this.apply_btn_ = new System.Windows.Forms.Button();
+			this.apply_cb_ = new System.Windows.Forms.CheckBox();
 			this.panel1.SuspendLayout();
 			this.panel3.SuspendLayout();
+			this.panel2.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// panel1
@@ -239,46 +314,48 @@ namespace TriggerEdit
 			this.condition_lst_.TabIndex = 1;
 			this.condition_lst_.SelectedValueChanged += new System.EventHandler(this.condition_lst__SelectedValueChanged);
 			// 
-			// ok_btn_
-			// 
-			this.ok_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.ok_btn_.Location = new System.Drawing.Point(416, 208);
-			this.ok_btn_.Name = "ok_btn_";
-			this.ok_btn_.TabIndex = 1;
-			this.ok_btn_.Text = "OK";
-			// 
-			// cancel_btn_
-			// 
-			this.cancel_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cancel_btn_.Location = new System.Drawing.Point(504, 208);
-			this.cancel_btn_.Name = "cancel_btn_";
-			this.cancel_btn_.TabIndex = 2;
-			this.cancel_btn_.Text = "Cancel";
-			// 
 			// panel2
 			// 
+			this.panel2.Controls.Add(this.apply_cb_);
+			this.panel2.Controls.Add(this.apply_btn_);
 			this.panel2.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panel2.Location = new System.Drawing.Point(8, 197);
 			this.panel2.Name = "panel2";
 			this.panel2.Size = new System.Drawing.Size(576, 40);
 			this.panel2.TabIndex = 3;
 			// 
+			// apply_btn_
+			// 
+			this.apply_btn_.Location = new System.Drawing.Point(496, 8);
+			this.apply_btn_.Name = "apply_btn_";
+			this.apply_btn_.TabIndex = 0;
+			this.apply_btn_.Text = "Apply";
+			this.apply_btn_.Click += new System.EventHandler(this.apply_btn__Click);
+			// 
+			// apply_cb_
+			// 
+			this.apply_cb_.Location = new System.Drawing.Point(400, 8);
+			this.apply_cb_.Name = "apply_cb_";
+			this.apply_cb_.Size = new System.Drawing.Size(88, 24);
+			this.apply_cb_.TabIndex = 1;
+			this.apply_cb_.Text = "always apply";
+			this.apply_cb_.CheckedChanged += new System.EventHandler(this.apply_cb__CheckedChanged);
+			// 
 			// ConditionBuilder
 			// 
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
 			this.ClientSize = new System.Drawing.Size(592, 245);
-			this.Controls.Add(this.cancel_btn_);
-			this.Controls.Add(this.ok_btn_);
 			this.Controls.Add(this.panel1);
 			this.Controls.Add(this.panel2);
 			this.DockPadding.All = 8;
+			this.MaximizeBox = false;
+			this.MinimizeBox = false;
 			this.Name = "ConditionBuilder";
 			this.ShowInTaskbar = false;
 			this.Text = "ConditionBuilder";
 			this.panel1.ResumeLayout(false);
 			this.panel3.ResumeLayout(false);
+			this.panel2.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -289,22 +366,11 @@ namespace TriggerEdit
 		private System.ComponentModel.Container components = null;
 		private ConditionDisplay display_pnl_;
 		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.Button ok_btn_;
 		private System.Windows.Forms.PropertyGrid property_grid_;
 		private System.Windows.Forms.Panel panel2;
 		private System.Windows.Forms.Panel panel3;
 		private System.Windows.Forms.ComboBox condition_lst_;
 		private System.Windows.Forms.Splitter splitter1;
-		private System.Windows.Forms.Button cancel_btn_;
-
-		#endregion
-
-		#region data
-
-		bool      new_condition_;
-		Condition condition_;
-		Condition selection_;
-		Condition selection_parent_;
 
 		#endregion
 	}

@@ -107,6 +107,9 @@ namespace TriggerEdit
 		{
 			const float pi      = (float)Math.PI;
 			const float max_arc = 2.0f;
+			// calculate the color for the ring
+			Color color = Color.Gold;
+			Color hl_color = Color.FromArgb(Color.Yellow.ToArgb() - color.ToArgb());
 			// store the number of buttons, for briefness
 			int count = button_info_.Count;
 			// calculate button sizes
@@ -147,17 +150,17 @@ namespace TriggerEdit
 				texture_side *= 2;
 			Bitmap icon_bmp = new Bitmap(texture_side, texture_side);
 			Graphics icon_gfx = Graphics.FromImage(icon_bmp);
-			icon_gfx.Clear(Color.Orange);
+			icon_gfx.Clear(color);
 			// initialize the vertex containers
 			ArrayList colored     = new ArrayList();
 			ArrayList highlighted = new ArrayList();
 			ArrayList textured    = new ArrayList();
 			// initialize the vertex structures
 			CustomVertex.PositionColored vc = new CustomVertex.PositionColored();
-			vc.Z = -0.4f;
-			vc.Color = Color.Orange.ToArgb();
+			vc.Z = -0.06f;
+			vc.Color = color.ToArgb();
 			CustomVertex.PositionTextured vt = new CustomVertex.PositionTextured();
-			vt.Z = -0.36f;
+			vt.Z = -0.03f;
 			// calculate button placement,
 			// draw the texture,
 			// and create geometry
@@ -281,8 +284,8 @@ namespace TriggerEdit
 				highlighted[i] = new CustomVertex.PositionColored(
 					v.X,
 					v.Y,
-					-0.33f,
-					0x00505A00);
+					0.0f,
+					hl_color.ToArgb());
 			}
 			// initialize the texture
 			icon_texture_ = Texture.FromBitmap(device, icon_bmp, Usage.None, Pool.Managed);
@@ -352,6 +355,11 @@ namespace TriggerEdit
 				device.SetRenderState(RenderStates.DestinationBlend, (int)Blend.Zero);
 				device.SetRenderState(RenderStates.AlphaBlendEnable, 0);
 			}
+		}
+
+		public int Selection
+		{
+			get { return selection_; }
 		}
 
 		public bool Visible

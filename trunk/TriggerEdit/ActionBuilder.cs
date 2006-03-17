@@ -7,9 +7,26 @@ using TriggerEdit.Definitions;
 
 namespace TriggerEdit
 {
+	//------
+	// using
+	//------
+
+	#region
+
+	using TriggerDescription = TriggerContainer.TriggerDescription;
+	using TriggerState       = TriggerContainer.TriggerDescription.State;
+	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
+
+	#endregion
+
 	public class ActionBuilder : System.Windows.Forms.Form
 	{
-		#region interface
+
+		//----------
+		// interface
+		//----------
+
+		#region
 
 		public ActionBuilder()
 		{
@@ -42,7 +59,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region implementation
+		//---------------
+		// implementation
+		//---------------
+
+		#region
 
 		protected override void Dispose( bool disposing )
 		{
@@ -87,7 +108,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		#region event handlers
+		//---------------
+		// event handlers
+		//---------------
+
+		#region
 
 		private void actions_lst__SelectedValueChanged(object sender, System.EventArgs e)
 		{
@@ -101,19 +126,55 @@ namespace TriggerEdit
 				return;
 			action_ = (Action)Activator.CreateInstance(action_type);
 			property_grid_.SelectedObject = action_;
+			if (apply_cb_.Checked)
+				OnActionChanged(EventArgs.Empty);
 		}
+
+		private void apply_cb__CheckedChanged(object sender, System.EventArgs e)
+		{
+			apply_btn_.Enabled = !apply_cb_.Checked;
+		}
+
+		private void apply_btn__Click(object sender, System.EventArgs e)
+		{
+			OnActionChanged(EventArgs.Empty);
+		}
+
+		protected override bool ProcessDialogKey(Keys keyData)
+		{
+			if (keyData == Keys.Escape)
+				Close();
+			return base.ProcessDialogKey (keyData);
+		}
+
 
 		#endregion
 
-		private System.Windows.Forms.Panel panel1;
-		private System.Windows.Forms.Button ok_btn_;
-		private System.Windows.Forms.Button cancel_btn_;
+		//-------
+		// events
+		//-------
 
-		#region data
+		public event EventHandler ActionChanged;
+
+		protected void OnActionChanged(EventArgs e)
+		{
+			if (null != ActionChanged)
+				ActionChanged(this, e);
+		}
+
+		//-----
+		// data
+		//-----
+
+		#region
 
 		Action action_;
 
 		#endregion
+
+		//----------
+		// generated
+		//----------
 
 		#region Windows Form Designer generated code
 		/// <summary>
@@ -125,8 +186,8 @@ namespace TriggerEdit
 			this.property_grid_ = new System.Windows.Forms.PropertyGrid();
 			this.actions_lst_ = new System.Windows.Forms.ComboBox();
 			this.panel1 = new System.Windows.Forms.Panel();
-			this.cancel_btn_ = new System.Windows.Forms.Button();
-			this.ok_btn_ = new System.Windows.Forms.Button();
+			this.apply_cb_ = new System.Windows.Forms.CheckBox();
+			this.apply_btn_ = new System.Windows.Forms.Button();
 			this.panel1.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -158,31 +219,32 @@ namespace TriggerEdit
 			// 
 			// panel1
 			// 
-			this.panel1.Controls.Add(this.cancel_btn_);
-			this.panel1.Controls.Add(this.ok_btn_);
+			this.panel1.Controls.Add(this.apply_cb_);
+			this.panel1.Controls.Add(this.apply_btn_);
 			this.panel1.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.panel1.Location = new System.Drawing.Point(8, 225);
 			this.panel1.Name = "panel1";
 			this.panel1.Size = new System.Drawing.Size(276, 40);
 			this.panel1.TabIndex = 2;
 			// 
-			// cancel_btn_
+			// apply_cb_
 			// 
-			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cancel_btn_.Location = new System.Drawing.Point(192, 8);
-			this.cancel_btn_.Name = "cancel_btn_";
-			this.cancel_btn_.Size = new System.Drawing.Size(72, 23);
-			this.cancel_btn_.TabIndex = 1;
-			this.cancel_btn_.Text = "Cancel";
+			this.apply_cb_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.apply_cb_.Location = new System.Drawing.Point(96, 8);
+			this.apply_cb_.Name = "apply_cb_";
+			this.apply_cb_.Size = new System.Drawing.Size(88, 24);
+			this.apply_cb_.TabIndex = 1;
+			this.apply_cb_.Text = "always apply";
+			this.apply_cb_.CheckedChanged += new System.EventHandler(this.apply_cb__CheckedChanged);
 			// 
-			// ok_btn_
+			// apply_btn_
 			// 
-			this.ok_btn_.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.ok_btn_.Location = new System.Drawing.Point(104, 8);
-			this.ok_btn_.Name = "ok_btn_";
-			this.ok_btn_.Size = new System.Drawing.Size(72, 23);
-			this.ok_btn_.TabIndex = 0;
-			this.ok_btn_.Text = "OK";
+			this.apply_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.apply_btn_.Location = new System.Drawing.Point(192, 8);
+			this.apply_btn_.Name = "apply_btn_";
+			this.apply_btn_.TabIndex = 0;
+			this.apply_btn_.Text = "Apply";
+			this.apply_btn_.Click += new System.EventHandler(this.apply_btn__Click);
 			// 
 			// ActionBuilder
 			// 
@@ -192,6 +254,8 @@ namespace TriggerEdit
 			this.Controls.Add(this.panel1);
 			this.Controls.Add(this.actions_lst_);
 			this.DockPadding.All = 8;
+			this.MaximizeBox = false;
+			this.MinimizeBox = false;
 			this.Name = "ActionBuilder";
 			this.ShowInTaskbar = false;
 			this.Text = "ActionBuilder";
@@ -206,6 +270,9 @@ namespace TriggerEdit
 		private System.ComponentModel.Container components = null;
 		private System.Windows.Forms.ComboBox actions_lst_;
 		private System.Windows.Forms.PropertyGrid property_grid_;
+		private System.Windows.Forms.Panel panel1;
+		private System.Windows.Forms.Button apply_btn_;
+		private System.Windows.Forms.CheckBox apply_cb_;
 
 		#endregion
 	}
