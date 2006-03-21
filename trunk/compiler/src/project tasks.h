@@ -98,19 +98,19 @@ public:
 	TaskData();
 	~TaskData();
 public:
-	tstring             map_name_;
-	tstring             project_folder_;
-	SIZE                map_size_;
-	ProjectState        project_state_;
-	bool                fast_quantization_;
-	bool                enable_lighting_;
-	float               mesh_threshold_;
 	bool                display_hardness_;
 	bool                display_texture_;
 	bool                display_zero_layer_;
-	tstring             file_names_[resource_count];
-	TaskCommon::MapInfo map_info_;
+	bool                enable_lighting_;
+	bool                fast_quantization_;
 	CRITICAL_SECTION    section_;
+	float               mesh_threshold_;
+	ProjectState        project_state_;
+	SIZE                map_size_;
+	TaskCommon::MapInfo map_info_;
+	tstring             file_names_[resource_count];
+	tstring             map_name_;
+	tstring             project_folder_;
 	// cached resources
 	TaskCommon::Hardness  *hardness_;
 	TaskCommon::Heightmap *heightmap_;
@@ -230,7 +230,7 @@ class InstallMapTask : public Task, public ErrorHandler
 {
 // construction/destruction
 public:
-	InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version);
+	InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version, bool rename_to_unregistered);
 // Task interface
 public:
 	void operator() ();
@@ -245,6 +245,7 @@ private:
 	HWND          hwnd_;
 	const tstring install_path_;
 	const uint    version_;
+	const bool    rename_to_unregistered_;
 };
 
 //------------
@@ -310,6 +311,7 @@ public:
 		bool custom_sky,
 		bool custom_surface,
 		bool custom_zero_layer,
+		bool use_registration,
 		HWND &error_hwnd);
 	void operator() ();
 private:
@@ -317,6 +319,7 @@ private:
 	bool custom_sky_;
 	bool custom_surface_;
 	bool custom_zero_layer_;
+	bool use_registration_;
 };
 
 //-----------------------------------
@@ -353,18 +356,18 @@ public:
 		const TaskCommon::MapInfo &map_info);
 	void operator() ();
 private:
-	tstring      map_name_;
-	tstring      project_folder_;
-	SIZE         map_size_;
-	ProjectState project_state_;
-	bool         fast_quantization_;
-	bool         enable_lighting_;
-	float        mesh_threshold_;
 	bool         display_hardness_;
 	bool         display_texture_;
 	bool         display_zero_layer_;
-	tstring      file_names_[resource_count];
+	bool         enable_lighting_;
+	bool         fast_quantization_;
+	float        mesh_threshold_;
+	ProjectState project_state_;
+	SIZE         map_size_;
 	TaskCommon::MapInfo map_info_;
+	tstring      file_names_[resource_count];
+	tstring      map_name_;
+	tstring      project_folder_;
 };
 
 //---------------------------------------

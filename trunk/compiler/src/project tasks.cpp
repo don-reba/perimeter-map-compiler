@@ -235,11 +235,16 @@ void ImportScriptTask::operator() ()
 // InstallShrubTask implementation
 //--------------------------------
 
-InstallMapTask::InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version)
-	:ErrorHandler (hwnd)
-	,hwnd_        (hwnd)
-	,install_path_(install_path)
-	,version_     (version)
+InstallMapTask::InstallMapTask(
+	HWND &hwnd,
+	LPCTSTR install_path,
+	uint version,
+	bool rename_to_unregistered)
+	:ErrorHandler           (hwnd)
+	,hwnd_                  (hwnd)
+	,install_path_          (install_path)
+	,version_               (version)
+	,rename_to_unregistered_(rename_to_unregistered)
 {}
 
 void InstallMapTask::operator() ()
@@ -254,7 +259,10 @@ void InstallMapTask::operator() ()
 	// get the name to use for stuff that needs a name
 	// this is the map name for a registered map, and "UNREGISTERED" otherwise
 	// ASSUME shrubs are registered
-	tstring folder_name((PS_SHRUB == task_data_.project_state_) ? task_data_.map_name_ :  _T("UNREGISTERED"));
+	tstring folder_name(
+		(PS_SHRUB == task_data_.project_state_ || !rename_to_unregistered_)
+		? task_data_.map_name_
+		: _T("UNREGISTERED"));
 	// create a directory for the map
 	{
 		// create path
@@ -683,12 +691,14 @@ PackShrubTask::PackShrubTask(
 	bool custom_sky,
 	bool custom_surface,
 	bool custom_zero_layer,
+	bool use_registration,
 	HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
 	,custom_hardness_  (custom_hardness)
 	,custom_sky_       (custom_sky)
 	,custom_surface_   (custom_surface)
 	,custom_zero_layer_(custom_zero_layer)
+	,use_registration_ (use_registration)
 {}
 
 void PackShrubTask::operator() ()
@@ -748,8 +758,9 @@ void PackShrubTask::operator() ()
 			checksum = CalculateChecksum(data, size, checksum);
 			delete [] data;
 			// register the map
-			if (!RegisterMap(task_data_.map_name_.c_str(), checksum, *this))
-				return;
+			if (use_registration_)
+				if (!RegisterMap(task_data_.map_name_.c_str(), checksum, *this))
+					return;
 		}
 		// script
 		if (NULL != task_data_.script_)
@@ -1090,17 +1101,17 @@ UpdateDataTask::UpdateDataTask(
 	bool           display_zero_layer,
 	tstring        file_names[resource_count],
 	const MapInfo &map_info)
-	:map_name_          (map_name)
-	,project_folder_    (project_folder)
-	,map_size_          (map_size)
-	,project_state_     (project_state)
-	,fast_quantization_ (fast_quantization)
-	,enable_lighting_   (enable_lighting)
-	,mesh_threshold_    (mesh_threshold)
-	,display_hardness_  (display_hardness)
-	,display_texture_   (display_texture)
-	,display_zero_layer_(display_zero_layer)
-	,map_info_          (map_info)
+	:display_hardness_      (display_hardness)
+	,display_texture_       (display_texture)
+	,display_zero_layer_    (display_zero_layer)
+	,enable_lighting_       (enable_lighting)
+	,fast_quantization_     (fast_quantization)
+	,map_info_              (map_info)
+	,map_name_              (map_name)
+	,map_size_              (map_size)
+	,mesh_threshold_        (mesh_threshold)
+	,project_folder_        (project_folder)
+	,project_state_         (project_state)
 {
 	for (uint i(0); i != resource_count; ++i)
 		file_names_[i] = file_names[i];
@@ -1108,17 +1119,17 @@ UpdateDataTask::UpdateDataTask(
 
 void UpdateDataTask::operator() ()
 {
-	task_data_.map_name_           = map_name_;
-	task_data_.project_folder_     = project_folder_;
-	task_data_.map_size_           = map_size_;
-	task_data_.project_state_      = project_state_;
-	task_data_.fast_quantization_  = fast_quantization_;
-	task_data_.enable_lighting_    = enable_lighting_;
-	task_data_.mesh_threshold_     = mesh_threshold_;
-	task_data_.display_hardness_   = display_hardness_;
-	task_data_.display_texture_    = display_texture_;
-	task_data_.display_zero_layer_ = display_zero_layer_;
-	task_data_.map_info_           = map_info_;
+	task_data_.display_hardness_       = display_hardness_;
+	task_data_.display_texture_        = display_texture_;
+	task_data_.display_zero_layer_     = display_zero_layer_;
+	task_data_.enable_lighting_        = enable_lighting_;
+	task_data_.fast_quantization_      = fast_quantization_;
+	task_data_.map_info_               = map_info_;
+	task_data_.map_name_               = map_name_;
+	task_data_.map_size_               = map_size_;
+	task_data_.mesh_threshold_         = mesh_threshold_;
+	task_data_.project_folder_         = project_folder_;
+	task_data_.project_state_          = project_state_;
 	for (uint i(0); i != resource_count; ++i)
 		task_data_.file_names_[i] = file_names_[i];
 }

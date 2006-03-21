@@ -1,4 +1,4 @@
-	//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Perimeter Map Compiler
 // Copyright (c) 2005, Don Reba
 // All rights reserved.
@@ -262,6 +262,7 @@ void ProjectManager::PackShrub()
 		MacroProjectData(ID_CUSTOM_SKY),
 		MacroProjectData(ID_CUSTOM_SURFACE),
 		MacroProjectData(ID_CUSTOM_ZERO_LAYER),
+		MacroAppData(ID_USE_REGISTRATION),
 		error_hwnd_));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
@@ -528,7 +529,7 @@ void ProjectManager::InstallMap(LPCTSTR install_path, uint version)
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
-	AddTask(new InstallMapTask(error_hwnd_, install_path, version));
+	AddTask(new InstallMapTask(error_hwnd_, install_path, version, MacroAppData(ID_RENAME_TO_UNREGISTERED)));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
 }

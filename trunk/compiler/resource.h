@@ -64,6 +64,7 @@
 #define IDC_MAP_POWER_X                 1006
 #define IDC_MAP_POWER_Y                 1007
 #define IDC_ZERO_PLAST                  1008
+#define IDC_PLAYER_COUNT                1009
 #define IDC_ZERO_PLAST_SPIN             1010
 #define IDC_BUTTON1                     1011
 #define IDC_FOG_COLOR                   1011
@@ -73,6 +74,8 @@
 #define IDC_FOG_END                     1012
 #define IDC_FOG_START                   1013
 #define IDC_SP1_X                       1014
+#define IDC_ZERO_PLAST_SPIN2            1014
+#define IDC_PLAYER_COUNT_SPINT          1014
 #define IDC_SP1_X_SPIN                  1015
 #define IDC_SP1_Y                       1016
 #define IDC_EDIT1                       1016
@@ -117,6 +120,8 @@
 #define IDC_DISPLAY_ZERO_LAYER          1049
 #define IDC_REMEMBER_CHOICE             1051
 #define IDC_CHOICE_LIST                 1052
+#define IDC_NEW_LOCATION                1054
+#define IDC_RENAME_LOCATION             1055
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -147,7 +152,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        205
 #define _APS_NEXT_COMMAND_VALUE         32810
-#define _APS_NEXT_CONTROL_VALUE         1053
+#define _APS_NEXT_CONTROL_VALUE         1056
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
