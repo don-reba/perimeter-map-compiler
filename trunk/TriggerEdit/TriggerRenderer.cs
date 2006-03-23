@@ -16,12 +16,15 @@ namespace TriggerEdit
 
 		#region
 
-		public TriggerRenderer(Device device, MarkerLayout marker_layout, System.Drawing.Font font)
+		public TriggerRenderer(Device device, MarkerLayout marker_layout, SizeF link_box_size, System.Drawing.Font font)
 		{
-			font_          = new Microsoft.DirectX.Direct3D.Font(device, font);
-			marker_layout_ = marker_layout;
-			sprite_        = new Sprite(device);
-			vertices_      = new CustomVertex.PositionColored[64];
+			font_            = new Microsoft.DirectX.Direct3D.Font(device, font);
+			link_box_radius_ = link_box_size;
+			marker_layout_   = marker_layout;
+			sprite_          = new Sprite(device);
+			vertices_        = new CustomVertex.PositionColored[64];
+			link_box_radius_.Width  /= 2.0f;
+			link_box_radius_.Height /= 2.0f;
 		}
 		
 		/// <summary>
@@ -40,11 +43,13 @@ namespace TriggerEdit
 					head,
 					triggers.descriptions_[i].Fill,
 					triggers.descriptions_[i].Outline);
-				foreach (int j in triggers.adjacency_.GetList(i))
-				{
-					triggers.GetInterpolatedPosition(j, ref tail);
-					PushSnappedLine(head, tail, Color.Red);
-				}
+			}
+			for (int i = 0; i != triggers.adjacency_list_.Count; ++i)
+			{
+				TriggerContainer.Link link = triggers.adjacency_list_[i];
+				triggers.GetInterpolatedPosition(link.head_, ref head);
+				triggers.GetInterpolatedPosition(link.tail_, ref tail);
+				PushSnappedArrow(head, tail, link.group_, link.persistent_, link.Fill);
 			}
 			for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
 			{
@@ -56,8 +61,8 @@ namespace TriggerEdit
 			}
 			for (int i = 0; i != triggers.g_links_.Count; ++i)
 			{
-				TriggerContainer.Link link = triggers.GetLinkGhost(i);
-				PushLine(
+				TriggerContainer.GhostLink link = triggers.GetLinkGhost(i);
+				PushArrow(
 					link.head_,
 					link.tail_,
 					link.snap_head_,
@@ -87,6 +92,7 @@ namespace TriggerEdit
 			sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.SortTexture | SpriteFlags.ObjectSpace);
 			device.SamplerState[0].MinFilter = TextureFilter.Point;
 			device.SamplerState[0].MagFilter = TextureFilter.Point;
+			// triggers
 			for (int i = 0; i != triggers.count_; ++i)
 			{
 				triggers.GetInterpolatedPosition(i, ref head);
@@ -105,6 +111,7 @@ namespace TriggerEdit
 					DrawTextFormat.WordBreak,
 					Color.Black);
 			}
+			// trigger ghosts
 			for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
 			{
 				PointF point
@@ -112,8 +119,8 @@ namespace TriggerEdit
 				TriggerContainer.TriggerDescription description
 					= (TriggerContainer.TriggerDescription)triggers.g_marker_descriptions_[i];
 				Rectangle rect = new Rectangle(
-					(int)(point.X - marker_layout_.Width  / 2),
-					(int)(point.Y - marker_layout_.Height / 2),
+					(int)(point.X - marker_layout_.Width  / 2.0f),
+					(int)(point.Y - marker_layout_.Height / 2.0f),
 					marker_layout_.Width,
 					marker_layout_.Height);
 				rect.Inflate(
@@ -124,6 +131,26 @@ namespace TriggerEdit
 					description.name_,
 					rect,
 					DrawTextFormat.WordBreak,
+					Color.Black);
+			}
+			// links
+			for (int i = 0; i != triggers.adjacency_list_.Count; ++i)
+			{
+				TriggerContainer.Link link = triggers.adjacency_list_[i];
+				if (0 == link.group_)
+					continue;
+				PointF h = triggers.GetInterpolatedPosition(link.head_);
+				PointF t = triggers.GetInterpolatedPosition(link.tail_);
+				Rectangle rect = new Rectangle(
+					(int)((h.X + t.X) / 2.0f - link_box_radius_.Width),
+					(int)((h.Y + t.Y) / 2.0f - link_box_radius_.Height),
+					(int)(link_box_radius_.Width  * 2.0f),
+					(int)(link_box_radius_.Height * 2.0f));
+				font_.DrawText(
+					sprite_,
+					link.group_.ToString(),
+					rect,
+					DrawTextFormat.WordBreak | DrawTextFormat.Center,
 					Color.Black);
 			}
 			sprite_.End();
@@ -174,17 +201,25 @@ namespace TriggerEdit
 		}
 
 		// [-0.1,0)
-		private void PushSnappedLine(
+		private void PushSnappedArrow(
 			PointF head,
 			PointF tail,
-			Color color)
+			int    group,
+			bool   persistent,
+			Color  color)
 		{
 			SnapPoints(ref head, ref tail);
-			PushLine(head, tail, color);
+			PushArrow(head, tail, persistent, color);
+			if (0 != group)
+				PushRectangle(
+					new PointF((head.X + tail.X) / 2.0f, (head.Y + tail.Y) / 2.0f),
+					link_box_radius_,
+					-0.05f,
+					Color.Orange);
 		}
 
 		// [-0.1,0)
-		private void PushLine(
+		private void PushArrow(
 			PointF head,
 			PointF tail,
 			bool snap_head,
@@ -193,35 +228,36 @@ namespace TriggerEdit
 		{
 			if (snap_head && snap_tail)
 			{
-				PushSnappedLine(head, tail, color);
+				PushSnappedArrow(head, tail, 0, false, color);
 				return;
 			}
 			if (snap_head)
 			{
 				PointF temp = tail;
 				SnapPoints(ref head, ref temp);
-				PushLine(head, tail, color);
+				PushArrow(head, tail, false, color);
 				return;
 			}
 			if (snap_tail)
 			{
 				PointF temp = head;
 				SnapPoints(ref temp, ref tail);
-				PushLine(head, tail, color);
+				PushArrow(head, tail, false, color);
 				return;
 			}
 		}
 
 		// [-0.1,0)
-		private void PushLine(
+		private void PushArrow(
 			PointF head,
 			PointF tail,
-			Color color)
+			bool   persistent,
+			Color  color)
 		{
 			// calculate new coordinate system
 			Vector2 dx = new Vector2(
-				tail.X - head.X,
-				tail.Y - head.Y);
+				head.X - tail.X,
+				head.Y - tail.Y);
 			dx.Normalize();
 			Vector2 dy = dx;
 			float new_y = -dy.X;
@@ -229,38 +265,38 @@ namespace TriggerEdit
 			dy.Y = new_y;
 			// calculate offset
 			Vector2 offset = dy;
-			offset *= 0.5f; // 1 unit thick
+			offset *= persistent ? 1.5f : 0.5f; // 1-3 units thick
 			// build the line
 			CustomVertex.PositionColored vertex = new CustomVertex.PositionColored();
 			vertex.Color = color.ToArgb();
 			vertex.Z = -0.1f;
-			vertex.X = head.X - offset.X;
-			vertex.Y = head.Y - offset.Y;
+			vertex.X = tail.X - offset.X;
+			vertex.Y = tail.Y - offset.Y;
 			AddVertex(vertex);
-			vertex.X = tail.X - offset.X - dx.X * 8.0f;
-			vertex.Y = tail.Y - offset.Y - dx.Y * 8.0f;
+			vertex.X = head.X - offset.X - dx.X * 8.0f;
+			vertex.Y = head.Y - offset.Y - dx.Y * 8.0f;
 			AddVertex(vertex);
-			vertex.X = tail.X + offset.X - dx.X * 8.0f;
-			vertex.Y = tail.Y + offset.Y - dx.Y * 8.0f;
+			vertex.X = head.X + offset.X - dx.X * 8.0f;
+			vertex.Y = head.Y + offset.Y - dx.Y * 8.0f;
 			AddVertex(vertex);
 			AddVertex(vertex);
-			vertex.X = head.X - offset.X;
-			vertex.Y = head.Y - offset.Y;
+			vertex.X = tail.X - offset.X;
+			vertex.Y = tail.Y - offset.Y;
 			AddVertex(vertex);
-			vertex.X = head.X + offset.X;
-			vertex.Y = head.Y + offset.Y;
+			vertex.X = tail.X + offset.X;
+			vertex.Y = tail.Y + offset.Y;
 			AddVertex(vertex);
 			// build the arrow
 			Vector2 corner1 = dx * -12.0f + dy * 4.0f;
 			Vector2 corner2 = dx * -12.0f - dy * 4.0f;
-			vertex.X = tail.X;
-			vertex.Y = tail.Y;
+			vertex.X = head.X;
+			vertex.Y = head.Y;
 			AddVertex(vertex);
-			vertex.X = tail.X + corner1.X;
-			vertex.Y = tail.Y + corner1.Y;
+			vertex.X = head.X + corner1.X;
+			vertex.Y = head.Y + corner1.Y;
 			AddVertex(vertex);
-			vertex.X = tail.X + corner2.X;
-			vertex.Y = tail.Y + corner2.Y;
+			vertex.X = head.X + corner2.X;
+			vertex.Y = head.Y + corner2.Y;
 			AddVertex(vertex);
 		}
 
@@ -397,6 +433,7 @@ namespace TriggerEdit
 
 		// DX
 		Microsoft.DirectX.Direct3D.Font font_;
+		SizeF                           link_box_radius_;
 		MarkerLayout                    marker_layout_;
 		Sprite                          sprite_;
 		// vertex management

@@ -6,72 +6,6 @@ namespace TriggerEdit
 {
 	public class AdjacencyMatrix
 	{
-		//-------------
-		// nested types
-		//-------------
-
-		#region
-
-		public class AdjacencyList
-		{
-			public AdjacencyList(int row, BitArray bits, int count)
-			{
-				bits_     = bits;
-				count_    = count;
-				position_ = row * count;
-			}
-
-			public class Enumerator
-			{
-				public Enumerator(int position, int end, BitArray bits)
-				{
-					bits_     = bits;
-					end_      = end;
-					position_ = position - 1;
-					start_    = position;
-				}
-
-				#region IEnumerator Members
-
-				public int Current
-				{
-					get { return position_ - start_; }
-				}
-
-				public bool MoveNext()
-				{
-					do
-					{
-						++position_;
-					} while (position_ != end_ && !bits_[position_]);
-					return position_ != end_;
-				}
-
-				#endregion
-
-				BitArray bits_;
-				int      end_;
-				int      position_;
-				int      start_;
-			}
-
-			#region IEnumerable Members
-
-			public Enumerator GetEnumerator()
-			{
-				return new Enumerator(position_, position_ + count_, bits_);
-			}
-
-			#endregion
-
-			private BitArray bits_;
-			private int      count_;
-			private int      position_;
-		}
-
-
-		#endregion
-
 		//----------
 		// interface
 		//----------
@@ -108,11 +42,6 @@ namespace TriggerEdit
 					return;
 				bits_[row * count_ + col] = value;
 			}
-		}
-
-		public AdjacencyList GetList(int index)
-		{
-			return new AdjacencyList(index, bits_, count_);
 		}
 
 		public void Flip(int row, int col)

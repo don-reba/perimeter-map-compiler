@@ -161,6 +161,9 @@ namespace TriggerEdit
 			vc.Color = color.ToArgb();
 			CustomVertex.PositionTextured vt = new CustomVertex.PositionTextured();
 			vt.Z = -0.03f;
+			// clear vertex counts
+			colored_count_  = 0;
+			textured_count_ = 0;
 			// calculate button placement,
 			// draw the texture,
 			// and create geometry
@@ -311,7 +314,7 @@ namespace TriggerEdit
 				textured.Count,
 				device,
 				Usage.WriteOnly,
-				CustomVertex.PositionColored.Format,
+				CustomVertex.PositionTextured.Format,
 				Pool.Managed);
 			vb_stream = textured_vb_.Lock(0, 0, LockFlags.None);
 			vb_stream.Write(textured.ToArray(typeof(CustomVertex.PositionTextured)));
@@ -379,11 +382,13 @@ namespace TriggerEdit
 		/// <summary>
 		/// Mouse event handler. Coordinates must be with respect to the object.
 		/// </summary>
-		public void OnMouseMove(float x, float y)
+		/// <returns>Returns true if a button was highlighted.</returns>
+		public bool OnMouseMove(float x, float y)
 		{
 			if (!is_visible_)
-				return;
+				return false;
 			selection_ = HitTest(x, y);
+			return (selection_ >= 0);
 		}
 
 		/// <summary>

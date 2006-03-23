@@ -15,6 +15,7 @@ namespace TriggerEdit
 	using TriggerDescription = TriggerContainer.TriggerDescription;
 	using TriggerState       = TriggerContainer.TriggerDescription.State;
 	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
+	using TriggerGroup       = TriggerContainer.Group;
 
 	#endregion
 
@@ -34,6 +35,8 @@ namespace TriggerEdit
 			args_ = args;
 			display_pnl_.SelectTrigger
 				+= new TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
+			display_pnl_.SelectLink
+				+= new TriggerEdit.TriggerDisplay.SelectLinkEvent(display_pnl__SelectLink);
 			triggers_       = new TriggerContainer();
 			dialog_opacity_ = 1.0f;
 			Application.AddMessageFilter(this);
@@ -54,15 +57,6 @@ namespace TriggerEdit
 				Import.SendMessage(m.HWnd, (uint)m.Msg, m.WParam, m.LParam);
 				return true;
 			}
-//			if (m.Msg == (int)Import.WindowsMessages.WM_KEYDOWN)
-//			{
-//				// toggle animation on "space" key press
-//				int vcode = (int)m.WParam;
-//				if (vcode == (int)Import.VK.SPACE)
-//					display_pnl_.ToggleAnimation();
-//				else if (vcode == (int)Import.VK.ALPHA_F)
-//					display_pnl_.ShowFrameRate = !display_pnl_.ShowFrameRate;
-//			}
 			return false;
 		}
 
@@ -175,6 +169,11 @@ namespace TriggerEdit
 
 		private void NewFile()
 		{
+			link_group_btn_.Enabled      = false;
+			link_ungroup_btn_.Enabled    = false;
+			keep_link_alive_btn_.Enabled = false;
+			keep_link_alive_btn_.Checked = false;
+			SetSelectedGroup(null);
 			triggers_.Reset();
 			display_pnl_.Reset(ref triggers_);
 		}
@@ -278,7 +277,18 @@ namespace TriggerEdit
 				}
 				catch {}
 			}
-			catch {}
+			catch {}	
+		}
+
+		private void SetSelectedGroup(TriggerGroup group)
+		{
+			selected_group_ = null;
+			ungroup_btn_.Enabled      = (null != group);
+			group_select_btn_.Enabled = (null != group);
+			comment_btn_.Enabled      = (null != group);
+			comment_edt_.Enabled      = (null != group);
+			comment_edt_.Text         = (null == group) ? "" : group.comment_;
+			selected_group_           = group;
 		}
 
 		#endregion
@@ -311,6 +321,7 @@ namespace TriggerEdit
 			for (int i = 0; i != triggers.Length; ++i)
 				triggers[i] = triggers_.descriptions_[e[i]];
 			DisplayMarkerInfo(triggers);
+			// set builders
 			if (1 == e.Count)
 			{
 				if (null != action_builder_ && !action_builder_.IsDisposed)
@@ -331,6 +342,50 @@ namespace TriggerEdit
 					condition_builder_.Enabled   = false;
 				}
 			}
+			// set group selection
+			if (triggers.Length == 0)
+			{
+				group_btn_.Enabled = false;
+				SetSelectedGroup(null);
+			}
+			else
+			{
+				// if there is a single group among the selection, set it as active
+				// otherwise, set selected group to null
+				TriggerGroup group = null;
+				bool multiple_groups = false;
+				for (int i = 0; i != triggers.Length; ++i)
+				{
+					if (null == triggers[i].group_)
+						continue;
+					if (null == group)
+						group = triggers[i].group_;
+					else
+					{
+						multiple_groups = true;
+						group = null;
+						break;
+					}
+				}
+				if (selected_group_ != group)
+					SetSelectedGroup(group);
+				group_btn_.Enabled = !multiple_groups;
+			}
+		}
+
+		private void display_pnl__SelectLink(object sender, TriggerDisplay.LinkEventArgs e)
+		{
+			link_group_btn_.Enabled      = (e.Count > 0);
+			keep_link_alive_btn_.Enabled = (e.Count > 0);
+			keep_link_alive_btn_.Checked = false;
+			bool is_grouped = false;
+			for (int i = 0; i != e.Count; ++i)
+				if (triggers_.adjacency_list_[e[i]].group_ != 0)
+				{
+					is_grouped = true;
+					break;
+				}
+			ungroup_btn_.Enabled = is_grouped;
 		}
 
 		private void MainForm_Load(object sender, System.EventArgs e)
@@ -428,9 +483,10 @@ namespace TriggerEdit
 
 		private void zoom_udc__ValueChanged(object sender, System.EventArgs e)
 		{
-			if ((float)zoom_udc_.Value == 0.0f)
-				zoom_udc_.Value = new decimal(1.0f);
-			display_pnl_.Zoom = 1.0f / (float)zoom_udc_.Value;
+			float new_zoom = (float)zoom_udc_.Value;
+			if (0.0f == new_zoom)
+				new_zoom = 1.0f;
+			display_pnl_.Zoom = 1.0f / new_zoom;
 		}
 
 		private void action_btn__Click(object sender, System.EventArgs e)
@@ -549,6 +605,74 @@ namespace TriggerEdit
 			SaveProperties();
 		}
 
+		private void group_btn__Click(object sender, System.EventArgs e)
+		{
+			if (null == selected_group_)
+			{
+				// create a new group
+				int[] triggers = new int[display_pnl_.Selection.Count];
+				for (int i = 0; i != triggers.Length; ++i)
+					triggers[i] = (int)display_pnl_.Selection[i];
+				SetSelectedGroup(triggers_.GroupTriggers(triggers));
+			}
+			else
+			{
+				foreach (int i in display_pnl_.Selection)
+					triggers_.descriptions_[i].group_ = selected_group_;
+			}
+		}
+
+		private void ungroup_btn__Click(object sender, System.EventArgs e)
+		{
+			foreach(int i in display_pnl_.Selection)
+				triggers_.descriptions_[i].group_ = null;
+			SetSelectedGroup(null);
+		}
+
+		private void comment_btn__Click(object sender, System.EventArgs e)
+		{
+			GroupCommentEditor editor = new GroupCommentEditor();
+			editor.Comment = comment_edt_.Text;
+			editor.ShowDialog(this);
+			comment_edt_.Text = editor.Comment;
+		}
+
+		private void comment_edt__TextChanged(object sender, System.EventArgs e)
+		{
+			if (null != selected_group_)
+				selected_group_.comment_ = comment_edt_.Text;
+		}
+
+		private void group_select_btn__Click(object sender, System.EventArgs e)
+		{
+			ArrayList selection = new ArrayList();
+			for (int i = 0; i != triggers_.descriptions_.Length; ++i)
+				if (triggers_.descriptions_[i].group_ == selected_group_)
+					selection.Add(i);
+			display_pnl_.Selection = selection;
+		}
+
+		private void link_help_btn__Click(object sender, System.EventArgs e)
+		{
+			LinkHelpDialog help_dlg = new LinkHelpDialog();
+			help_dlg.ShowDialog(this);
+		}
+
+		private void link_group_btn__Click(object sender, System.EventArgs e)
+		{
+			display_pnl_.GroupSelectedLinks();
+		}
+
+		private void link_ungroup_btn__Click(object sender, System.EventArgs e)
+		{
+			display_pnl_.UngroupSelectedLinks();
+		}
+
+		private void keep_link_alive_btn__CheckedChanged(object sender, System.EventArgs e)
+		{
+			display_pnl_.SetSelectedLinksPersistence(keep_link_alive_btn_.Checked);
+		}
+
 		#endregion
 
 		//-----
@@ -562,7 +686,15 @@ namespace TriggerEdit
 		private ActionBuilder               action_builder_;
 		private ConditionBuilder            condition_builder_;
 		private System.Windows.Forms.Button zoom_eye_btn_;
+		private System.Windows.Forms.TextBox comment_edt_;
+		private System.Windows.Forms.Button group_select_btn_;
 		private float                       dialog_opacity_;
+		private System.Windows.Forms.GroupBox link_box_;
+		private System.Windows.Forms.Button link_group_btn_;
+		private System.Windows.Forms.Button link_ungroup_btn_;
+		private System.Windows.Forms.Button link_help_btn_;
+		private System.Windows.Forms.CheckBox keep_link_alive_btn_;
+		private TriggerGroup                selected_group_;
 
 		#endregion
 
@@ -571,6 +703,7 @@ namespace TriggerEdit
 		//----------
 
 		#region code
+
 		/// <summary>
 		/// Required method for Designer support - do not modify
 		/// the contents of this method with the code editor.
@@ -584,12 +717,14 @@ namespace TriggerEdit
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_actions_panel_ = new System.Windows.Forms.Panel();
 			this.group_box_ = new System.Windows.Forms.GroupBox();
+			this.group_select_btn_ = new System.Windows.Forms.Button();
 			this.comment_btn_ = new System.Windows.Forms.Button();
 			this.group_btn_ = new System.Windows.Forms.Button();
 			this.ungroup_btn_ = new System.Windows.Forms.Button();
-			this.textBox1 = new System.Windows.Forms.TextBox();
+			this.comment_edt_ = new System.Windows.Forms.TextBox();
 			this.comment_label_ = new System.Windows.Forms.Label();
 			this.zoom_box_ = new System.Windows.Forms.GroupBox();
+			this.zoom_eye_btn_ = new System.Windows.Forms.Button();
 			this.label1 = new System.Windows.Forms.Label();
 			this.zoom_udc_ = new System.Windows.Forms.NumericUpDown();
 			this.zoom_selection_btn_ = new System.Windows.Forms.Button();
@@ -606,13 +741,18 @@ namespace TriggerEdit
 			this.save_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.prefs_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.toolbar_img_lst_ = new System.Windows.Forms.ImageList(this.components);
-			this.zoom_eye_btn_ = new System.Windows.Forms.Button();
+			this.link_box_ = new System.Windows.Forms.GroupBox();
+			this.link_group_btn_ = new System.Windows.Forms.Button();
+			this.link_ungroup_btn_ = new System.Windows.Forms.Button();
+			this.link_help_btn_ = new System.Windows.Forms.Button();
+			this.keep_link_alive_btn_ = new System.Windows.Forms.CheckBox();
 			this.property_panel_.SuspendLayout();
 			this.property_actions_panel_.SuspendLayout();
 			this.group_box_.SuspendLayout();
 			this.zoom_box_.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).BeginInit();
 			this.trigger_box_.SuspendLayout();
+			this.link_box_.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// display_pnl_
@@ -651,35 +791,45 @@ namespace TriggerEdit
 			this.property_tree_.Location = new System.Drawing.Point(0, 0);
 			this.property_tree_.Name = "property_tree_";
 			this.property_tree_.SelectedImageIndex = -1;
-			this.property_tree_.Size = new System.Drawing.Size(196, 171);
+			this.property_tree_.Size = new System.Drawing.Size(196, 59);
 			this.property_tree_.TabIndex = 1;
 			// 
 			// property_actions_panel_
 			// 
+			this.property_actions_panel_.Controls.Add(this.link_box_);
 			this.property_actions_panel_.Controls.Add(this.group_box_);
 			this.property_actions_panel_.Controls.Add(this.zoom_box_);
 			this.property_actions_panel_.Controls.Add(this.trigger_box_);
 			this.property_actions_panel_.Dock = System.Windows.Forms.DockStyle.Bottom;
-			this.property_actions_panel_.Location = new System.Drawing.Point(0, 171);
+			this.property_actions_panel_.Location = new System.Drawing.Point(0, 59);
 			this.property_actions_panel_.Name = "property_actions_panel_";
-			this.property_actions_panel_.Size = new System.Drawing.Size(196, 344);
+			this.property_actions_panel_.Size = new System.Drawing.Size(196, 456);
 			this.property_actions_panel_.TabIndex = 3;
 			// 
 			// group_box_
 			// 
 			this.group_box_.Anchor = System.Windows.Forms.AnchorStyles.Top;
+			this.group_box_.Controls.Add(this.group_select_btn_);
 			this.group_box_.Controls.Add(this.comment_btn_);
 			this.group_box_.Controls.Add(this.group_btn_);
 			this.group_box_.Controls.Add(this.ungroup_btn_);
-			this.group_box_.Controls.Add(this.textBox1);
+			this.group_box_.Controls.Add(this.comment_edt_);
 			this.group_box_.Controls.Add(this.comment_label_);
-			this.group_box_.Enabled = false;
-			this.group_box_.Location = new System.Drawing.Point(8, 120);
+			this.group_box_.Location = new System.Drawing.Point(8, 112);
 			this.group_box_.Name = "group_box_";
-			this.group_box_.Size = new System.Drawing.Size(176, 104);
+			this.group_box_.Size = new System.Drawing.Size(176, 136);
 			this.group_box_.TabIndex = 16;
 			this.group_box_.TabStop = false;
-			this.group_box_.Text = "Group";
+			this.group_box_.Text = "Trigger Group";
+			// 
+			// group_select_btn_
+			// 
+			this.group_select_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.group_select_btn_.Location = new System.Drawing.Point(48, 96);
+			this.group_select_btn_.Name = "group_select_btn_";
+			this.group_select_btn_.TabIndex = 5;
+			this.group_select_btn_.Text = "Select";
+			this.group_select_btn_.Click += new System.EventHandler(this.group_select_btn__Click);
 			// 
 			// comment_btn_
 			// 
@@ -689,6 +839,7 @@ namespace TriggerEdit
 			this.comment_btn_.Size = new System.Drawing.Size(24, 20);
 			this.comment_btn_.TabIndex = 4;
 			this.comment_btn_.Text = "...";
+			this.comment_btn_.Click += new System.EventHandler(this.comment_btn__Click);
 			// 
 			// group_btn_
 			// 
@@ -697,6 +848,7 @@ namespace TriggerEdit
 			this.group_btn_.Name = "group_btn_";
 			this.group_btn_.TabIndex = 3;
 			this.group_btn_.Text = "Group";
+			this.group_btn_.Click += new System.EventHandler(this.group_btn__Click);
 			// 
 			// ungroup_btn_
 			// 
@@ -705,15 +857,17 @@ namespace TriggerEdit
 			this.ungroup_btn_.Name = "ungroup_btn_";
 			this.ungroup_btn_.TabIndex = 2;
 			this.ungroup_btn_.Text = "Ungroup";
+			this.ungroup_btn_.Click += new System.EventHandler(this.ungroup_btn__Click);
 			// 
-			// textBox1
+			// comment_edt_
 			// 
-			this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.textBox1.Location = new System.Drawing.Point(8, 32);
-			this.textBox1.Name = "textBox1";
-			this.textBox1.Size = new System.Drawing.Size(136, 20);
-			this.textBox1.TabIndex = 1;
-			this.textBox1.Text = "";
+			this.comment_edt_.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.comment_edt_.Location = new System.Drawing.Point(8, 32);
+			this.comment_edt_.Name = "comment_edt_";
+			this.comment_edt_.Size = new System.Drawing.Size(136, 20);
+			this.comment_edt_.TabIndex = 1;
+			this.comment_edt_.Text = "";
+			this.comment_edt_.TextChanged += new System.EventHandler(this.comment_edt__TextChanged);
 			// 
 			// comment_label_
 			// 
@@ -731,12 +885,22 @@ namespace TriggerEdit
 			this.zoom_box_.Controls.Add(this.zoom_udc_);
 			this.zoom_box_.Controls.Add(this.zoom_selection_btn_);
 			this.zoom_box_.Controls.Add(this.zoom_fit_btn_);
-			this.zoom_box_.Location = new System.Drawing.Point(8, 240);
+			this.zoom_box_.Location = new System.Drawing.Point(8, 352);
 			this.zoom_box_.Name = "zoom_box_";
 			this.zoom_box_.Size = new System.Drawing.Size(176, 96);
 			this.zoom_box_.TabIndex = 15;
 			this.zoom_box_.TabStop = false;
 			this.zoom_box_.Text = "Zoom";
+			// 
+			// zoom_eye_btn_
+			// 
+			this.zoom_eye_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.zoom_eye_btn_.Location = new System.Drawing.Point(8, 56);
+			this.zoom_eye_btn_.Name = "zoom_eye_btn_";
+			this.zoom_eye_btn_.Size = new System.Drawing.Size(32, 23);
+			this.zoom_eye_btn_.TabIndex = 12;
+			this.zoom_eye_btn_.Text = "1:1";
+			this.zoom_eye_btn_.Click += new System.EventHandler(this.zoom_eye_btn__Click);
 			// 
 			// label1
 			// 
@@ -757,9 +921,9 @@ namespace TriggerEdit
 																						  131072});
 			this.zoom_udc_.Location = new System.Drawing.Point(48, 24);
 			this.zoom_udc_.Maximum = new System.Decimal(new int[] {
-																						-1,
-																						-1,
-																						-1,
+																						1,
+																						0,
+																						0,
 																						0});
 			this.zoom_udc_.Minimum = new System.Decimal(new int[] {
 																						1,
@@ -906,15 +1070,57 @@ namespace TriggerEdit
 			this.toolbar_img_lst_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_img_lst_.ImageStream")));
 			this.toolbar_img_lst_.TransparentColor = System.Drawing.Color.Magenta;
 			// 
-			// zoom_eye_btn_
+			// link_box_
 			// 
-			this.zoom_eye_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			this.zoom_eye_btn_.Location = new System.Drawing.Point(8, 56);
-			this.zoom_eye_btn_.Name = "zoom_eye_btn_";
-			this.zoom_eye_btn_.Size = new System.Drawing.Size(32, 23);
-			this.zoom_eye_btn_.TabIndex = 12;
-			this.zoom_eye_btn_.Text = "1:1";
-			this.zoom_eye_btn_.Click += new System.EventHandler(this.zoom_eye_btn__Click);
+			this.link_box_.Controls.Add(this.keep_link_alive_btn_);
+			this.link_box_.Controls.Add(this.link_help_btn_);
+			this.link_box_.Controls.Add(this.link_ungroup_btn_);
+			this.link_box_.Controls.Add(this.link_group_btn_);
+			this.link_box_.Location = new System.Drawing.Point(8, 256);
+			this.link_box_.Name = "link_box_";
+			this.link_box_.Size = new System.Drawing.Size(176, 88);
+			this.link_box_.TabIndex = 17;
+			this.link_box_.TabStop = false;
+			this.link_box_.Text = "Link";
+			// 
+			// link_group_btn_
+			// 
+			this.link_group_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.link_group_btn_.Location = new System.Drawing.Point(8, 24);
+			this.link_group_btn_.Name = "link_group_btn_";
+			this.link_group_btn_.Size = new System.Drawing.Size(48, 23);
+			this.link_group_btn_.TabIndex = 0;
+			this.link_group_btn_.Text = "Group";
+			this.link_group_btn_.Click += new System.EventHandler(this.link_group_btn__Click);
+			// 
+			// link_ungroup_btn_
+			// 
+			this.link_ungroup_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.link_ungroup_btn_.Location = new System.Drawing.Point(72, 24);
+			this.link_ungroup_btn_.Name = "link_ungroup_btn_";
+			this.link_ungroup_btn_.Size = new System.Drawing.Size(64, 23);
+			this.link_ungroup_btn_.TabIndex = 1;
+			this.link_ungroup_btn_.Text = "Ungroup";
+			this.link_ungroup_btn_.Click += new System.EventHandler(this.link_ungroup_btn__Click);
+			// 
+			// link_help_btn_
+			// 
+			this.link_help_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.link_help_btn_.Location = new System.Drawing.Point(152, 24);
+			this.link_help_btn_.Name = "link_help_btn_";
+			this.link_help_btn_.Size = new System.Drawing.Size(16, 23);
+			this.link_help_btn_.TabIndex = 2;
+			this.link_help_btn_.Text = "?";
+			this.link_help_btn_.Click += new System.EventHandler(this.link_help_btn__Click);
+			// 
+			// keep_link_alive_btn_
+			// 
+			this.keep_link_alive_btn_.Location = new System.Drawing.Point(8, 56);
+			this.keep_link_alive_btn_.Name = "keep_link_alive_btn_";
+			this.keep_link_alive_btn_.Size = new System.Drawing.Size(80, 16);
+			this.keep_link_alive_btn_.TabIndex = 3;
+			this.keep_link_alive_btn_.Text = "keep alive";
+			this.keep_link_alive_btn_.CheckedChanged += new System.EventHandler(this.keep_link_alive_btn__CheckedChanged);
 			// 
 			// MainForm
 			// 
@@ -938,6 +1144,7 @@ namespace TriggerEdit
 			this.zoom_box_.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).EndInit();
 			this.trigger_box_.ResumeLayout(false);
+			this.link_box_.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -965,7 +1172,6 @@ namespace TriggerEdit
 		private System.Windows.Forms.Panel         property_actions_panel_;
 		private System.Windows.Forms.Splitter      splitter1;
 		private System.Windows.Forms.TextBox       name_edt_;
-		private System.Windows.Forms.TextBox       textBox1;
 		private System.Windows.Forms.ToolBar       toolbar_;
 		private System.Windows.Forms.ToolBarButton load_btn_;
 		private System.Windows.Forms.ToolBarButton new_btn_;

@@ -22,6 +22,8 @@ namespace TriggerEdit
 	#region
 
 	using TriggerDescription = TriggerContainer.TriggerDescription;
+	using TriggerGroup       = TriggerContainer.Group;
+	using TriggerLink        = TriggerContainer.Link;
 	using TriggerState       = TriggerContainer.TriggerDescription.State;
 	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
 
@@ -92,6 +94,7 @@ namespace TriggerEdit
 			old_camera_position_ = new Point(0, 0);
 			rendering_enabled_   = false;
 			selection_           = new ArrayList();
+			link_selection_      = new ArrayList();
 			selection_rect_      = RectangleF.Empty;
 			// initialize the disc control
 			InitializeDiskControl();
@@ -174,6 +177,58 @@ namespace TriggerEdit
 			selection_state_ = SelectionState.Zoom;
 		}
 
+		public void GroupSelectedLinks()
+		{
+			// partition the selected links by the head trigger
+			Hashtable partitions = new Hashtable(link_selection_.Count);
+			for (int i = 0; i != link_selection_.Count; ++i)
+			{
+				int head = triggers_.adjacency_list_[(int)link_selection_[i]].head_;
+				if (!partitions.ContainsKey(head))
+					partitions.Add(head, new ArrayList());
+				((ArrayList)partitions[head]).Add(link_selection_[i]);
+				// ungroup the link
+				triggers_.adjacency_list_.SetGroup((int)link_selection_[i], 0);
+			}
+			// work with each partition separately
+			foreach (DictionaryEntry entry in partitions)
+			{
+				int       trigger = (int)      entry.Key;
+				ArrayList list    = (ArrayList)entry.Value;
+				// count the groups for this trigger
+				int[] groups = new int[10];
+				for (int i = 0; i != triggers_.adjacency_list_.Count; ++i)
+					if (triggers_.adjacency_list_[i].head_ == trigger)
+						++groups[triggers_.adjacency_list_[i].group_];
+				// find the minimum unoccupied group
+				int group = 1;
+				for (;group != groups.Length; ++group)
+					if (0 == groups[group])
+						break;
+				if (group == groups.Length)
+					continue;
+				// set the links to this group
+				for (int i = 0; i != list.Count; ++i)
+					triggers_.adjacency_list_.SetGroup((int)list[i], group);
+			}
+		}
+
+		public void UngroupSelectedLinks()
+		{
+			for (int i = 0; i != link_selection_.Count; ++i)
+				triggers_.adjacency_list_.SetGroup((int)link_selection_[i], 0);
+		}
+
+		/// <summary>
+		/// Determine whether the selected links "die" after activation.
+		/// </summary>
+		/// <param name="persist">If false, the link will not activate more than once.</param>
+		public void SetSelectedLinksPersistence(bool persist)
+		{
+			for (int i = 0; i != link_selection_.Count; ++i)
+				triggers_.adjacency_list_.SetPersistence((int)link_selection_[i], persist);
+		}
+
 		//-----------
 		// properties
 		//-----------
@@ -211,6 +266,13 @@ namespace TriggerEdit
 		public ArrayList Selection
 		{
 			get { return ArrayList.ReadOnly(selection_); }
+			set
+			{
+				if (selection_.IsReadOnly || selection_.IsFixedSize)
+					throw new ArgumentException("Selection is read only or of fixed size.");
+				SetSelection(value);
+				OnSelectTrigger(new TriggerEventArgs(selection_));
+			}
 		}
 
 		public bool ShowFrameRate
@@ -227,6 +289,8 @@ namespace TriggerEdit
 			}
 			set
 			{
+				if (value < 1.0f)
+					value = 1.0f;
 				while (camera_.Zoom > value)
 					camera_.DecrementZoom();
 				while (camera_.Zoom < value)
@@ -242,6 +306,8 @@ namespace TriggerEdit
 				float ratio = (float)Math.Max(
 					value.Width  / ClientRectangle.Width,
 					value.Height / ClientRectangle.Height);
+				if (ratio < 1.0f)
+					ratio = 1.0f;
 				// set camera
 				camera_.Position = new PointF(
 					value.Left / 2.0f + value.Right  / 2.0f,
@@ -290,7 +356,7 @@ namespace TriggerEdit
 								if (animation_remainder_step_ <= 0.1f)
 									animation_state_ = AnimationState.Done;
 								// cap the time allowed for computing animation
-								if (Environment.TickCount - last_step_time_ > 200)
+								if (Environment.TickCount - last_step_time_ > 100)
 									break;
 							}
 							for (int i = 0; i != triggers_.count_; ++i)
@@ -361,29 +427,59 @@ namespace TriggerEdit
 		}
 
 		/// <param name="position">in screen coordinates</param>
-		protected void HighlightTriggers(Point position)
+		protected bool HighlightTriggers(PointF position)
 		{
-			// find the cell under cursor
+			// find the trigger under the cursor
 			ScreenToWorld(ref position);
 			int index = triggers_.GetIndex(position, marker_layout_);
 			if (disk_control_.Selection >= 0)
 				index = -1;
 			else if (index == active_)
-				return;
+				return (index >= 0);
 			// unhighlight the previous cell and its neighbours
-			if (active_ >= 0 && active_ < triggers_.count_)
-			{
-				triggers_.descriptions_[active_].status_ &= ~TriggerStatus.Bright;
-				foreach (int link in triggers_.adjacency_.GetList(active_))
-					triggers_.descriptions_[link].status_ &= ~TriggerStatus.Dim;
-			}
+			if (active_ >= 0)
+				UnhighlightTrigger(active_);
 			active_ = index;
 			if (index < 0)
-				return;
+				return false;
 			// highlight the selected trigger and its dependants
+			HighlightTrigger(index);
+			return true;
+		}
+
+		protected void HighlightTrigger(int index)
+		{
 			triggers_.descriptions_[index].status_ |= TriggerStatus.Bright;
-			foreach (int link in triggers_.adjacency_.GetList(index))
-				triggers_.descriptions_[link].status_ |= TriggerStatus.Dim;
+			for (int link = 0; link != triggers_.count_; ++link)
+				if (triggers_.adjacency_matrix_[index, link])
+					triggers_.descriptions_[link].status_ |= TriggerStatus.Dim;
+		}
+
+		protected void UnhighlightTrigger(int index)
+		{
+			triggers_.descriptions_[index].status_ &= ~TriggerStatus.Bright;
+			for (int link = 0; link != triggers_.count_; ++link)
+				if (triggers_.adjacency_matrix_[index, link])
+					triggers_.descriptions_[link].status_ &= ~TriggerStatus.Dim;
+		}
+
+		/// <param name="position">in screen coordinates</param>
+		protected bool HighlightLinks(PointF position)
+		{
+			// find the link under the cursor
+			ScreenToWorld(ref position);
+			if (active_link_ >= 0)
+				triggers_.adjacency_list_.RemoveStatus(active_link_, TriggerLink.Status.Dim);
+			int index = triggers_.GetLinkIndex(position, marker_layout_.Width, marker_layout_.Height);
+			if (disk_control_.Selection >= 0)
+				index = -1;
+			else if (index == active_)
+				return (index >= 0);
+			active_link_ = index;
+			if (index < 0)
+				return false;
+			triggers_.adjacency_list_.AddStatus(active_link_, TriggerLink.Status.Dim);
+			return true;
 		}
 
 		private bool InitGraphics()
@@ -442,7 +538,11 @@ namespace TriggerEdit
 						MessageBoxIcon.Error);
 					Application.Exit();
 				}
-				trigger_renderer_ = new TriggerRenderer(device_, marker_layout_, Font);
+				trigger_renderer_ = new TriggerRenderer(
+					device_,
+					marker_layout_,
+					new SizeF(Font.Height, Font.Height),
+					Font);
 			}
 			else
 			{
@@ -719,7 +819,7 @@ namespace TriggerEdit
 					int p_index = 0;
 					for (int j = 0; j != positions.Length; ++j)
 					{
-						if (triggers_.adjacency_[i, j] || triggers_.adjacency_[j, i])
+						if (triggers_.adjacency_matrix_[i, j] || triggers_.adjacency_matrix_[j, i])
 						{
 							float dx = positions[i].X - positions[j].X;
 							float dy = positions[i].Y - positions[j].Y;
@@ -781,6 +881,8 @@ namespace TriggerEdit
 		private float ShiftVertices(ref PointF[] positions)
 		{
 			float k = cell_spacing_;
+			float marker_width  = marker_layout_.Width;
+			float marker_height = marker_layout_.Height;
 			// reset velocities
 			for (int i = 0; i != triggers_.count_; ++i)
 				triggers_.velocities_[i] = PointF.Empty;	
@@ -793,11 +895,32 @@ namespace TriggerEdit
 				{
 					float dx = positions[j].X - positions[i].X;
 					float dy = positions[j].Y - positions[i].Y;
-					ShiftVertices_AdjustLength(ref dx, marker_layout_.Width);
-					ShiftVertices_AdjustLength(ref dy, marker_layout_.Height);
+					// manual inlining (performance-critical)
+					// ShiftVertices_AdjustLength(ref dx, marker_width);
+					if (dx > 0)
+						if (dx < marker_width)
+							dx = 0.1f;
+						else
+							dx -= marker_width;
+					else
+						if (dx > -marker_width)
+						dx = -0.1f;
+					else
+						dx += marker_width;
+					// manual inlining (performance-critical)
+					// ShiftVertices_AdjustLength(ref dy, marker_height);
+					if (dy > 0)
+						if (dy < marker_height)
+							dy = 0.1f;
+						else
+							dy -= marker_height;
+					else
+						if (dy > -marker_height)
+						dy = -0.1f;
+					else
+						dy += marker_height;
+					// calculate distance squared
 					float d_sqr = dx * dx + dy * dy;
-					if (0 == d_sqr)
-						v_x += marker_layout_.Width + k;
 					// repulsion
 					if (d_sqr > 0)
 					{
@@ -810,7 +933,10 @@ namespace TriggerEdit
 						triggers_.velocities_[j].Y += r_dy;
 					}
 					// attraction
-					if (triggers_.adjacency_[i, j] || triggers_.adjacency_[j, i])
+					TriggerGroup group_i = triggers_.descriptions_[i].group_;
+					TriggerGroup group_j = triggers_.descriptions_[j].group_;
+					if (triggers_.adjacency_matrix_[i, j] || triggers_.adjacency_matrix_[j, i]
+						|| (null != group_i && group_i == group_j))
 					{
 						float d = (float)Math.Sqrt(d_sqr);
 						if (d > k)
@@ -837,9 +963,15 @@ namespace TriggerEdit
 				float v_abs = (float)Math.Sqrt(v_x * v_x + v_y * v_y);
 				if (v_abs != 0)
 				{
+					// calculate the offset as the minimum between v_abs and temperature
+					float offset;
+					if (v_abs < temperature)
+						offset = v_abs;
+					else
+						offset = temperature;
 					// set the new coordinates
-					positions[i].X = positions[i].X + (v_x / v_abs) * Math.Min(v_abs, temperature);
-					positions[i].Y = positions[i].Y + (v_y / v_abs) * Math.Min(v_abs, temperature);
+					positions[i].X = positions[i].X + (v_x / v_abs) * offset;
+					positions[i].Y = positions[i].Y + (v_y / v_abs) * offset;
 				}
 			}
 			// cool down
@@ -850,72 +982,6 @@ namespace TriggerEdit
 					temperature = 0.5f;
 			}
 			return temperature;
-		}
-
-		private void SnapPoints(ref Point pnt1, ref Point pnt2)
-		{
-			// initialize the rectangles
-			Rectangle rect1 = new Rectangle(0, 0, marker_layout_.Width, marker_layout_.Height);
-			Rectangle rect2 = rect1;
-			rect2.Offset(pnt2.X - pnt1.X, pnt2.Y - pnt1.Y);
-			// snap logic
-			if (rect1.Bottom < rect2.Top)
-			{
-				if (rect1.Right < rect2.Left)
-				{
-					pnt1.X += marker_layout_.Width  / 2;
-					pnt1.Y += marker_layout_.Height / 2;
-					pnt2.X -= marker_layout_.Width  / 2;
-					pnt2.Y -= marker_layout_.Height / 2;
-				}
-				else if (rect1.Left > rect2.Right)
-				{
-					pnt1.X -= marker_layout_.Width  / 2;
-					pnt1.Y += marker_layout_.Height / 2;
-					pnt2.X += marker_layout_.Width  / 2;
-					pnt2.Y -= marker_layout_.Height / 2;
-				}
-				else
-				{
-					pnt1.Y += marker_layout_.Height / 2;
-					pnt2.Y -= marker_layout_.Height / 2;
-				}
-			}
-			else if (rect1.Top > rect2.Bottom)
-			{
-				if (rect1.Right < rect2.Left)
-				{
-					pnt1.X += marker_layout_.Width  / 2;
-					pnt1.Y -= marker_layout_.Height / 2;
-					pnt2.X -= marker_layout_.Width  / 2;
-					pnt2.Y += marker_layout_.Height / 2;
-				}
-				else if (rect1.Left > rect2.Right)
-				{
-					pnt1.X -= marker_layout_.Width  / 2;
-					pnt1.Y -= marker_layout_.Height / 2;
-					pnt2.X += marker_layout_.Width  / 2;
-					pnt2.Y += marker_layout_.Height / 2;
-				}
-				else
-				{
-					pnt1.Y -= marker_layout_.Height / 2;
-					pnt2.Y += marker_layout_.Height / 2;
-				}
-			}
-			else
-			{
-				if (rect1.Right < rect2.Left)
-				{
-					pnt1.X += marker_layout_.Width / 2;
-					pnt2.X -= marker_layout_.Width / 2;
-				}
-				else if (rect1.Left > rect2.Right)
-				{
-					pnt1.X -= marker_layout_.Width / 2;
-					pnt2.X += marker_layout_.Width / 2;
-				}
-			}
 		}
 
 		private void SetSelection(int index)
@@ -947,6 +1013,35 @@ namespace TriggerEdit
 			}
 		}
 
+		private void SetLinkSelection(int index)
+		{
+			if (SelectionMode.Replace == selection_mode_)
+			{
+				// clear selected flags for previuos selection
+				for (int i = 0; i != link_selection_.Count; ++i)
+					triggers_.adjacency_list_.RemoveStatus((int)link_selection_[i], TriggerLink.Status.Selected);
+				link_selection_.Clear();
+			}
+			if (index < 0)
+				return;
+			if (  SelectionMode.Replace == selection_mode_
+				|| SelectionMode.Add     == selection_mode_)
+			{
+				// add selection
+				triggers_.adjacency_list_.AddStatus(index, TriggerLink.Status.Selected);
+				link_selection_.Add(index);
+			} 
+			else if (SelectionMode.Substract == selection_mode_)
+			{
+				// remove selection
+				if (link_selection_.Contains(index))
+				{
+					triggers_.adjacency_list_.RemoveStatus(index, TriggerLink.Status.Selected);
+					link_selection_.Remove(index);
+				}
+			}
+		}
+
 		private void SetSelection(ArrayList list)
 		{
 			if (SelectionMode.Replace == selection_mode_)
@@ -963,7 +1058,9 @@ namespace TriggerEdit
 			{
 				for (int i = 0; i != list.Count; ++i)
 					triggers_.descriptions_[(int)list[i]].status_ |= TriggerStatus.Selected;
-				selection_.AddRange(list);
+				for (int i = 0; i != list.Count; ++i)
+					if (!selection_.Contains(list[i]))
+						selection_.Add(list[i]);
 			}
 			if (SelectionMode.Substract == selection_mode_)
 			{
@@ -1033,7 +1130,7 @@ namespace TriggerEdit
 			triggers_.AddNew();
 			triggers_.descriptions_[triggers_.count_ - 1]
 				= (TriggerContainer.TriggerDescription)triggers_.g_marker_descriptions_[0];
-			triggers_.adjacency_[(int)selection_[0], triggers_.count_ - 1] = true;
+			triggers_.AddLink((int)selection_[0], triggers_.count_ - 1);
 			triggers_.history_[triggers_.count_ - 1].Set((PointF)triggers_.g_marker_positions_[0]);
 			triggers_.positions_[triggers_.count_ - 1] = (PointF)triggers_.g_marker_positions_[0];
 			// remove the ghosts
@@ -1053,10 +1150,11 @@ namespace TriggerEdit
 			// create a new marker ghost
 			triggers_.AddMarkerGhost(triggers_.descriptions_[(int)selection_[0]], cursor);
 			// copy the links
-			foreach (int tail in triggers_.adjacency_.GetList((int)selection_[0]))
-				triggers_.AddLinkGhost(cursor, triggers_.positions_[tail]);
 			for (int tail = 0; tail != triggers_.count_; ++tail)
-				if (triggers_.adjacency_[tail, (int)selection_[0]])
+				if (triggers_.adjacency_matrix_[(int)selection_[0], tail])
+					triggers_.AddLinkGhost(cursor, triggers_.positions_[tail]);
+			for (int tail = 0; tail != triggers_.count_; ++tail)
+				if (triggers_.adjacency_matrix_[tail, (int)selection_[0]])
 					triggers_.AddLinkGhost(triggers_.GetInterpolatedPosition(tail), cursor);
 			// modify environment
 			drag_state_ = DragState.Clone;
@@ -1076,13 +1174,14 @@ namespace TriggerEdit
 			triggers_.g_marker_positions_[0] = cursor;
 			// move the links
 			int i = 0;
-			foreach (int tail in triggers_.adjacency_.GetList((int)selection_[0]))
-				triggers_.SetLinkGhost(
-					i++,
-					cursor,
-					triggers_.positions_[tail]);
 			for (int tail = 0; tail != triggers_.count_; ++tail)
-				if (triggers_.adjacency_[tail, (int)selection_[0]])
+				if (triggers_.adjacency_matrix_[(int)selection_[0], tail])
+					triggers_.SetLinkGhost(
+						i++,
+						cursor,
+						triggers_.positions_[tail]);
+			for (int tail = 0; tail != triggers_.count_; ++tail)
+				if (triggers_.adjacency_matrix_[tail, (int)selection_[0]])
 					triggers_.SetLinkGhost(
 						i++,
 						triggers_.GetInterpolatedPosition(tail),
@@ -1112,11 +1211,11 @@ namespace TriggerEdit
 				(float)int_cursor.Y);
 			ScreenToWorld(ref cursor);
 			// create the link ghost connecting the source with the cursor
-			TriggerContainer.Link link;
-			link.head_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
-			link.tail_      = cursor;
-			link.snap_head_ = true;
-			link.snap_tail_ = false;
+			TriggerContainer.GhostLink link;
+			link.head_      = cursor;
+			link.tail_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
+			link.snap_head_ = false;
+			link.snap_tail_ = true;
 			triggers_.AddLinkGhost(link);
 			// modify environment
 			drag_state_ = DragState.Link;
@@ -1132,11 +1231,11 @@ namespace TriggerEdit
 				(float)int_cursor.Y);
 			ScreenToWorld(ref cursor);
 			// create the link ghost connecting the source with the cursor
-			TriggerContainer.Link link;
-			link.head_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
-			link.tail_      = cursor;
-			link.snap_head_ = true;
-			link.snap_tail_ = false;
+			TriggerContainer.GhostLink link;
+			link.head_      = cursor;
+			link.tail_      = triggers_.GetInterpolatedPosition((int)selection_[0]);
+			link.snap_head_ = false;
+			link.snap_tail_ = true;
 			triggers_.SetLinkGhost(0, link);
 		}
 
@@ -1159,12 +1258,18 @@ namespace TriggerEdit
 			// carry out the link operation
 			if (0 == new_selection)
 			{
-				triggers_.adjacency_[0, (int)selection_[0]] = !triggers_.adjacency_[0, (int)selection_[0]];
-				triggers_.adjacency_[(int)selection_[0], 0] = false;
+				if (triggers_.adjacency_matrix_[0, (int)selection_[0]])
+					triggers_.RemoveLink(0, (int)selection_[0]);
+				else
+					triggers_.AddLink(0, (int)selection_[0]);
 			}
 			else
-				triggers_.adjacency_[(int)selection_[0], new_selection]
-					= !triggers_.adjacency_[(int)selection_[0], new_selection];
+			{
+				if (triggers_.adjacency_matrix_[(int)selection_[0], new_selection])
+					triggers_.RemoveLink((int)selection_[0], new_selection);
+				else
+					triggers_.AddLink((int)selection_[0], new_selection);
+			}
 		}
 
 		private void BeginTriggerMove(object sender, EventArgs e)
@@ -1294,6 +1399,37 @@ namespace TriggerEdit
 
 		#endregion
 
+		#region link event
+
+		public class LinkEventArgs : EventArgs
+		{
+			public LinkEventArgs(ArrayList ids)
+			{
+				ids_ = ids;
+			}
+			public int this[int index]
+			{
+				get { return (int)ids_[index]; }
+			}
+			public int Count
+			{
+				get { return ids_.Count; }
+			}
+			private ArrayList ids_;
+		}
+
+		public delegate void SelectLinkEvent(object sender, LinkEventArgs e);
+
+		public event SelectLinkEvent SelectLink;
+
+		public void OnSelectLink(LinkEventArgs e)
+		{
+			if (null != SelectLink)
+				SelectLink(this, e);	
+		}
+
+		#endregion
+
 		#region zoom event
 
 		public class ZoomEventArgs : EventArgs
@@ -1399,8 +1535,6 @@ namespace TriggerEdit
 					return;
 				}
 			}
-			// find the marker under the cursor
-			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
 			// set selection mode, depending on the modifier key pressed
 			switch (Control.ModifierKeys)
 			{
@@ -1408,6 +1542,11 @@ namespace TriggerEdit
 				case Keys.Control: selection_mode_ = SelectionMode.Substract; break;
 				default:           selection_mode_ = SelectionMode.Replace;   break;
 			}
+			// find the marker under the cursor
+			int new_selection = triggers_.GetIndex(cursor_location, marker_layout_);
+			// deselect the link, if a marker is selected
+			if (new_selection >= 0)
+				SetLinkSelection(-1);
 			// handle marker dragging
 			if (new_selection >= 0
 				&& selection_.Count == 1
@@ -1424,13 +1563,26 @@ namespace TriggerEdit
 					= (1 == selection_.Count)
 					&& !triggers_.descriptions_[new_selection].is_virtual_;
 				OnSelectTrigger(new TriggerEventArgs(selection_));
+				BeginTriggerMove(this, EventArgs.Empty);
 				return;
 			}
 			// handle marker selection
 			if (new_selection < 0)
 			{
 				disk_control_.Visible = false;
-				BeginTriggerSelection(this, EventArgs.Empty);
+				// find the link under the cursor
+				new_selection = triggers_.GetLinkIndex(cursor_location, marker_layout_.Width, marker_layout_.Height);
+				if (new_selection >= 0)
+				{
+					SetLinkSelection(new_selection);
+					OnSelectLink(new LinkEventArgs(link_selection_));
+				}
+				else
+				{
+					SetLinkSelection(-1);
+					OnSelectLink(new LinkEventArgs(link_selection_));
+					BeginTriggerSelection(this, EventArgs.Empty);
+				}
 				return;
 			}
 		}
@@ -1462,7 +1614,8 @@ namespace TriggerEdit
 				triggers_.GetInterpolatedPosition((int)selection_[0], out x, out y);
 				disk_control_.OnMouseMove(ex - x, ey - y);
 			}
-			HighlightTriggers(new Point(e.X, e.Y));
+			HighlightTriggers(new PointF(e.X, e.Y));
+			HighlightLinks(new PointF(e.X, e.Y));
 			switch (drag_state_)
 			{
 				case DragState.MoveCamera:
@@ -1502,6 +1655,7 @@ namespace TriggerEdit
 					}
 				} break;
 			}
+			Render();
 			base.OnMouseMove(e);
 		}
 
@@ -1551,6 +1705,8 @@ namespace TriggerEdit
 			if (!rendering_enabled_)
 				return;
 			camera_.IncrementZoom(e.Delta / 120);
+			while (camera_.Zoom < 1.0f)
+				camera_.IncrementZoom();
 			OnZoomChanged(new ZoomEventArgs(camera_.Zoom));
 			base.OnMouseWheel (e);
 		}
@@ -1647,8 +1803,10 @@ namespace TriggerEdit
 		private DragState drag_state_;
 		private PointF    drag_offset_;
 		// selection
-		private int            active_ = -1;
-		private ArrayList      selection_;
+		private int            active_      = -1;
+		private int            active_link_ = -1;
+		private ArrayList      selection_;      // of int
+		private ArrayList      link_selection_; // of int
 		private SelectionMode  selection_mode_;
 		private SelectionState selection_state_;
 		private RectangleF     selection_rect_;
@@ -1658,12 +1816,12 @@ namespace TriggerEdit
 		// DirectX
 		private Device device_;
 		// FPS
-		float                           fps_;
-		Microsoft.DirectX.Direct3D.Font fps_font_;
-		Sprite                          fps_sprite_;
-		int                             frames_passed_;
-		int                             last_frame_time_;
-		bool                            show_frame_rate_;
+		private float                           fps_;
+		private Microsoft.DirectX.Direct3D.Font fps_font_;
+		private Sprite                          fps_sprite_;
+		private int                             frames_passed_;
+		private int                             last_frame_time_;
+		private bool                            show_frame_rate_;
 		// animation
 		private bool           animation_active_;
 		private float          animation_remainder_;
@@ -1675,11 +1833,11 @@ namespace TriggerEdit
 
 		#endregion
 
-		//----------------------------------
-		// Component Designer generated code
-		//----------------------------------
+		//----------
+		// generated
+		//----------
 
-		#region
+		#region code
 
 		/// <summary>
 		/// Required method for Designer support - do not modify 
@@ -1691,12 +1849,8 @@ namespace TriggerEdit
 		}
 
 		#endregion
-
-		//------------------------
-		// Component Designer data
-		//------------------------
 		
-		#region
+		#region data
 
 		private System.ComponentModel.IContainer components = null;
 

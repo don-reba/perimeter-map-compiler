@@ -59,7 +59,7 @@
                     OutputPath = "bin\Release\"
                     RegisterForComInterop = "false"
                     RemoveIntegerChecks = "false"
-                    TreatWarningsAsErrors = "false"
+                    TreatWarningsAsErrors = "true"
                     WarningLevel = "4"
                 />
             </Settings>
@@ -127,6 +127,11 @@
                     BuildAction = "EmbeddedResource"
                 />
                 <File
+                    RelPath = "AdjacencyList.cs"
+                    SubType = "Code"
+                    BuildAction = "Compile"
+                />
+                <File
                     RelPath = "AdjacencyMatrix.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
@@ -191,9 +196,37 @@
                     BuildAction = "Compile"
                 />
                 <File
+                    RelPath = "GroupCommentEditor.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "GroupCommentEditor.resx"
+                    DependentUpon = "GroupCommentEditor.cs"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
                     RelPath = "Import.cs"
                     SubType = "Code"
                     BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "link help (en).rtf"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "link help (ru).rtf"
+                    BuildAction = "EmbeddedResource"
+                />
+                <File
+                    RelPath = "LinkHelpDialog.cs"
+                    SubType = "Form"
+                    BuildAction = "Compile"
+                />
+                <File
+                    RelPath = "LinkHelpDialog.resx"
+                    DependentUpon = "LinkHelpDialog.cs"
+                    BuildAction = "EmbeddedResource"
                 />
                 <File
                     RelPath = "MainForm.cs"
