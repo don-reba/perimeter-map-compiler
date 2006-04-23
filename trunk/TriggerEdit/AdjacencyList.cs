@@ -101,7 +101,7 @@ namespace TriggerEdit
 			if (index >= count_)
 				throw new IndexOutOfRangeException();
 			Link link = links_[index];
-			for (int i = index; i != count_; ++i)
+			for (int i = index; i != count_ - 1; ++i)
 				links_[i] = links_[i + 1];
 			--count_;
 			return link;

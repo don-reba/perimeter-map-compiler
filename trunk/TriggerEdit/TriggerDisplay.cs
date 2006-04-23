@@ -177,6 +177,12 @@ namespace TriggerEdit
 			selection_state_ = SelectionState.Zoom;
 		}
 
+		public void GroupSelectedLinks(int group)
+		{
+			for (int i = 0; i != link_selection_.Count; ++i)
+				triggers_.adjacency_list_.SetGroup((int)link_selection_[i], group);
+		}
+
 		public void GroupSelectedLinks()
 		{
 			// partition the selected links by the head trigger
@@ -263,6 +269,12 @@ namespace TriggerEdit
 			set { cell_spacing_ = value; }
 		}
 
+		public bool DisplayAction
+		{
+			get { return trigger_renderer_.DisplayAction; }
+			set { trigger_renderer_.DisplayAction = value; }
+		}
+
 		public ArrayList Selection
 		{
 			get { return ArrayList.ReadOnly(selection_); }
@@ -295,6 +307,8 @@ namespace TriggerEdit
 					camera_.DecrementZoom();
 				while (camera_.Zoom < value)
 					camera_.IncrementZoom();
+				if (!animation_active_)
+					Render();
 			}
 		}
 
@@ -904,7 +918,7 @@ namespace TriggerEdit
 							dx -= marker_width;
 					else
 						if (dx > -marker_width)
-						dx = -0.1f;
+							dx = -0.1f;
 					else
 						dx += marker_width;
 					// manual inlining (performance-critical)
@@ -916,7 +930,7 @@ namespace TriggerEdit
 							dy -= marker_height;
 					else
 						if (dy > -marker_height)
-						dy = -0.1f;
+							dy = -0.1f;
 					else
 						dy += marker_height;
 					// calculate distance squared
@@ -1571,7 +1585,10 @@ namespace TriggerEdit
 			{
 				disk_control_.Visible = false;
 				// find the link under the cursor
-				new_selection = triggers_.GetLinkIndex(cursor_location, marker_layout_.Width, marker_layout_.Height);
+				new_selection = triggers_.GetLinkIndex(
+					cursor_location,
+					marker_layout_.Width,
+					marker_layout_.Height);
 				if (new_selection >= 0)
 				{
 					SetLinkSelection(new_selection);
@@ -1655,7 +1672,8 @@ namespace TriggerEdit
 					}
 				} break;
 			}
-			Render();
+			if (!animation_active_)
+				Render();
 			base.OnMouseMove(e);
 		}
 

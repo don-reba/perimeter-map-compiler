@@ -51,6 +51,15 @@ namespace TriggerEdit
 				persistent_ = false;
 			}
 
+			public Link(int tail, int head, int group, bool is_thin)
+			{
+				head_       = head;
+				tail_       = tail;
+				status_     = Status.None;
+				group_      = group;
+				persistent_ = !is_thin;
+			}
+
 			public Color Fill
 			{
 				get
@@ -62,6 +71,18 @@ namespace TriggerEdit
 					if (0 != (status_ & Status.Dim))
 						return Color.Gold;
 					return Color.Red;
+				}
+			}
+
+			public Color HeadFill
+			{
+				get
+				{
+					if (0 != (status_ & Status.Bright))
+						return Color.Yellow;
+					if (0 != (status_ & Status.Dim))
+						return Color.Gold;
+					return Link.colors_[group_];
 				}
 			}
 
@@ -80,7 +101,39 @@ namespace TriggerEdit
 			public bool   persistent_;
 
 			#endregion
-		}
+
+			#region static
+
+			// 10 colours - one for each group
+			public static Color[] colors_ = {
+														  Color.Red,
+														  Color.LightBlue,
+														  Color.LightGreen,
+														  Color.Khaki,
+														  Color.Plum,
+														  Color.YellowGreen,
+														  Color.Orange,
+														  Color.Gray,
+														  Color.DeepPink,
+														  Color.Tan
+													  };
+
+			public static string[] color_strings_ = {
+																	 "STRATEGY_RED",
+																	 "STRATEGY_GREEN",
+																	 "STRATEGY_BLUE",
+																	 "STRATEGY_YELLOW",
+																	 "STRATEGY_COLOR_0",
+																	 "STRATEGY_COLOR_1",
+																	 "STRATEGY_COLOR_2",
+																	 "STRATEGY_COLOR_3",
+																	 "STRATEGY_COLOR_4",
+																	 "STRATEGY_COLOR_5"
+															  };
+
+			#endregion
+
+			}
 
 		public struct GhostLink
 		{
@@ -165,7 +218,8 @@ namespace TriggerEdit
 
 			public void Serialize(
 				ScriptXmlWriter w,
-				IEnumerable     link_names,
+				IList           links,
+				IList     descriptions,
 				State           state,
 				PointF          position)
 			{
@@ -184,12 +238,16 @@ namespace TriggerEdit
 					w.WriteElement("int", "action", "0");
 				// outgoing links
 				w.WriteStartNamedElement("array", "outcomingLinks");
-				foreach (string link_name in link_names)
+				foreach (Link link in links)
 				{
+					// get name
+					string name  = ((TriggerDescription)descriptions[link.head_]).name_;
+					string color = Link.color_strings_[link.group_];
+					string type  = link.persistent_ ? "THICK" : "THIN";
 					w.WriteStartElement("set");
-					w.WriteElement("string", "triggerName",    link_name);
-					w.WriteElement("value",  "color",          "STRATEGY_RED");
-					w.WriteElement("value",  "type",           "THIN");
+					w.WriteElement("string", "triggerName",    name);
+					w.WriteElement("value",  "color",          color);
+					w.WriteElement("value",  "type",           type);
 					w.WriteElement("value",  "active_",        "false");
 					w.WriteElement("int",    "parentOffsetX_", "0");
 					w.WriteElement("int",    "parentOffsetY_", "0");
@@ -400,9 +458,14 @@ namespace TriggerEdit
 
 		public void AddLink(int tail, int head)
 		{
+			AddLink(tail, head, 0, true);
+		}
+
+		public void AddLink(int tail, int head, int group, bool is_thin)
+		{
 			if (adjacency_matrix_[tail, head])
 				throw new Exception("Link already exists.");
-			adjacency_list_.Add(new Link(tail, head));
+			adjacency_list_.Add(new Link(tail, head, group, is_thin));
 			adjacency_matrix_[tail, head] = true;
 		}
 
@@ -442,6 +505,43 @@ namespace TriggerEdit
 		{
 			const int tolerance = 6;
 			// find the link under the cursor
+			// search unselected
+			for (int i = 0; i != adjacency_list_.Count; ++i)
+			{
+				if (0 != (adjacency_list_[i].status_ & Link.Status.Selected))
+					continue;
+				// get head and tail of the link
+				PointF t = GetInterpolatedPosition(adjacency_list_[i].tail_);
+				PointF h = GetInterpolatedPosition(adjacency_list_[i].head_);
+				SnapPoints(ref h, ref t, marker_width, marker_height);
+				// check whether the point is within the bounding rectangle
+				if (position.X < t.X - tolerance && position.X < h.X - tolerance)
+					continue;
+				if (position.X > t.X + tolerance && position.X > h.X + tolerance)
+					continue;
+				if (position.Y < t.Y - tolerance && position.Y < h.Y - tolerance)
+					continue;
+				if (position.Y > t.Y + tolerance && position.Y > h.Y + tolerance)
+					continue;
+				// translate the origin to the tail
+				PointF l = new PointF(h.X - t.X,        h.Y - t.Y);
+				PointF p = new PointF(position.X - t.X, position.Y - t.Y);
+				// project the position vector onto the link vector
+				float l_norm = (float)Math.Sqrt(l.X * l.X + l.Y * l.Y);
+				float d = (l.X * p.X + l.Y * p.Y) / l_norm;
+				// check length of the projection
+				if (d < 0 || d > l_norm)
+					continue;
+				// get distance from the link
+				PointF off = new PointF(p.X - l.X * d / l_norm, p.Y - l.Y * d / l_norm);
+				d = off.X * off.X + off.Y * off.Y;
+				// check the distance
+				if (d > tolerance * tolerance)
+					continue;
+				return i;
+			}
+			// find the link under the cursor
+			// search the rest
 			for (int i = 0; i != adjacency_list_.Count; ++i)
 			{
 				// get head and tail of the link
@@ -597,21 +697,32 @@ namespace TriggerEdit
 				{
 					try
 					{
-						string ref_name = link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText;
+						// get name
+						string ref_name  = link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText;
 						if (!names.Contains(ref_name))
 							continue;
+						// get target
 						int target = (int)names[ref_name];
+						// get group
+						string ref_color = link_node.SelectSingleNode("value[@name=\"color\"]").InnerText;
+						int    group     = Array.IndexOf(Link.color_strings_, ref_color);
+						if (group < 0)
+							throw new Exception("unknown link colour");
+						// create link
+						string ref_type = link_node.SelectSingleNode("value[@name=\"type\"]").InnerText;
+						bool   is_thin  = ref_type == "THIN";
 						if (i != target) // consistency check
-							AddLink(i, target);
+							AddLink(i, target, group, is_thin);
 					}
 					catch (Exception e)
 					{
 						string msg = e.ToString();
 						if (
 							DialogResult.OK != MessageBox.Show(
-								"Invalid message link in \""
-								+ descriptions_[i].name_
-								+ "\".",
+								string.Format(
+									"Invalid message link in \"{0}\".\n\n{1}",
+									descriptions_[i].name_,
+									e),
 								"Warning",
 								MessageBoxButtons.OKCancel,
 								MessageBoxIcon.Warning)
@@ -645,16 +756,16 @@ namespace TriggerEdit
 			w.WriteStartNamedElement("array", "triggers");
 			for (int i = 1; i != count_; ++i)
 			{
-				ArrayList link_names = new ArrayList();
-				for (int j = 0; j != count_; ++j)
-					if (adjacency_matrix_[i, j])
-						link_names.Add(descriptions_[j].name_);
+				ArrayList links = new ArrayList(); // of Link
+				foreach(Link link in adjacency_list_)
+					if (link.tail_ == i)
+						links.Add(link);
 				TriggerDescription.State state;
 				if (adjacency_matrix_[0, i])
 					state = TriggerDescription.State.Checking;
 				else
 					state = TriggerDescription.State.Sleeping;
-				descriptions_[i].Serialize(w, link_names, state, positions_[i]);
+				descriptions_[i].Serialize(w, links, descriptions_, state, positions_[i]);
 			}
 			w.WriteEndElement();
 			// layout info

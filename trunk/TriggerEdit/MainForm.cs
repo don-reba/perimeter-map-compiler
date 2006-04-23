@@ -16,6 +16,7 @@ namespace TriggerEdit
 	using TriggerState       = TriggerContainer.TriggerDescription.State;
 	using TriggerStatus      = TriggerContainer.TriggerDescription.Status;
 	using TriggerGroup       = TriggerContainer.Group;
+	using TriggerLink        = TriggerContainer.Link;
 
 	#endregion
 
@@ -32,6 +33,15 @@ namespace TriggerEdit
 		{
 			// Required for Windows Form Designer support
 			InitializeComponent();
+			// initialize link groupo combo box
+			link_group_cb_.Items.Clear();
+			for (int i = 0; i != TriggerLink.colors_.Length; ++i)
+				link_group_cb_.Items.Add(String.Format(
+					"Group {0} ({1})",
+					i + 1,
+					TriggerLink.colors_[i].Name));
+			link_group_cb_.Enabled = false;
+			// initialize data
 			args_ = args;
 			display_pnl_.SelectTrigger
 				+= new TriggerDisplay.SelectTriggerEvent(display_pnl__SelectTrigger);
@@ -169,8 +179,7 @@ namespace TriggerEdit
 
 		private void NewFile()
 		{
-			link_group_btn_.Enabled      = false;
-			link_ungroup_btn_.Enabled    = false;
+			link_group_cb_.Enabled       = false;
 			keep_link_alive_btn_.Enabled = false;
 			keep_link_alive_btn_.Checked = false;
 			SetSelectedGroup(null);
@@ -375,7 +384,7 @@ namespace TriggerEdit
 
 		private void display_pnl__SelectLink(object sender, TriggerDisplay.LinkEventArgs e)
 		{
-			link_group_btn_.Enabled      = (e.Count > 0);
+			link_group_cb_.Enabled       = (e.Count > 0);
 			keep_link_alive_btn_.Enabled = (e.Count > 0);
 			keep_link_alive_btn_.Checked = false;
 			bool is_grouped = false;
@@ -458,12 +467,14 @@ namespace TriggerEdit
 			pref_dlg.AnimationSpeed  = display_pnl_.AnimationSpeed;
 			pref_dlg.MarkerSpacing   = display_pnl_.MarkerSpacing;
 			pref_dlg.MarkerLineCount = display_pnl_.MarkerLineCount;
+			pref_dlg.DisplayAction   = display_pnl_.DisplayAction;
 			pref_dlg.DialogOpacity   = dialog_opacity_;
 			if (DialogResult.OK == pref_dlg.ShowDialog(this))
 			{
 				display_pnl_.AnimationSpeed  = pref_dlg.AnimationSpeed;
 				display_pnl_.MarkerSpacing   = pref_dlg.MarkerSpacing;
 				display_pnl_.MarkerLineCount = pref_dlg.MarkerLineCount;
+				display_pnl_.DisplayAction   = pref_dlg.DisplayAction;
 				if (pref_dlg.DialogOpacity != dialog_opacity_)
 				{
 					dialog_opacity_ = pref_dlg.DialogOpacity;
@@ -673,6 +684,11 @@ namespace TriggerEdit
 			display_pnl_.SetSelectedLinksPersistence(keep_link_alive_btn_.Checked);
 		}
 
+		private void link_group_cb__SelectedIndexChanged(object sender, System.EventArgs e)
+		{
+			display_pnl_.GroupSelectedLinks(link_group_cb_.SelectedIndex);
+		}
+
 		#endregion
 
 		//-----
@@ -681,20 +697,13 @@ namespace TriggerEdit
 
 		#region data
 
-		private string[]                    args_;
-		private TriggerContainer            triggers_;
-		private ActionBuilder               action_builder_;
-		private ConditionBuilder            condition_builder_;
-		private System.Windows.Forms.Button zoom_eye_btn_;
-		private System.Windows.Forms.TextBox comment_edt_;
-		private System.Windows.Forms.Button group_select_btn_;
-		private float                       dialog_opacity_;
-		private System.Windows.Forms.GroupBox link_box_;
-		private System.Windows.Forms.Button link_group_btn_;
-		private System.Windows.Forms.Button link_ungroup_btn_;
-		private System.Windows.Forms.Button link_help_btn_;
-		private System.Windows.Forms.CheckBox keep_link_alive_btn_;
-		private TriggerGroup                selected_group_;
+		private string[]         args_;
+		private TriggerContainer triggers_;
+		private ActionBuilder    action_builder_;
+		private ConditionBuilder condition_builder_;
+		private float            dialog_opacity_;
+		private TriggerGroup     selected_group_;
+		private TriggerDisplay   display_pnl_;
 
 		#endregion
 
@@ -716,6 +725,9 @@ namespace TriggerEdit
 			this.property_panel_ = new System.Windows.Forms.Panel();
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_actions_panel_ = new System.Windows.Forms.Panel();
+			this.link_box_ = new System.Windows.Forms.GroupBox();
+			this.keep_link_alive_btn_ = new System.Windows.Forms.CheckBox();
+			this.link_help_btn_ = new System.Windows.Forms.Button();
 			this.group_box_ = new System.Windows.Forms.GroupBox();
 			this.group_select_btn_ = new System.Windows.Forms.Button();
 			this.comment_btn_ = new System.Windows.Forms.Button();
@@ -741,18 +753,14 @@ namespace TriggerEdit
 			this.save_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.prefs_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.toolbar_img_lst_ = new System.Windows.Forms.ImageList(this.components);
-			this.link_box_ = new System.Windows.Forms.GroupBox();
-			this.link_group_btn_ = new System.Windows.Forms.Button();
-			this.link_ungroup_btn_ = new System.Windows.Forms.Button();
-			this.link_help_btn_ = new System.Windows.Forms.Button();
-			this.keep_link_alive_btn_ = new System.Windows.Forms.CheckBox();
+			this.link_group_cb_ = new System.Windows.Forms.ComboBox();
 			this.property_panel_.SuspendLayout();
 			this.property_actions_panel_.SuspendLayout();
+			this.link_box_.SuspendLayout();
 			this.group_box_.SuspendLayout();
 			this.zoom_box_.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).BeginInit();
 			this.trigger_box_.SuspendLayout();
-			this.link_box_.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// display_pnl_
@@ -805,6 +813,37 @@ namespace TriggerEdit
 			this.property_actions_panel_.Name = "property_actions_panel_";
 			this.property_actions_panel_.Size = new System.Drawing.Size(196, 456);
 			this.property_actions_panel_.TabIndex = 3;
+			// 
+			// link_box_
+			// 
+			this.link_box_.Controls.Add(this.link_group_cb_);
+			this.link_box_.Controls.Add(this.keep_link_alive_btn_);
+			this.link_box_.Controls.Add(this.link_help_btn_);
+			this.link_box_.Location = new System.Drawing.Point(8, 256);
+			this.link_box_.Name = "link_box_";
+			this.link_box_.Size = new System.Drawing.Size(176, 88);
+			this.link_box_.TabIndex = 17;
+			this.link_box_.TabStop = false;
+			this.link_box_.Text = "Link";
+			// 
+			// keep_link_alive_btn_
+			// 
+			this.keep_link_alive_btn_.Location = new System.Drawing.Point(8, 56);
+			this.keep_link_alive_btn_.Name = "keep_link_alive_btn_";
+			this.keep_link_alive_btn_.Size = new System.Drawing.Size(80, 16);
+			this.keep_link_alive_btn_.TabIndex = 3;
+			this.keep_link_alive_btn_.Text = "keep alive";
+			this.keep_link_alive_btn_.CheckedChanged += new System.EventHandler(this.keep_link_alive_btn__CheckedChanged);
+			// 
+			// link_help_btn_
+			// 
+			this.link_help_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+			this.link_help_btn_.Location = new System.Drawing.Point(152, 24);
+			this.link_help_btn_.Name = "link_help_btn_";
+			this.link_help_btn_.Size = new System.Drawing.Size(16, 23);
+			this.link_help_btn_.TabIndex = 2;
+			this.link_help_btn_.Text = "?";
+			this.link_help_btn_.Click += new System.EventHandler(this.link_help_btn__Click);
 			// 
 			// group_box_
 			// 
@@ -1070,57 +1109,13 @@ namespace TriggerEdit
 			this.toolbar_img_lst_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_img_lst_.ImageStream")));
 			this.toolbar_img_lst_.TransparentColor = System.Drawing.Color.Magenta;
 			// 
-			// link_box_
+			// link_group_cb_
 			// 
-			this.link_box_.Controls.Add(this.keep_link_alive_btn_);
-			this.link_box_.Controls.Add(this.link_help_btn_);
-			this.link_box_.Controls.Add(this.link_ungroup_btn_);
-			this.link_box_.Controls.Add(this.link_group_btn_);
-			this.link_box_.Location = new System.Drawing.Point(8, 256);
-			this.link_box_.Name = "link_box_";
-			this.link_box_.Size = new System.Drawing.Size(176, 88);
-			this.link_box_.TabIndex = 17;
-			this.link_box_.TabStop = false;
-			this.link_box_.Text = "Link";
-			// 
-			// link_group_btn_
-			// 
-			this.link_group_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			this.link_group_btn_.Location = new System.Drawing.Point(8, 24);
-			this.link_group_btn_.Name = "link_group_btn_";
-			this.link_group_btn_.Size = new System.Drawing.Size(48, 23);
-			this.link_group_btn_.TabIndex = 0;
-			this.link_group_btn_.Text = "Group";
-			this.link_group_btn_.Click += new System.EventHandler(this.link_group_btn__Click);
-			// 
-			// link_ungroup_btn_
-			// 
-			this.link_ungroup_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			this.link_ungroup_btn_.Location = new System.Drawing.Point(72, 24);
-			this.link_ungroup_btn_.Name = "link_ungroup_btn_";
-			this.link_ungroup_btn_.Size = new System.Drawing.Size(64, 23);
-			this.link_ungroup_btn_.TabIndex = 1;
-			this.link_ungroup_btn_.Text = "Ungroup";
-			this.link_ungroup_btn_.Click += new System.EventHandler(this.link_ungroup_btn__Click);
-			// 
-			// link_help_btn_
-			// 
-			this.link_help_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-			this.link_help_btn_.Location = new System.Drawing.Point(152, 24);
-			this.link_help_btn_.Name = "link_help_btn_";
-			this.link_help_btn_.Size = new System.Drawing.Size(16, 23);
-			this.link_help_btn_.TabIndex = 2;
-			this.link_help_btn_.Text = "?";
-			this.link_help_btn_.Click += new System.EventHandler(this.link_help_btn__Click);
-			// 
-			// keep_link_alive_btn_
-			// 
-			this.keep_link_alive_btn_.Location = new System.Drawing.Point(8, 56);
-			this.keep_link_alive_btn_.Name = "keep_link_alive_btn_";
-			this.keep_link_alive_btn_.Size = new System.Drawing.Size(80, 16);
-			this.keep_link_alive_btn_.TabIndex = 3;
-			this.keep_link_alive_btn_.Text = "keep alive";
-			this.keep_link_alive_btn_.CheckedChanged += new System.EventHandler(this.keep_link_alive_btn__CheckedChanged);
+			this.link_group_cb_.Location = new System.Drawing.Point(8, 24);
+			this.link_group_cb_.Name = "link_group_cb_";
+			this.link_group_cb_.Size = new System.Drawing.Size(136, 21);
+			this.link_group_cb_.TabIndex = 4;
+			this.link_group_cb_.SelectedIndexChanged += new System.EventHandler(this.link_group_cb__SelectedIndexChanged);
 			// 
 			// MainForm
 			// 
@@ -1140,11 +1135,11 @@ namespace TriggerEdit
 			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.property_panel_.ResumeLayout(false);
 			this.property_actions_panel_.ResumeLayout(false);
+			this.link_box_.ResumeLayout(false);
 			this.group_box_.ResumeLayout(false);
 			this.zoom_box_.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.zoom_udc_)).EndInit();
 			this.trigger_box_.ResumeLayout(false);
-			this.link_box_.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -1157,20 +1152,27 @@ namespace TriggerEdit
 		private System.Windows.Forms.Button        comment_btn_;
 		private System.Windows.Forms.Button        condition_btn_;
 		private System.Windows.Forms.Button        group_btn_;
+		private System.Windows.Forms.Button        group_select_btn_;
+		private System.Windows.Forms.Button        link_help_btn_;
 		private System.Windows.Forms.Button        ungroup_btn_;
+		private System.Windows.Forms.Button        zoom_eye_btn_;
 		private System.Windows.Forms.Button        zoom_fit_btn_;
 		private System.Windows.Forms.Button        zoom_selection_btn_;
+		private System.Windows.Forms.CheckBox      keep_link_alive_btn_;
+		private System.Windows.Forms.ComboBox      link_group_cb_;
 		private System.Windows.Forms.GroupBox      group_box_;
+		private System.Windows.Forms.GroupBox      link_box_;
 		private System.Windows.Forms.GroupBox      trigger_box_;
 		private System.Windows.Forms.GroupBox      zoom_box_;
 		private System.Windows.Forms.ImageList     toolbar_img_lst_;
-		private System.Windows.Forms.Label         name_lbl_;
 		private System.Windows.Forms.Label         comment_label_;
 		private System.Windows.Forms.Label         label1;
+		private System.Windows.Forms.Label         name_lbl_;
 		private System.Windows.Forms.NumericUpDown zoom_udc_;
-		private System.Windows.Forms.Panel         property_panel_;
 		private System.Windows.Forms.Panel         property_actions_panel_;
+		private System.Windows.Forms.Panel         property_panel_;
 		private System.Windows.Forms.Splitter      splitter1;
+		private System.Windows.Forms.TextBox       comment_edt_;
 		private System.Windows.Forms.TextBox       name_edt_;
 		private System.Windows.Forms.ToolBar       toolbar_;
 		private System.Windows.Forms.ToolBarButton load_btn_;
@@ -1178,7 +1180,6 @@ namespace TriggerEdit
 		private System.Windows.Forms.ToolBarButton prefs_btn_;
 		private System.Windows.Forms.ToolBarButton save_btn_;
 		private System.Windows.Forms.TreeView      property_tree_;
-		private TriggerDisplay                     display_pnl_;
 
 		#endregion
 	}

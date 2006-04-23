@@ -61,6 +61,12 @@ namespace TriggerEdit
 			set { spacing_udc_.Value = new decimal(value); }
 		}
 
+		public bool DisplayAction
+		{
+			get { return display_action_cb_.Checked; }
+			set { display_action_cb_.Checked = value; }
+		}
+
 		/// <summary>
 		/// Opacity of non-modal dialogs, in the range (0, 1].
 		/// </summary>
@@ -94,6 +100,8 @@ namespace TriggerEdit
 			this.label3 = new System.Windows.Forms.Label();
 			this.dialog_opacity_nud_ = new System.Windows.Forms.NumericUpDown();
 			this.label4 = new System.Windows.Forms.Label();
+			this.label5 = new System.Windows.Forms.Label();
+			this.display_action_cb_ = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)(this.animation_speed_udc_)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.spacing_udc_)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.line_count_nud_)).BeginInit();
@@ -103,7 +111,7 @@ namespace TriggerEdit
 			// ok_btn_
 			// 
 			this.ok_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.ok_btn_.Location = new System.Drawing.Point(56, 128);
+			this.ok_btn_.Location = new System.Drawing.Point(56, 168);
 			this.ok_btn_.Name = "ok_btn_";
 			this.ok_btn_.TabIndex = 0;
 			this.ok_btn_.Text = "OK";
@@ -113,7 +121,7 @@ namespace TriggerEdit
 			// 
 			this.cancel_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.cancel_btn_.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.cancel_btn_.Location = new System.Drawing.Point(144, 128);
+			this.cancel_btn_.Location = new System.Drawing.Point(144, 168);
 			this.cancel_btn_.Name = "cancel_btn_";
 			this.cancel_btn_.TabIndex = 1;
 			this.cancel_btn_.Text = "Cancel";
@@ -192,7 +200,7 @@ namespace TriggerEdit
 			// 
 			// dialog_opacity_nud_
 			// 
-			this.dialog_opacity_nud_.Location = new System.Drawing.Point(153, 88);
+			this.dialog_opacity_nud_.Location = new System.Drawing.Point(153, 112);
 			this.dialog_opacity_nud_.Minimum = new System.Decimal(new int[] {
 																									 1,
 																									 0,
@@ -209,18 +217,35 @@ namespace TriggerEdit
 			// 
 			// label4
 			// 
-			this.label4.Location = new System.Drawing.Point(17, 88);
+			this.label4.Location = new System.Drawing.Point(17, 112);
 			this.label4.Name = "label4";
 			this.label4.Size = new System.Drawing.Size(136, 16);
 			this.label4.TabIndex = 8;
 			this.label4.Text = "floating dialog opacity (%)";
+			// 
+			// label5
+			// 
+			this.label5.Location = new System.Drawing.Point(16, 88);
+			this.label5.Name = "label5";
+			this.label5.Size = new System.Drawing.Size(136, 16);
+			this.label5.TabIndex = 10;
+			this.label5.Text = "display action on label";
+			// 
+			// display_action_cb_
+			// 
+			this.display_action_cb_.Location = new System.Drawing.Point(152, 88);
+			this.display_action_cb_.Name = "display_action_cb_";
+			this.display_action_cb_.Size = new System.Drawing.Size(16, 16);
+			this.display_action_cb_.TabIndex = 11;
 			// 
 			// TriggerEditProperties
 			// 
 			this.AcceptButton = this.ok_btn_;
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
 			this.CancelButton = this.cancel_btn_;
-			this.ClientSize = new System.Drawing.Size(234, 159);
+			this.ClientSize = new System.Drawing.Size(234, 199);
+			this.Controls.Add(this.display_action_cb_);
+			this.Controls.Add(this.label5);
 			this.Controls.Add(this.dialog_opacity_nud_);
 			this.Controls.Add(this.label4);
 			this.Controls.Add(this.line_count_nud_);
@@ -263,6 +288,8 @@ namespace TriggerEdit
 		private System.Windows.Forms.Label label3;
 		private System.Windows.Forms.NumericUpDown dialog_opacity_nud_;
 		private System.Windows.Forms.Label label4;
+		private System.Windows.Forms.Label label5;
+		private System.Windows.Forms.CheckBox display_action_cb_;
 		private System.Windows.Forms.NumericUpDown spacing_udc_;
 
 		#endregion

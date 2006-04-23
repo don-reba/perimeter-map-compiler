@@ -243,8 +243,8 @@ namespace TriggerEdit
 			this.property_grid_ = new System.Windows.Forms.PropertyGrid();
 			this.condition_lst_ = new System.Windows.Forms.ComboBox();
 			this.panel2 = new System.Windows.Forms.Panel();
-			this.apply_btn_ = new System.Windows.Forms.Button();
 			this.apply_cb_ = new System.Windows.Forms.CheckBox();
+			this.apply_btn_ = new System.Windows.Forms.Button();
 			this.panel1.SuspendLayout();
 			this.panel3.SuspendLayout();
 			this.panel2.SuspendLayout();
@@ -324,22 +324,24 @@ namespace TriggerEdit
 			this.panel2.Size = new System.Drawing.Size(576, 40);
 			this.panel2.TabIndex = 3;
 			// 
-			// apply_btn_
-			// 
-			this.apply_btn_.Location = new System.Drawing.Point(496, 8);
-			this.apply_btn_.Name = "apply_btn_";
-			this.apply_btn_.TabIndex = 0;
-			this.apply_btn_.Text = "Apply";
-			this.apply_btn_.Click += new System.EventHandler(this.apply_btn__Click);
-			// 
 			// apply_cb_
 			// 
+			this.apply_cb_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.apply_cb_.Location = new System.Drawing.Point(400, 8);
 			this.apply_cb_.Name = "apply_cb_";
 			this.apply_cb_.Size = new System.Drawing.Size(88, 24);
 			this.apply_cb_.TabIndex = 1;
 			this.apply_cb_.Text = "always apply";
 			this.apply_cb_.CheckedChanged += new System.EventHandler(this.apply_cb__CheckedChanged);
+			// 
+			// apply_btn_
+			// 
+			this.apply_btn_.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.apply_btn_.Location = new System.Drawing.Point(496, 8);
+			this.apply_btn_.Name = "apply_btn_";
+			this.apply_btn_.TabIndex = 0;
+			this.apply_btn_.Text = "Apply";
+			this.apply_btn_.Click += new System.EventHandler(this.apply_btn__Click);
 			// 
 			// ConditionBuilder
 			// 
