@@ -29,7 +29,7 @@ namespace TriggerEdit
 
 	#endregion
 
-	public class TriggerDisplay : System.Windows.Forms.Panel
+	public class TriggerDisplay : System.Windows.Forms.UserControl
 	{
 		//-------------
 		// nested types
@@ -85,6 +85,8 @@ namespace TriggerEdit
 		{
 			// This call is required by the Windows.Forms Form Designer.
 			InitializeComponent();
+			// disable D3D Device envent handlers, to prevent long disposal
+			Device.IsUsingEventHandlers = false;
 			// initialize variables
 			animation_state_     = AnimationState.Off;
 			camera_              = new Camera();
@@ -101,11 +103,6 @@ namespace TriggerEdit
 			// hook event handlers
 			if (!DesignMode)
 				Application.Idle += new EventHandler(OnApplicationIdle);
-		}
-
-		public new void Dispose()
-		{
-			device_.Dispose();
 		}
 
 		public bool RenderingEnabled
@@ -127,11 +124,15 @@ namespace TriggerEdit
 			// remove selection
 			active_    = -1;
 			selection_.Clear();
+			// remove the disk control
+			if (null != disk_control_)
+				disk_control_.Visible = false;
 			// center camera at the root node
 			camera_.Position = triggers_.positions_[0];
 			// set initial marker positions
 			// initalize miscellaneous
-			InitGraphics();
+			if (null == device_ || device_.Disposed)
+				InitGraphics();
 			animation_state_  = AnimationState.FirstStep;
 			animation_active_ = true;
 		}
@@ -235,6 +236,7 @@ namespace TriggerEdit
 				triggers_.adjacency_list_.SetPersistence((int)link_selection_[i], persist);
 		}
 
+
 		//-----------
 		// properties
 		//-----------
@@ -271,8 +273,18 @@ namespace TriggerEdit
 
 		public bool DisplayAction
 		{
-			get { return trigger_renderer_.DisplayAction; }
-			set { trigger_renderer_.DisplayAction = value; }
+			get
+			{
+				if (null == trigger_renderer_)
+					return false;
+				return trigger_renderer_.DisplayAction;
+			}
+			set
+			{
+				if (null == trigger_renderer_)
+					return;
+				trigger_renderer_.DisplayAction = value;
+			}
 		}
 
 		public ArrayList Selection
@@ -430,14 +442,20 @@ namespace TriggerEdit
 			}
 		}
 
-		protected override void Dispose( bool disposing )
+		protected override void Dispose(bool disposing)
 		{
-			if( disposing )
+			if(disposing)
 			{
-				if( components != null )
+				if(null != components)
 					components.Dispose();
+				OnDisposeDevice();
+				if (null != device_)
+				{
+					device_.Dispose();
+					device_ = null;
+				}
 			}
-			base.Dispose( disposing );
+			base.Dispose(disposing);
 		}
 
 		/// <param name="position">in screen coordinates</param>
@@ -498,7 +516,6 @@ namespace TriggerEdit
 
 		private bool InitGraphics()
 		{
-			Device.IsUsingEventHandlers = false;
 			// get system specs
 			AdapterInformation adapter_info = Manager.Adapters.Default;
 			int result;
@@ -530,47 +547,33 @@ namespace TriggerEdit
 			presentParams.MultiSampleQuality     = 0;
 			presentParams.SwapEffect             = SwapEffect.Discard;
 			presentParams.Windowed               = true;
-			if (null == device_)
+			try
 			{
-				try
-				{
-					device_ = new Device(
-						0,
-						DeviceType.Hardware,
-						this, 
-						create_flags,
-						presentParams);
-					device_.EvictManagedResources();
-				}
-				catch (InvalidCallException)
-				{
-					MessageBox.Show(
-						"Direct 3D device could not be created.\n"
-						+ "The program will now terminate.",
-						"Error",
-						MessageBoxButtons.OK,
-						MessageBoxIcon.Error);
-					Application.Exit();
-				}
-				trigger_renderer_ = new TriggerRenderer(
-					device_,
-					marker_layout_,
-					new SizeF(Font.Height, Font.Height),
-					Font);
+				device_ = new Device(
+					0,
+					DeviceType.Hardware,
+					this, 
+					create_flags,
+					presentParams);
+				Device.IsUsingEventHandlers = true;
+				device_.DeviceLost  += new EventHandler(OnLostDevice);
+				device_.DeviceReset += new EventHandler(OnResetDevice);
+				Device.IsUsingEventHandlers = false;
 			}
-			else
+			catch (InvalidCallException)
 			{
-				OnLostDevice();
-				while (!device_.CheckCooperativeLevel())
-					Thread.Sleep(250);
-				device_.Reset(presentParams);
-				try
-				{
-					OnResetDevice();
-				}
-				catch (DriverInternalErrorException)
-				{}
+				MessageBox.Show(
+					"Direct 3D device could not be created.\n"
+					+ "The program will now terminate.",
+					"Error",
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Error);
+				Application.Exit();
 			}
+			trigger_renderer_ = new TriggerRenderer(
+				device_,
+				marker_layout_,
+				Font);
 			device_.RenderState.CullMode = Cull.None;
 			device_.RenderState.Lighting = false;
 			// initialize FPS data
@@ -581,16 +584,47 @@ namespace TriggerEdit
 			return true;
 		}
 
-		private void OnLostDevice()
+		private void OnDisposeDevice()
 		{
-			trigger_renderer_.OnLostDevice();
-			fps_font_.OnLostDevice();
-			fps_sprite_.OnLostDevice();
+			if (null != fps_font_)
+			{
+				fps_font_.Dispose();
+				fps_font_ = null;
+			}
+			if (null != fps_sprite_)
+			{
+				fps_sprite_.Dispose();
+				fps_sprite_ = null;
+			}
+			if (null != trigger_renderer_)
+			{
+				trigger_renderer_.OnDisposeDevice();
+				trigger_renderer_ = null;
+			}
+			if (null != disk_control_)
+			{
+				disk_control_.OnDisposeDevice();
+				disk_control_ = null;
+			}
 		}
 
-		private void OnResetDevice()
+		private void OnLostDevice(object sender, EventArgs e)
+		{
+			if (null != fps_font_)
+				fps_font_.OnLostDevice();
+			if (null != fps_sprite_)
+				fps_sprite_.OnLostDevice();
+			if (null != trigger_renderer_)
+				trigger_renderer_.OnLostDevice();
+		}
+
+		private void OnResetDevice(object sender, EventArgs e)
 		{
 			trigger_renderer_.OnResetDevice();
+			fps_sprite_.OnResetDevice();
+			fps_font_.OnResetDevice();
+			// lay out the disk control
+			disk_control_.Layout(device_);
 		}
 
 		private void Render()
@@ -641,16 +675,9 @@ namespace TriggerEdit
 				&& selection_rect_.Width  > 0.0f
 				&& selection_rect_.Height > 0.0f)
 				RenderSelectioRect();
-			// end the scene
+			// end and present the scene
 			device_.EndScene();
-			try
-			{
-				device_.Present();
-			}
-			catch (DeviceLostException)
-			{
-				InitGraphics();
-			}
+			device_.Present();
 		}
 
 		private void RenderSelectioRect()
@@ -901,7 +928,7 @@ namespace TriggerEdit
 			for (int i = 0; i != triggers_.count_; ++i)
 				triggers_.velocities_[i] = PointF.Empty;	
 			// calculate forces
-			for (int i = 1; i != triggers_.count_; ++i)
+			for (int i = 0; i != triggers_.count_; ++i)
 			{
 				float v_x = 0;
 				float v_y = 0;
@@ -972,6 +999,8 @@ namespace TriggerEdit
 			float temperature = 4 / temperature_;
 			for (int i = 0; i != triggers_.count_; ++i)
 			{
+				if (drag_state_ == DragState.MoveMarker && i == (int)selection_[0])
+					continue;
 				float v_x = triggers_.velocities_[i].X;
 				float v_y = triggers_.velocities_[i].Y;
 				float v_abs = (float)Math.Sqrt(v_x * v_x + v_y * v_y);
@@ -1751,7 +1780,6 @@ namespace TriggerEdit
 			base.OnSizeChanged(e);
 			if (DesignMode)
 				return;
-			InitGraphics();
 			camera_.ViewportSize = ClientRectangle.Size;
 			Invalidate();
 		}

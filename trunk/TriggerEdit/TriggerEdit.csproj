@@ -26,7 +26,7 @@
                     Name = "Debug"
                     AllowUnsafeBlocks = "false"
                     BaseAddress = "285212672"
-                    CheckForOverflowUnderflow = "false"
+                    CheckForOverflowUnderflow = "true"
                     ConfigurationOverrideFile = ""
                     DefineConstants = "DEBUG;TRACE;D3D_DEBUG_INFO"
                     DocumentationFile = ""
@@ -35,7 +35,7 @@
                     IncrementalBuild = "false"
                     NoStdLib = "false"
                     NoWarn = ""
-                    Optimize = "true"
+                    Optimize = "false"
                     OutputPath = "bin\Debug\"
                     RegisterForComInterop = "false"
                     RemoveIntegerChecks = "false"
@@ -275,7 +275,7 @@
                 />
                 <File
                     RelPath = "TriggerDisplay.cs"
-                    SubType = "Component"
+                    SubType = "UserControl"
                     BuildAction = "Compile"
                 />
                 <File

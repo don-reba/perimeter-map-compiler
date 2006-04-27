@@ -16,15 +16,12 @@ namespace TriggerEdit
 
 		#region
 
-		public TriggerRenderer(Device device, MarkerLayout marker_layout, SizeF link_box_size, System.Drawing.Font font)
+		public TriggerRenderer(Device device, MarkerLayout marker_layout, System.Drawing.Font font)
 		{
 			font_            = new Microsoft.DirectX.Direct3D.Font(device, font);
-			link_box_radius_ = link_box_size;
 			marker_layout_   = marker_layout;
 			sprite_          = new Sprite(device);
 			vertices_        = new CustomVertex.PositionColored[64];
-			link_box_radius_.Width  /= 2.0f;
-			link_box_radius_.Height /= 2.0f;
 		}
 		
 		/// <summary>
@@ -83,84 +80,101 @@ namespace TriggerEdit
 			if (0 == current_vertex_)
 				return;
 			// create the vertex buffer
-			VertexBuffer vb = new VertexBuffer(
-				typeof(CustomVertex.PositionColored),
-				vertices_.Length,
-				device,
-				Usage.WriteOnly,
-				CustomVertex.PositionColored.Format,
-				Pool.Managed);
-			GraphicsStream vb_stream = vb.Lock(0, 0, LockFlags.None);
-			vb_stream.Write(vertices_);
-			vb.Unlock();
-			device.SetStreamSource(0, vb, 0);
-			device.VertexFormat = CustomVertex.PositionColored.Format;
-			// output geometry
-			device.DrawPrimitives(PrimitiveType.TriangleList, 0, current_vertex_ / 3);
-			vb.Dispose();
-			// draw text
-			sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.SortTexture | SpriteFlags.ObjectSpace);
-			device.SamplerState[0].MinFilter = TextureFilter.Point;
-			device.SamplerState[0].MagFilter = TextureFilter.Point;
-			// triggers
-			for (int i = 0; i != triggers.count_; ++i)
+			using (VertexBuffer vb = new VertexBuffer(
+						 typeof(CustomVertex.PositionColored),
+						 vertices_.Length,
+						 device,
+						 Usage.WriteOnly,
+						 CustomVertex.PositionColored.Format,
+						 Pool.Managed))
 			{
-				triggers.GetInterpolatedPosition(i, ref head);
-				Rectangle rect = new Rectangle(
-					(int)(head.X - marker_layout_.Width  / 2),
-					(int)(head.Y - marker_layout_.Height / 2),
-					marker_layout_.Width,
-					marker_layout_.Height);
-				rect.Inflate(
-					-marker_layout_.TextOffset.Width,
-					-marker_layout_.TextOffset.Height);
-				font_.DrawText(
-					sprite_,
-					(triggers.descriptions_[i].action_ != null)
+				GraphicsStream vb_stream = vb.Lock(0, 0, LockFlags.None);
+				vb_stream.Write(vertices_);
+				vb.Unlock();
+				device.SetStreamSource(0, vb, 0);
+				device.VertexFormat = CustomVertex.PositionColored.Format;
+				// output geometry
+				device.DrawPrimitives(PrimitiveType.TriangleList, 0, current_vertex_ / 3);
+				vb.Dispose();
+				// output text
+				sprite_.Begin(SpriteFlags.AlphaBlend | SpriteFlags.SortTexture | SpriteFlags.ObjectSpace);
+				device.SamplerState[0].MinFilter = TextureFilter.Point;
+				device.SamplerState[0].MagFilter = TextureFilter.Point;
+				// triggers
+				for (int i = 0; i != triggers.count_; ++i)
+				{
+					triggers.GetInterpolatedPosition(i, ref head);
+					Rectangle rect = new Rectangle(
+						(int)(head.X - marker_layout_.Width  / 2),
+						(int)(head.Y - marker_layout_.Height / 2),
+						marker_layout_.Width,
+						marker_layout_.Height);
+					rect.Inflate(
+						-marker_layout_.TextOffset.Width,
+						-marker_layout_.TextOffset.Height);
+					font_.DrawText(
+						sprite_,
+						(triggers.descriptions_[i].action_ != null)
 						? string.Format(
-							"{0}:\n{1}",
-							triggers.descriptions_[i].name_,
-							triggers.descriptions_[i].action_.Name)
+						"{0}:\n{1}",
+						triggers.descriptions_[i].name_,
+						triggers.descriptions_[i].action_.Name)
 						: triggers.descriptions_[i].name_,
-					rect,
-					DrawTextFormat.WordBreak,
-					Color.Black);
-			}
-			// trigger ghosts
-			for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
-			{
-				PointF point
-					= (PointF)triggers.g_marker_positions_[i];
-				TriggerContainer.TriggerDescription description
-					= (TriggerContainer.TriggerDescription)triggers.g_marker_descriptions_[i];
-				Rectangle rect = new Rectangle(
-					(int)(point.X - marker_layout_.Width  / 2.0f),
-					(int)(point.Y - marker_layout_.Height / 2.0f),
-					marker_layout_.Width,
-					marker_layout_.Height);
-				rect.Inflate(
-					-marker_layout_.TextOffset.Width,
-					-marker_layout_.TextOffset.Height);
-				font_.DrawText(
-					sprite_,
-					(description.action_ != null)
+						rect,
+						DrawTextFormat.WordBreak,
+						Color.Black);
+				}
+				// trigger ghosts
+				for (int i = 0; i != triggers.g_marker_positions_.Count; ++i)
+				{
+					PointF point
+						= (PointF)triggers.g_marker_positions_[i];
+					TriggerContainer.TriggerDescription description
+						= (TriggerContainer.TriggerDescription)triggers.g_marker_descriptions_[i];
+					Rectangle rect = new Rectangle(
+						(int)(point.X - marker_layout_.Width  / 2.0f),
+						(int)(point.Y - marker_layout_.Height / 2.0f),
+						marker_layout_.Width,
+						marker_layout_.Height);
+					rect.Inflate(
+						-marker_layout_.TextOffset.Width,
+						-marker_layout_.TextOffset.Height);
+					font_.DrawText(
+						sprite_,
+						(description.action_ != null)
 						? string.Format(
-							"{0}:\n{1}",
-							description.name_,
-							description.action_.Name)
+						"{0}:\n{1}",
+						description.name_,
+						description.action_.Name)
 						: description.name_,
-					rect,
-					DrawTextFormat.WordBreak,
-					Color.Black);
+						rect,
+						DrawTextFormat.WordBreak,
+						Color.Black);
+				}
+				sprite_.End();
 			}
-			sprite_.End();
-			vb.Dispose();
+		}
+
+		public void OnDisposeDevice()
+		{
+			if (null != sprite_ && !sprite_.Disposed)
+			{
+				sprite_.Dispose();
+				sprite_ = null;
+			}
+			if (null != font_ && !font_.Disposed)
+			{
+				font_.Dispose();
+				font_ = null;
+			}
 		}
 
 		public void OnLostDevice()
 		{
-			sprite_.OnLostDevice();
-			font_.OnLostDevice();
+			if (null != sprite_)
+				sprite_.OnLostDevice();
+			if (null != font_)
+				font_.OnLostDevice();
 		}
 
 		public void OnResetDevice()
@@ -435,7 +449,6 @@ namespace TriggerEdit
 
 		// DX
 		private Microsoft.DirectX.Direct3D.Font font_;
-		private SizeF                           link_box_radius_;
 		private MarkerLayout                    marker_layout_;
 		private Sprite                          sprite_;
 		private float                           z_;

@@ -371,6 +371,25 @@ namespace TriggerEdit
 			set { is_visible_ = value; }
 		}
 
+		public void OnDisposeDevice()
+		{
+			if (null != colored_vb_)
+			{
+				colored_vb_.Dispose();
+				colored_vb_ = null;
+			}
+			if (null != textured_vb_)
+			{
+				textured_vb_.Dispose();
+				textured_vb_ = null;
+			}
+			if (null != icon_texture_)
+			{
+				icon_texture_.Dispose();
+				icon_texture_ = null;
+			}
+		}
+
 		#endregion
 
 		//---------------

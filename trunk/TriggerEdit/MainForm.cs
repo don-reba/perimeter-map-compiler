@@ -233,60 +233,100 @@ namespace TriggerEdit
 		private void SaveProperties()
 		{
 			string path = Path.ChangeExtension(Application.ExecutablePath, ".ini");
-			XmlWriter w = new XmlTextWriter(path, System.Text.UnicodeEncoding.Unicode);
-			w.WriteStartElement("preferences");
-			w.WriteElementString(
-				"animation_speed",
-				display_pnl_.AnimationSpeed.ToString());
-			w.WriteElementString(
-				"marker_spacing",
-				display_pnl_.MarkerSpacing.ToString());
-			w.WriteElementString(
-				"marker_line_count",
-				display_pnl_.MarkerLineCount.ToString());
-			w.WriteElementString(
-				"dialog_opacity",
-				dialog_opacity_.ToString());
-			w.Close();
+			try
+			{
+				XmlTextWriter w = new XmlTextWriter(path, System.Text.UnicodeEncoding.Unicode);
+				w.Formatting = Formatting.Indented;
+				w.WriteStartElement("preferences");
+				w.WriteElementString(
+					"animation_speed",
+					display_pnl_.AnimationSpeed.ToString());
+				w.WriteElementString(
+					"marker_spacing",
+					display_pnl_.MarkerSpacing.ToString());
+				w.WriteElementString(
+					"marker_line_count",
+					display_pnl_.MarkerLineCount.ToString());
+				w.WriteElementString(
+					"dialog_opacity",
+					dialog_opacity_.ToString());
+				w.WriteElementString(
+					"display_actions",
+					display_pnl_.DisplayAction.ToString());
+				w.Close();
+			}
+			catch(IOException e)
+			{
+				Debug.WriteLine(e.ToString());
+				MessageBox.Show(
+					"Preferences could not be saved.",
+					"Error",
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Error);
+			}
 		}
 
 		protected void LoadProperties()
 		{
+			XmlDocument doc = new XmlDocument();
+			// load the XML file
 			try
 			{
-				// load the XML file
 				string path = Path.ChangeExtension(Application.ExecutablePath, ".ini");
 				XmlTextReader reader = new XmlTextReader(path);
-				XmlDocument doc = new XmlDocument();
-				doc.Load(reader);
+				try
+				{
+					doc.Load(reader);
+				}
+				catch(XmlException e)
+				{
+					reader.Close();
+					Debug.WriteLine(e.ToString());
+					return;
+				}
 				reader.Close();
-				// extract data
-				try
-				{
-					display_pnl_.AnimationSpeed = float.Parse(doc.SelectSingleNode(
-						"preferences/animation_speed").InnerText);
-				}
-				catch {}
-				try
-				{
-					display_pnl_.MarkerSpacing = float.Parse(doc.SelectSingleNode(
-						"preferences/marker_spacing").InnerText);
-				}
-				catch {}
-				try
-				{
-					display_pnl_.MarkerLineCount = int.Parse(doc.SelectSingleNode(
-						"preferences/marker_line_count").InnerText);
-				}
-				catch {}
-				try
-				{
-					dialog_opacity_ = float.Parse(doc.SelectSingleNode(
-						"preferences/dialog_opacity").InnerText);
-				}
-				catch {}
 			}
-			catch {}	
+			catch(IOException e)
+			{
+				Debug.WriteLine(e.ToString());
+				MessageBox.Show(
+					"Preferences could not be loaded.",
+					"Error",
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Error);
+				return;
+			}
+			// extract data
+			try
+			{
+				display_pnl_.AnimationSpeed = float.Parse(doc.SelectSingleNode(
+					"preferences/animation_speed").InnerText);
+			}
+			catch {}
+			try
+			{
+				display_pnl_.MarkerSpacing = float.Parse(doc.SelectSingleNode(
+					"preferences/marker_spacing").InnerText);
+			}
+			catch {}
+			try
+			{
+				display_pnl_.MarkerLineCount = int.Parse(doc.SelectSingleNode(
+					"preferences/marker_line_count").InnerText);
+			}
+			catch {}
+			try
+			{
+				display_pnl_.DisplayAction = bool.Parse(doc.SelectSingleNode(
+					"preferences/display_action").InnerText);
+			}
+			catch {}
+			try
+			{
+				dialog_opacity_ = float.Parse(doc.SelectSingleNode(
+					"preferences/dialog_opacity").InnerText);
+			}
+			catch {}
 		}
 
 		private void SetSelectedGroup(TriggerGroup group)
@@ -334,9 +374,15 @@ namespace TriggerEdit
 			if (1 == e.Count)
 			{
 				if (null != action_builder_ && !action_builder_.IsDisposed)
+				{
 					action_builder_.Action = triggers_.descriptions_[e[0]].action_;
+					action_builder_.Enabled = true;
+				}
 				if (null != condition_builder_ && !condition_builder_.IsDisposed)
+				{
 					condition_builder_.Condition = triggers_.descriptions_[e[0]].condition_;
+					condition_builder_.Enabled = true;
+				}
 			}
 			else
 			{
@@ -599,21 +645,30 @@ namespace TriggerEdit
 			display_pnl_.Zoom = 1.0f;
 			zoom_udc_.Value   = new decimal(1.0f);
 			display_pnl_.Zoom = 1.0f;
+			display_pnl_.Focus();
 		}
 
 		private void zoom_fit_btn__Click(object sender, System.EventArgs e)
 		{
 			display_pnl_.ZoomToFit();
+			display_pnl_.Focus();
 		}
 
 		private void zoom_selection_btn__Click(object sender, System.EventArgs e)
 		{
 			display_pnl_.ZoomToSelection();
+			display_pnl_.Focus();
 		}
 
 		private void MainForm_Closing(object sender, System.ComponentModel.CancelEventArgs e)
 		{
 			SaveProperties();
+		}
+
+		private void MainForm_Closed(object sender, System.EventArgs e)
+		{
+			display_pnl_.Dispose();
+			System.GC.Collect();
 		}
 
 		private void group_btn__Click(object sender, System.EventArgs e)
@@ -726,6 +781,7 @@ namespace TriggerEdit
 			this.property_tree_ = new System.Windows.Forms.TreeView();
 			this.property_actions_panel_ = new System.Windows.Forms.Panel();
 			this.link_box_ = new System.Windows.Forms.GroupBox();
+			this.link_group_cb_ = new System.Windows.Forms.ComboBox();
 			this.keep_link_alive_btn_ = new System.Windows.Forms.CheckBox();
 			this.link_help_btn_ = new System.Windows.Forms.Button();
 			this.group_box_ = new System.Windows.Forms.GroupBox();
@@ -753,7 +809,6 @@ namespace TriggerEdit
 			this.save_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.prefs_btn_ = new System.Windows.Forms.ToolBarButton();
 			this.toolbar_img_lst_ = new System.Windows.Forms.ImageList(this.components);
-			this.link_group_cb_ = new System.Windows.Forms.ComboBox();
 			this.property_panel_.SuspendLayout();
 			this.property_actions_panel_.SuspendLayout();
 			this.link_box_.SuspendLayout();
@@ -767,7 +822,6 @@ namespace TriggerEdit
 			// 
 			this.display_pnl_.AnimationSpeed = 96F;
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
-			this.display_pnl_.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.display_pnl_.Location = new System.Drawing.Point(211, 42);
 			this.display_pnl_.MarkerLineCount = 2;
@@ -826,6 +880,14 @@ namespace TriggerEdit
 			this.link_box_.TabStop = false;
 			this.link_box_.Text = "Link";
 			// 
+			// link_group_cb_
+			// 
+			this.link_group_cb_.Location = new System.Drawing.Point(8, 24);
+			this.link_group_cb_.Name = "link_group_cb_";
+			this.link_group_cb_.Size = new System.Drawing.Size(136, 21);
+			this.link_group_cb_.TabIndex = 4;
+			this.link_group_cb_.SelectedIndexChanged += new System.EventHandler(this.link_group_cb__SelectedIndexChanged);
+			// 
 			// keep_link_alive_btn_
 			// 
 			this.keep_link_alive_btn_.Location = new System.Drawing.Point(8, 56);
@@ -872,6 +934,7 @@ namespace TriggerEdit
 			// 
 			// comment_btn_
 			// 
+			this.comment_btn_.Enabled = false;
 			this.comment_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.comment_btn_.Location = new System.Drawing.Point(144, 32);
 			this.comment_btn_.Name = "comment_btn_";
@@ -882,6 +945,7 @@ namespace TriggerEdit
 			// 
 			// group_btn_
 			// 
+			this.group_btn_.Enabled = false;
 			this.group_btn_.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
 			this.group_btn_.Location = new System.Drawing.Point(8, 64);
 			this.group_btn_.Name = "group_btn_";
@@ -901,6 +965,7 @@ namespace TriggerEdit
 			// comment_edt_
 			// 
 			this.comment_edt_.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.comment_edt_.Enabled = false;
 			this.comment_edt_.Location = new System.Drawing.Point(8, 32);
 			this.comment_edt_.Name = "comment_edt_";
 			this.comment_edt_.Size = new System.Drawing.Size(136, 20);
@@ -1109,14 +1174,6 @@ namespace TriggerEdit
 			this.toolbar_img_lst_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_img_lst_.ImageStream")));
 			this.toolbar_img_lst_.TransparentColor = System.Drawing.Color.Magenta;
 			// 
-			// link_group_cb_
-			// 
-			this.link_group_cb_.Location = new System.Drawing.Point(8, 24);
-			this.link_group_cb_.Name = "link_group_cb_";
-			this.link_group_cb_.Size = new System.Drawing.Size(136, 21);
-			this.link_group_cb_.TabIndex = 4;
-			this.link_group_cb_.SelectedIndexChanged += new System.EventHandler(this.link_group_cb__SelectedIndexChanged);
-			// 
 			// MainForm
 			// 
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
@@ -1133,6 +1190,7 @@ namespace TriggerEdit
 			this.Resize += new System.EventHandler(this.MainForm_Resize);
 			this.Closing += new System.ComponentModel.CancelEventHandler(this.MainForm_Closing);
 			this.Load += new System.EventHandler(this.MainForm_Load);
+			this.Closed += new System.EventHandler(this.MainForm_Closed);
 			this.property_panel_.ResumeLayout(false);
 			this.property_actions_panel_.ResumeLayout(false);
 			this.link_box_.ResumeLayout(false);
