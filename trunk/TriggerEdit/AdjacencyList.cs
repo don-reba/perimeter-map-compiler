@@ -90,9 +90,11 @@ namespace TriggerEdit
 
 		public Link Remove(int tail, int head)
 		{
+			// find the link
 			int index = IndexOf(tail, head);
 			if (index < 0)
 				throw new Exception("Link was not found.");
+			// remove the link
 			return RemoveAt(index);
 		}
 

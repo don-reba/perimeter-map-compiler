@@ -15,16 +15,48 @@ namespace TriggerEdit
 
 		public enum Building
 		{
+			UNIT_ATTRIBUTE_ANY,
+			UNIT_ATTRIBUTE_BOMB_STATION1,
+			UNIT_ATTRIBUTE_BOMB_STATION2,
+			UNIT_ATTRIBUTE_BOMB_STATION3,
 			UNIT_ATTRIBUTE_COLLECTOR,
 			UNIT_ATTRIBUTE_COMMANDER,
 			UNIT_ATTRIBUTE_CORE,
+			UNIT_ATTRIBUTE_CORRIDOR_ALPHA,
+			UNIT_ATTRIBUTE_CORRIDOR_OMEGA,
 			UNIT_ATTRIBUTE_ELECTRO_CANNON,
+			UNIT_ATTRIBUTE_ELECTRO_STATION1,
+			UNIT_ATTRIBUTE_ELECTRO_STATION2,
+			UNIT_ATTRIBUTE_ELECTRO_STATION3,
+			UNIT_ATTRIBUTE_EMPIRE_STATION1,
+			UNIT_ATTRIBUTE_EMPIRE_STATION2,
+			UNIT_ATTRIBUTE_EMPIRE_STATION3,
+			UNIT_ATTRIBUTE_EXODUS_STATION1,
+			UNIT_ATTRIBUTE_EXODUS_STATION2,
+			UNIT_ATTRIBUTE_EXODUS_STATION3,
+			UNIT_ATTRIBUTE_FLY_STATION1,
+			UNIT_ATTRIBUTE_FLY_STATION2,
+			UNIT_ATTRIBUTE_FRAME,
+			UNIT_ATTRIBUTE_GUN_BALLISTIC,
+			UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR,
 			UNIT_ATTRIBUTE_GUN_HOWITZER,
+			UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR,
 			UNIT_ATTRIBUTE_GUN_SUBCHASER,
+			UNIT_ATTRIBUTE_HARKBACK_STATION1,
+			UNIT_ATTRIBUTE_HARKBACK_STATION2,
+			UNIT_ATTRIBUTE_HARKBACK_STATION3,
 			UNIT_ATTRIBUTE_LASER_CANNON,
+			UNIT_ATTRIBUTE_LASER_STATION1,
+			UNIT_ATTRIBUTE_LASER_STATION2,
+			UNIT_ATTRIBUTE_LASER_STATION3,
 			UNIT_ATTRIBUTE_OFFICER_PLANT,
 			UNIT_ATTRIBUTE_ROCKET_LAUNCHER,
+			UNIT_ATTRIBUTE_ROCKET_STATION1,
+			UNIT_ATTRIBUTE_ROCKET_STATION2,
+			UNIT_ATTRIBUTE_ROCKET_STATION3,
 			UNIT_ATTRIBUTE_SOLDIER_PLANT,
+			UNIT_ATTRIBUTE_SUBTERRA_STATION1,
+			UNIT_ATTRIBUTE_SUBTERRA_STATION2,
 			UNIT_ATTRIBUTE_TECHNIC_PLANT
 		}
 		public enum ControlID
@@ -837,10 +869,14 @@ namespace TriggerEdit
 		}
 		public enum Weapon
 		{
+			UNIT_ATTRIBUTE_ELECTRO_CANNON,
 			UNIT_ATTRIBUTE_GUN_BALLISTIC,
 			UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR,
+			UNIT_ATTRIBUTE_GUN_HOWITZER,
 			UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR,
-			UNIT_ATTRIBUTE_SCUM_SPOT
+			UNIT_ATTRIBUTE_GUN_SUBCHASER,
+			UNIT_ATTRIBUTE_LASER_CANNON,
+			UNIT_ATTRIBUTE_ROCKET_LAUNCHER
 		}
 
 		#endregion
@@ -899,7 +935,7 @@ namespace TriggerEdit
 				if (null == code_node)
 					return  null;
 				// get the condition name
-				string code   = code_node.InnerText;
+				string code   = code_node.InnerText.Trim();
 				string prefix = "struct ";
 				if (code.StartsWith(prefix))
 					code = code.Substring(prefix.Length);
@@ -920,7 +956,7 @@ namespace TriggerEdit
 						if (property.PropertyType.IsEnum)
 							property.SetValue(
 								condition,
-								Enum.Parse(property.PropertyType, property_node.InnerText),
+								Enum.Parse(property.PropertyType, property_node.InnerText.Trim()),
 								null);
 						else if (property.PropertyType == typeof(BitEnum))
 						{
@@ -933,19 +969,19 @@ namespace TriggerEdit
 								foreach (XmlNode value_node in value_nodes)
 									bit_enum[Enum.Parse(
 										bit_enum.GetEnumType(),
-										value_node.InnerText)] = true;
+										value_node.InnerText.Trim())] = true;
 							}
 							else
 							{
 								bit_enum[Enum.Parse(
 									bit_enum.GetEnumType(),
-									property_node.InnerText)] = true;
+									property_node.InnerText.Trim())] = true;
 							}
 						}
 						else
 							property.SetValue(
 								condition,
-								Convert.ChangeType(property_node.InnerText, property.PropertyType),
+								Convert.ChangeType(property_node.InnerText.Trim(), property.PropertyType),
 								null);
 					}
 					// set preconditions
@@ -968,7 +1004,7 @@ namespace TriggerEdit
 								XmlNode type_node = precondition_node.SelectSingleNode("value[@name=\"type\"]");
 								Precondition.Type type = Precondition.Type.NORMAL;
 								if (null != type_node)
-									type = (Precondition.Type)Enum.Parse(typeof(Precondition.Type), type_node.InnerText);
+									type = (Precondition.Type)Enum.Parse(typeof(Precondition.Type), type_node.InnerText.Trim());
 								// add the precondition
 								condition.preconditions_.Add(new Precondition(type, condition2));
 							}
@@ -1593,7 +1629,7 @@ namespace TriggerEdit
 				if (null == code_node)
 					return  null;
 				// get the action name
-				string code   = code_node.InnerText;
+				string code   = code_node.InnerText.Trim();
 				string prefix = "struct ";
 				if (code.StartsWith(prefix))
 					code = code.Substring(prefix.Length);
@@ -1603,31 +1639,33 @@ namespace TriggerEdit
 					// initialize main object
 					Type action_type = Type.GetType("TriggerEdit.Definitions." + code);
 					action = (Action)Activator.CreateInstance(action_type);
+					Debug.Assert(action.GetType() != typeof(ActionSetCameraAtObject));
 					// set properties
 					PropertyInfo[] properties = action_type.GetProperties();
 					foreach (PropertyInfo property in properties)
+					{
+						XmlNode property_node = node.SelectSingleNode(
+							"*[@name=\"" + property.Name + "\"]");
+						if (null == property_node)
+								continue;
 						if (
 							property.Name == "attackTimer"   ||
 							property.Name == "delayTimer"    ||
 							property.Name == "durationTimer" ||
 							property.Name == "timer")
 						{
-							XmlNode property_node = node.SelectSingleNode(
+							property_node = node.SelectSingleNode(
 								"*[@name=\"" + property.Name + "\"]/int[@name=\"time\"]");
 							if (null == property_node)
 								continue;
 							property.SetValue(
 								action,
-								int.Parse(property_node.InnerText),
+								int.Parse(property_node.InnerText.Trim()),
 								null);
 						} 
 						else if (property.PropertyType == typeof(TriggerEdit.Definitions.ControlCollection))
 						{
 							// get the control nodes
-							XmlNode property_node = node.SelectSingleNode(
-								"*[@name=\"" + property.Name + "\"]");
-							if (null == property_node)
-								continue;
 							XmlNodeList control_nodes = property_node.SelectNodes("set");
 							if (null == control_nodes || 0 == control_nodes.Count)
 								continue;
@@ -1646,39 +1684,48 @@ namespace TriggerEdit
 										continue;
 									if (control_property.PropertyType.IsEnum)
 										control_property.SetValue(
-											action,
+											control,
 											Enum.Parse(
-											control_property.PropertyType,
-											control_property_node.InnerText),
+												control_property.PropertyType,
+												control_property_node.InnerText.Trim()),
 											null);
 									else
 										control_property.SetValue(
 											control,
 											Convert.ChangeType(
-											control_property_node.InnerText,
-											control_property.PropertyType),
+												control_property_node.InnerText.Trim(),
+												control_property.PropertyType),
 											null);
 								}
 								controls.Add(control);
 							}
+							property.SetValue(
+								action,
+								controls,
+								null);
 						}
+						else if (property.PropertyType == typeof(BitEnum))
+							property.SetValue(
+								action,
+								BitEnum.Parse(
+									((BitEnum)property.GetValue(action, null)).GetEnumType(),
+									property_node.InnerText.Trim()),
+								null);
+						else if (property.PropertyType.IsEnum)
+							property.SetValue(
+								action,
+								Enum.Parse(
+									property.PropertyType,
+									property_node.InnerText.Trim()),
+								null);
 						else
-						{
-							XmlNode property_node = node.SelectSingleNode(
-								"*[@name=\"" + property.Name + "\"]");
-							if (null == property_node)
-								continue;
-							if (property.PropertyType.IsEnum)
-								property.SetValue(
-									action,
-									Enum.Parse(property.PropertyType, property_node.InnerText),
-									null);
-							else
-								property.SetValue(
-									action,
-									Convert.ChangeType(property_node.InnerText, property.PropertyType),
-									null);
-						}
+							property.SetValue(
+								action,
+								Convert.ChangeType(
+									property_node.InnerText.Trim(),
+									property.PropertyType),
+								null);
+					}
 				}
 				catch (Exception e)
 				{

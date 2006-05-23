@@ -118,6 +118,7 @@ namespace TriggerEdit
 				// load the XML file
 				XmlTextReader reader = new XmlTextReader(source);
 				XmlDocument doc = new XmlDocument();
+				doc.PreserveWhitespace = false;
 				doc.Load(reader);
 				reader.Close();
 				// extract data
@@ -167,6 +168,7 @@ namespace TriggerEdit
 			// load the XML file
 			XmlTextReader reader = new XmlTextReader(path);
 			XmlDocument doc = new XmlDocument();
+			doc.PreserveWhitespace = false;
 			doc.Load(reader);
 			reader.Close();
 			// extract data
@@ -269,6 +271,7 @@ namespace TriggerEdit
 		protected void LoadProperties()
 		{
 			XmlDocument doc = new XmlDocument();
+			doc.PreserveWhitespace = false;
 			// load the XML file
 			try
 			{
@@ -822,6 +825,7 @@ namespace TriggerEdit
 			// 
 			this.display_pnl_.AnimationSpeed = 96F;
 			this.display_pnl_.BackColor = System.Drawing.SystemColors.WindowFrame;
+			this.display_pnl_.DisplayAction = false;
 			this.display_pnl_.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.display_pnl_.Location = new System.Drawing.Point(211, 42);
 			this.display_pnl_.MarkerLineCount = 2;
@@ -1132,6 +1136,7 @@ namespace TriggerEdit
 																												this.load_btn_,
 																												this.save_btn_,
 																												this.prefs_btn_});
+			this.toolbar_.ButtonSize = new System.Drawing.Size(24, 24);
 			this.toolbar_.Divider = false;
 			this.toolbar_.DropDownArrows = true;
 			this.toolbar_.ImageList = this.toolbar_img_lst_;
@@ -1164,7 +1169,7 @@ namespace TriggerEdit
 			// prefs_btn_
 			// 
 			this.prefs_btn_.ImageIndex = 2;
-			this.prefs_btn_.Text = "&Preferences";
+			this.prefs_btn_.Text = "&Preferenes";
 			this.prefs_btn_.ToolTipText = "Ctrl+P";
 			// 
 			// toolbar_img_lst_

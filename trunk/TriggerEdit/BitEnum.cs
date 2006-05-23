@@ -82,6 +82,20 @@ namespace TriggerEdit
 			bits_      = new BitArray(field_count);
 		}
 
+		public static BitEnum Parse(Type enum_type, string data)
+		{
+			BitEnum bit_enum = new BitEnum(enum_type);
+			FieldInfo[] fields = enum_type.GetFields();
+			string[] tokens = data.Split(new char[] {'|'});
+			foreach(string token in tokens)
+				bit_enum[
+					Array.IndexOf(
+						fields,
+						enum_type.GetField(token.Trim()))
+					] = true;
+			return bit_enum;
+		}
+
 		public void SetAll()
 		{
 			bits_.SetAll(true);
@@ -111,10 +125,11 @@ namespace TriggerEdit
 
 		public ArrayList GetList()
 		{
+			FieldInfo[] fields = enum_type_.GetFields();
 			ArrayList list = new ArrayList();
 			for (int i = 0; i != bits_.Length; ++i)
 				if (bits_[i])
-					list.Add(Enum.Parse(enum_type_, Enum.GetName(enum_type_, i)));
+					list.Add(fields[i].Name);
 			return list;
 		}
 

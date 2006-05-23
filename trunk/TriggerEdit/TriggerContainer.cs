@@ -185,12 +185,12 @@ namespace TriggerEdit
 			{
 				// read name
 				name_ = node.SelectSingleNode(
-					"string[@name=\"name\"]").InnerText;
+					"string[@name=\"name\"]").InnerText.Trim();
 				// read state
 				XmlNode state_node = node.SelectSingleNode(
 					"value[@name=\"state_\"]");
 				state = State.Sleeping;
-				switch (state_node.InnerText)
+				switch (state_node.InnerText.Trim())
 				{
 					case "CHECKING": state = State.Checking; break;
 					case "SLEEPING": state = State.Sleeping; break;
@@ -209,9 +209,9 @@ namespace TriggerEdit
 				try
 				{
 					position.X = float.Parse(node.SelectSingleNode(
-						"set[@name=\"position\"]/float[@name=\"x\"]").InnerText);
+						"set[@name=\"position\"]/float[@name=\"x\"]").InnerText.Trim());
 					position.Y = float.Parse(node.SelectSingleNode(
-						"set[@name=\"position\"]/float[@name=\"y\"]").InnerText);
+						"set[@name=\"position\"]/float[@name=\"y\"]").InnerText.Trim());
 				}
 				catch {}
 			}
@@ -415,6 +415,15 @@ namespace TriggerEdit
 					adjacency_list_.Add(new Link(out_indices[out_i], in_indices[in_i]));
 			// remove the current trigger from the links list
 			adjacency_list_.RemoveVertex(index);
+			for (int i = 0; i != adjacency_list_.Count; ++i)
+			{
+				Link link = adjacency_list_[i];
+				if (link.head_ > index)
+					--link.head_;
+				if (link.tail_ > index)
+					--link.tail_;
+				adjacency_list_[i] = link;
+			}
 			// adjust the rest of the data
 			adjacency_matrix_.Collapse(index);
 			DeleteDescriptionEntry    (index);
@@ -672,9 +681,9 @@ namespace TriggerEdit
 					+ "/set[@name=\"[root]\"]"
 					+ "/set[@name=\"position\"]");
 				positions_[0].X = float.Parse(root_node.SelectSingleNode(
-					"float[@name=\"x\"]").InnerText);
+					"float[@name=\"x\"]").InnerText.Trim());
 				positions_[0].Y = float.Parse(root_node.SelectSingleNode(
-					"float[@name=\"y\"]").InnerText);
+					"float[@name=\"y\"]").InnerText.Trim());
 			}
 			catch {}
 			// serialize triggers and read in names
@@ -698,18 +707,24 @@ namespace TriggerEdit
 					try
 					{
 						// get name
-						string ref_name  = link_node.SelectSingleNode("string[@name=\"triggerName\"]").InnerText;
+						string ref_name = link_node.SelectSingleNode(
+							"string[@name=\"triggerName\"]"
+							).InnerText.Trim();
 						if (!names.Contains(ref_name))
 							continue;
 						// get target
 						int target = (int)names[ref_name];
 						// get group
-						string ref_color = link_node.SelectSingleNode("value[@name=\"color\"]").InnerText;
+						string ref_color = link_node.SelectSingleNode(
+							"value[@name=\"color\"]"
+							).InnerText.Trim();
 						int    group     = Array.IndexOf(Link.color_strings_, ref_color);
 						if (group < 0)
 							throw new Exception("unknown link colour");
 						// create link
-						string ref_type = link_node.SelectSingleNode("value[@name=\"type\"]").InnerText;
+						string ref_type = link_node.SelectSingleNode(
+							"value[@name=\"type\"]"
+							).InnerText.Trim();
 						bool   is_thin  = ref_type == "THIN";
 						if (i != target) // consistency check
 							AddLink(i, target, group, is_thin);
