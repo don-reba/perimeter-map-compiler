@@ -1,16 +1,33 @@
 using System;
-using System.Drawing;
 using System.Collections;
 using System.ComponentModel;
-using System.Windows.Forms;
 using System.Data;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
 using System.Xml;
 
 namespace MissionEdit
 {
 	public class MainForm : System.Windows.Forms.Form
 	{
+
+		//----------
+		// constants
+		//----------
+
+		const string default_trigger_name = "default";
+		private System.Windows.Forms.ToolBar toolbar_;
+		private System.Windows.Forms.ImageList toolbar_images_;
+		private System.Windows.Forms.ToolBarButton open_btn_;
+		private System.Windows.Forms.ToolBarButton save_btn_;
+		private System.Windows.Forms.ToolBarButton about_btn_;
+		private System.ComponentModel.IContainer components;
+		private System.Windows.Forms.Button control_new_btn_;
+		private System.Windows.Forms.Button remove_all_btn_;
+		const string control_id_prefix    = "SQSH_";
+
 		//-------------
 		// nested types
 		//-------------
@@ -41,6 +58,75 @@ namespace MissionEdit
 			public string      name_;
 		}
 
+		private class ControlData
+		{
+			public ControlData()
+			{
+				id_         = "BACKGRND_ID";
+				enabled_    = true;
+				visible_    = true;
+				flashing_   = false;
+				tab_number_ = 0;
+			}
+
+			public ControlData(
+				string id,
+				bool   enabled,
+				bool   visible,
+				bool   flashing,
+				int    tab_number)
+			{
+				id_         = id;
+				enabled_    = enabled;
+				visible_    = visible;
+				flashing_   = flashing;
+				tab_number_ = tab_number;
+			}
+
+			[TypeConverter(typeof(ControlIdConverter))]
+			public string ID
+			{
+				get { return id_; }
+				set { id_ = value; }
+			}
+
+			public bool enabled
+			{
+				get { return enabled_; }
+				set { enabled_ = value; }
+			}
+
+			public bool visible
+			{
+				get { return visible_; }
+				set { visible_ = value; }
+			}
+
+			public bool flashing
+			{
+				get { return flashing_; }
+				set { flashing_ = value; }
+			}
+
+			public int tab_number
+			{
+				get { return tab_number_; }
+				set { tab_number_ = value; }
+			}
+
+			public override string ToString()
+			{
+				return id_;
+			}
+
+
+			private string id_;
+			private bool   enabled_;
+			private bool   visible_;
+			private bool   flashing_;
+			private int    tab_number_;
+		}
+
 		#endregion
 
 		//------------
@@ -50,7 +136,10 @@ namespace MissionEdit
 		[STAThread]
 		static void Main(string[] args) 
 		{
-			Application.Run(new MainForm(args[0]));
+			Application.Run(new MainForm(
+				(args.Length > 0)
+				? args[0]
+				: ""));
 		}
 
 		//----------
@@ -63,10 +152,12 @@ namespace MissionEdit
 		{
 			current_player_ = -1;
 			InitializeComponent();
-			InitializeControlList();
+//			InitializeControlList();
 			InitializePlayers();
-			LoadFile(file_name);
 			player_cb_.SelectedIndex = 0;
+
+			if (File.Exists(file_name))
+				LoadFile(file_name);
 		}
 
 		#endregion
@@ -95,58 +186,6 @@ namespace MissionEdit
 			CheckButton(sender);
 		}
 
-		private void add_controls_btn__Click(object sender, System.EventArgs e)
-		{
-			// stop redrawing the lists
-			enabled_controls_lst_.SuspendLayout();
-			disabled_controls_lst_.SuspendLayout();
-			// get the items
-			ListBox.ObjectCollection enabled        = enabled_controls_lst_.Items;
-			ListBox.ObjectCollection disabled       = disabled_controls_lst_.Items;
-			ListBox.SelectedIndexCollection indices = enabled_controls_lst_.SelectedIndices;
-			// get the selection
-			int[] selection = new int[indices.Count];
-			for (int i = 0; i != selection.Length; ++i)
-				selection[i] = (int)indices[i];
-			// move items
-			int removed_count = 0;
-			foreach(int i in selection)
-			{
-				disabled.Add(enabled[i - removed_count]);
-				enabled.RemoveAt(i - removed_count);
-				++removed_count;
-			}
-			// redraw the lists
-			disabled_controls_lst_.ResumeLayout();
-			enabled_controls_lst_.ResumeLayout();
-		}
-
-		private void remove_controls_btn__Click(object sender, System.EventArgs e)
-		{
-			// stop redrawing the lists
-			enabled_controls_lst_.SuspendLayout();
-			disabled_controls_lst_.SuspendLayout();
-			// get the items
-			ListBox.ObjectCollection enabled  = enabled_controls_lst_.Items;
-			ListBox.ObjectCollection disabled = disabled_controls_lst_.Items;
-			ListBox.SelectedIndexCollection indices = disabled_controls_lst_.SelectedIndices;
-			// get the selection
-			int[] selection = new int[indices.Count];
-			for (int i = 0; i != selection.Length; ++i)
-				selection[i] = (int)indices[i];
-			// move items
-			int removed_count = 0;
-			foreach(int i in selection)
-			{
-				enabled.Add(disabled[i - removed_count]);
-				disabled.RemoveAt(i - removed_count);
-				++removed_count;
-			}
-			// redraw the lists
-			disabled_controls_lst_.ResumeLayout();
-			enabled_controls_lst_.ResumeLayout();
-		}
-
 		private void player_cb__SelectedIndexChanged(object sender, System.EventArgs e)
 		{
 			if (null != player_data_)
@@ -156,6 +195,69 @@ namespace MissionEdit
 		private void player_triggers_chk__CheckedChanged(object sender, System.EventArgs e)
 		{
 			edit_trigger_btn_.Enabled = player_triggers_chk_.Checked;
+		}
+
+		private void controls_lst__SelectedIndexChanged(object sender, System.EventArgs e)
+		{
+			ControlData data = (ControlData)controls_lst_.SelectedItem;
+			if (null != data)
+				control_properties_.SelectedObject = data;
+			control_remove_btn_.Enabled = (null != data);
+		}
+
+		private void control_new_btn__Click(object sender, System.EventArgs e)
+		{
+			ControlData new_data = new ControlData();
+			int index = controls_lst_.Items.Add(new_data);
+			controls_lst_.SelectedIndex = index;
+			control_properties_.SelectedObject = new_data;
+		}
+
+		private void control_properties__PropertyValueChanged(
+			object s,
+			PropertyValueChangedEventArgs e)
+		{
+			if (e.ChangedItem.Label == "ID")
+			{
+				object data  = control_properties_.SelectedObject;
+				controls_lst_.Items.Remove(data);
+				int index = controls_lst_.Items.Add(data);
+				controls_lst_.SelectedIndex = index;
+			}
+
+		}
+
+		private void control_remove_btn__Click(object sender, System.EventArgs e)
+		{
+			object data = control_properties_.SelectedObject;
+			control_properties_.SelectedObject = null;
+			controls_lst_.Items.Remove(data);
+		}
+
+		private void remove_all_btn__Click(object sender, System.EventArgs e)
+		{
+			control_properties_.SelectedObject = null;
+			controls_lst_.Items.Clear();
+		}
+
+		private void toolbar__ButtonClick(
+			object sender,
+			System.Windows.Forms.ToolBarButtonClickEventArgs e)
+		{
+			if (e.Button == open_btn_)
+			{
+				OpenFileDialog dlg = new OpenFileDialog();
+				dlg.Multiselect = false;
+				dlg.ReadOnlyChecked = false;
+				dlg.Filter = "Mission File (*.xml)|*.xml";
+				DialogResult result = dlg.ShowDialog(this);
+				if (DialogResult.OK == result)
+					LoadFile(dlg.FileName);
+			}
+			else if (e.Button == save_btn_)
+			{
+				SaveFile(file_name_);
+			}
 		}
 
 		#endregion
@@ -280,9 +382,9 @@ namespace MissionEdit
 				+ "/array[@name=\"playersData\"]"
 				+ "/set"
 				);
-			if (player_nodes.Count > player_data_.Length)
-				player_data_ = new PlayerData[player_nodes.Count];
-			for (int i = 0; i != player_nodes.Count; ++i)
+			Trace.Assert(4 == player_nodes.Count, "Expected to find 4 player nodes.");
+			Debug.Assert(4 == player_data_.Length);
+			for (int i = 0; i != 4; ++i)
 			{
 				// set belligerent
 				query = player_nodes[i].SelectSingleNode("value[@name=\"belligerent\"]");
@@ -334,521 +436,309 @@ namespace MissionEdit
 				query = player_nodes[i].SelectSingleNode(
 					"array[@name=\"TriggerChainNames\"]"
 					);
-				player_data_[i].triggers_ = (null != query);
+				player_data_[i].triggers_ = (
+					null != query
+					&& query.InnerText != default_trigger_name);
+			}
+			player_nodes = null;
+			// set control settings
+			XmlNodeList control_nodes = doc.SelectNodes(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/array[@name=\"controls\"]"
+				+ "/set");
+			try
+			{
+				controls_lst_.SuspendLayout();
+				controls_lst_.Items.Clear();
+				controls_lst_.SelectedItem = null;
+				control_properties_.SelectedObject = null;
+				foreach (XmlNode node in control_nodes)
+				{
+					ControlData data = new ControlData(
+						node.SelectSingleNode(
+							"*[@name=\"controlID\"]").InnerText.Trim().Substring(control_id_prefix.Length),
+						node.SelectSingleNode(
+							"*[@name=\"enabled\"]").InnerText.Trim() == "true",
+						node.SelectSingleNode(
+							"*[@name=\"visible\"]").InnerText.Trim() == "true",
+						node.SelectSingleNode(
+							"*[@name=\"flashing\"]").InnerText.Trim() == "true",
+						int.Parse(node.SelectSingleNode(
+							"*[@name=\"tabNumber\"]").InnerText.Trim())
+						);
+					controls_lst_.Items.Add(data);
+				}
+			}
+			finally
+			{
+				controls_lst_.ResumeLayout();
 			}
 		}
 
-		private void InitializeControlList() 
+		private void SaveFile(string file_name)
 		{
-			string[] items = 
+			file_name_ = file_name;
+			XmlNode query;
+			// load the document itself
+			XmlDocument doc = new XmlDocument();
+			doc.PreserveWhitespace = false;
+			doc.Load(file_name);
+			// set world name
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"MissionDescriptionPrm\"]"
+				+ "/string[@name=\"worldName\"]"
+				);
+			query.InnerText = world_name_edt_.Text;
+			// set world difficulty
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"MissionDescriptionPrm\"]"
+				+ "/value[@name=\"difficulty\"]"
+				);
+			switch (world_dificulty_cb_.SelectedIndex)
+			{
+				case 0: query.InnerText = "DIFFICULTY_EASY";   break;
+				case 1: query.InnerText = "DIFFICULTY_NORMAL"; break;
+				case 2: query.InnerText = "DIFFICULTY_HARD";   break;
+			}
+			// set world description
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"MissionDescriptionPrm\"]"
+				+ "/string[@name=\"missionDescription\"]"
+				);
+			query.InnerText = world_description_edt_.Text;
+			// set soundtracks
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/array[@name=\"soundTracks\"]"
+				);
+			query.RemoveAll();
+			((XmlElement)query).SetAttribute("name", "soundTracks");
+			if (construction_soundtrack_edt_.Text.Length > 0)
+				query.AppendChild(CreateSoundtrackNode(
+					"construction",
+					construction_soundtrack_edt_.Text,
+					doc));
+			if (battle_soundtrack_edt_.Text.Length > 0)
+				query.AppendChild(CreateSoundtrackNode(
+					"battle",
+					battle_soundtrack_edt_.Text,
+					doc));
+			if (regular_soundtrack_edt_.Text.Length > 0)
+				query.AppendChild(CreateSoundtrackNode(
+					"regular",
+					regular_soundtrack_edt_.Text,
+					doc));
+			// set alpha activation distance
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/*[@name=\"alphaActivationDistance\"]"
+				);
+			query.InnerText = alpha_distance_ud_.Value.ToString();
+			// set omega activation distance
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/*[@name=\"omegaActivationDistance\"]"
+				);
+			query.InnerText = omega_distance_ud_.Value.ToString();
+			// set spiral energy
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/int[@name=\"spiralChargingTime\"]"
+				);
+			query.InnerText = spiral_energy_ud_.Value.ToString();
+			// set spiral time
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/int[@name=\"spiralChargingTime\"]"
+				);
+			query.InnerText = spiral_time_ud_.Value.ToString();
+			// set spiral priority
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/int[@name=\"spiralChargingPriority\"]"
+				);
+			query.InnerText = spiral_priority_ud_.Value.ToString();
+			// set player data
+			XmlNodeList player_nodes = doc.SelectNodes(
+				"/script"
+				+ "/set[@name=\"MissionDescriptionPrm\"]"
+				+ "/array[@name=\"playersData\"]"
+				+ "/set"
+				);
+			Trace.Assert(4 == player_nodes.Count, "Expected to find 4 player nodes.");
+			Debug.Assert(4 == player_data_.Length);
+			for (int i = 0; i != player_nodes.Count; ++i)
+			{
+				// set belligerent
+				query = player_nodes[i].SelectSingleNode("value[@name=\"belligerent\"]");
+				query.InnerText = player_data_[i].belligerent_.ToString();
+				// set name
+				query = player_nodes[i].SelectSingleNode("*[@name=\"playerName\"]");
+				query.InnerText = player_data_[i].name_;
+				// set type
+				query = player_nodes[i].SelectSingleNode("*[@name=\"realPlayerType\"]");
+				if (player_enabled_chk_.Checked)
+					switch (player_data_[i].type_)
+					{
+						case 0: query.InnerText = "REAL_PLAYER_TYPE_PLAYER"; break;
+						case 1: query.InnerText = "REAL_PLAYER_TYPE_AI";     break;
+					}
+				else
+					query.InnerText = "REAL_PLAYER_TYPE_CLOSE";
+				// set colour
+				query = player_nodes[i].SelectSingleNode("*[@name=\"colorIndex\"]");
+				query.InnerText = player_data_[i].color_.ToString();
+				// set clan
+				query = player_nodes[i].SelectSingleNode("*[@name=\"clan\"]");
+				query.InnerText = player_data_[i].clan_.ToString();
+				// set difficulty
+				query = player_nodes[i].SelectSingleNode("*[@name=\"difficulty\"]");
+				switch (player_data_[i].difficulty_)
 				{
-					#region
-					"BACKGRND_ID",
-					"BAR_SQUAD1_ID",
-					"BAR_SQUAD2_ID",
-					"BAR_SQUAD3_ID",
-					"BAR_SQUAD4_ID",
-					"BAR_SQUAD5_ID",
-					"CHAT_INFO_ID",
-					"COMMANDER_ID",
-					"CORRIDOR_ALPHA_ID",
-					"CORRIDOR_OMEGA_ID",
-					"EMBLEM_ID",
-					"EMPTY_WND",
-					"FIELD_OFF_ID",
-					"FIELD_ON_ID",
-					"FRAME_TERRAIN_BUILD1_ID",
-					"FRAME_TERRAIN_BUILD2_ID",
-					"FRAME_TERRAIN_BUILD3_ID",
-					"FRAME_TERRAIN_BUILD4_ID",
-					"FRAME_TERRAIN_BUILD5_ID",
-					"GAME_MAX",
-					"GAME_SCREEN_ID",
-					"GUN_BALLISTIC_ID",
-					"GUN_ELECTRO_ID",
-					"GUN_FILTH_ID",
-					"GUN_GIMLET_ID",
-					"GUN_HOWITZER_ID",
-					"GUN_LASER_ID",
-					"GUN_ROCKET_ID",
-					"GUN_SUBCHASER_ID",
-					"HINT_ID",
-					"INFOWND_ID",
-					"INGAME_CHAT_EDIT_ID",
-					"MAP_WINDOW_ID",
-					"MENU_BUTTON_ID",
-					"MM_APPLY_BTN",
-					"MM_APPLY_NAME_BTN",
-					"MM_BACK",
-					"MM_BACK_CREDITS_BTN",
-					"MM_BACK_FROM_BATTLE_BTN",
-					"MM_BACK_FROM_CREATE_GAME_BTN",
-					"MM_BACK_FROM_CREATE_ONLINE_GAME_BTN",
-					"MM_BACK_FROM_CUSTOM_BTN",
-					"MM_BACK_FROM_GAME_BTN",
-					"MM_BACK_FROM_GRAPHICS_BTN",
-					"MM_BACK_FROM_INGAME_CUSTOM",
-					"MM_BACK_FROM_INGAME_GAME_OPTIONS",
-					"MM_BACK_FROM_INGAME_GRAPHICS_BTN",
-					"MM_BACK_FROM_INGAME_OPTIONS",
-					"MM_BACK_FROM_INGAME_SOUND",
-					"MM_BACK_FROM_LAN_BTN",
-					"MM_BACK_FROM_LOAD_BTN",
-					"MM_BACK_FROM_LOAD_IN_GAME_BTN",
-					"MM_BACK_FROM_LOAD_REPLAY_BTN",
-					"MM_BACK_FROM_LOBBY_BTN",
-					"MM_BACK_FROM_NAME_INPUT_BTN",
-					"MM_BACK_FROM_ONLINE_BTN",
-					"MM_BACK_FROM_ONLINE_LOBBY_BTN",
-					"MM_BACK_FROM_OPTIONS_BTN",
-					"MM_BACK_FROM_PROFILE_BTN",
-					"MM_BACK_FROM_SAVE_GAME_BTN",
-					"MM_BACK_FROM_SAVE_REPLAY_BTN",
-					"MM_BACK_FROM_SCENARIO_BTN",
-					"MM_BACK_FROM_SINGLE_BTN",
-					"MM_BACK_FROM_SOUND_BTN",
-					"MM_BACK_FROM_TASK_BTN",
-					"MM_BATTLE_BTN",
-					"MM_BATTLE_GO_BTN",
-					"MM_BATTLE_MAP",
-					"MM_BATTLE_MAP_DESCR_TXT",
-					"MM_BATTLE_PLAYER1_CLAN_BTN",
-					"MM_BATTLE_PLAYER1_CLR_BG",
-					"MM_BATTLE_PLAYER1_CLR_BTN",
-					"MM_BATTLE_PLAYER1_FRM_BTN",
-					"MM_BATTLE_PLAYER1_HC_BTN",
-					"MM_BATTLE_PLAYER1_SLOT_BTN",
-					"MM_BATTLE_PLAYER2_CLAN_BTN",
-					"MM_BATTLE_PLAYER2_CLR_BG",
-					"MM_BATTLE_PLAYER2_CLR_BTN",
-					"MM_BATTLE_PLAYER2_FRM_BTN",
-					"MM_BATTLE_PLAYER2_HC_BTN",
-					"MM_BATTLE_PLAYER2_SLOT_BTN",
-					"MM_BATTLE_PLAYER3_CLAN_BTN",
-					"MM_BATTLE_PLAYER3_CLR_BG",
-					"MM_BATTLE_PLAYER3_CLR_BTN",
-					"MM_BATTLE_PLAYER3_FRM_BTN",
-					"MM_BATTLE_PLAYER3_HC_BTN",
-					"MM_BATTLE_PLAYER3_SLOT_BTN",
-					"MM_BATTLE_PLAYER4_CLAN_BTN",
-					"MM_BATTLE_PLAYER4_CLR_BG",
-					"MM_BATTLE_PLAYER4_CLR_BTN",
-					"MM_BATTLE_PLAYER4_FRM_BTN",
-					"MM_BATTLE_PLAYER4_HC_BTN",
-					"MM_BATTLE_PLAYER4_SLOT_BTN",
-					"MM_BATTLE_SCR",
-					"MM_BATTLE_SURVIVAL_TXT",
-					"MM_BRIEFING_ICON",
-					"MM_BRIEFING_SCR",
-					"MM_BRIEFING_TXT",
-					"MM_BRIEFING_YEAR_TXT",
-					"MM_CONNECTION_TYPE_COMBO",
-					"MM_CONTINUE_BRIEFING_BORDER",
-					"MM_CONTINUE_BRIEFING_BTN",
-					"MM_CONTINUE_BTN",
-					"MM_CONTINUE_FROM_STATS_BORDER",
-					"MM_CONTINUE_FROM_STATS_BTN",
-					"MM_CREATE_BTN",
-					"MM_CREATE_GAME_MAP",
-					"MM_CREATE_GAME_MAP_DESCR_TXT",
-					"MM_CREATE_GAME_SCR",
-					"MM_CREATE_ONLINE_GAME_MAP",
-					"MM_CREATE_ONLINE_GAME_MAP_DESCR_TXT",
-					"MM_CREATE_ONLINE_GAME_SCR",
-					"MM_CREDITS_BTN",
-					"MM_CREDITS_SCR",
-					"MM_CREDITS_TXT",
-					"MM_CUSTOM_GRAPHICS_BTN",
-					"MM_CUSTOM_INGAME_GRAPHICS_BTN",
-					"MM_CUSTOM_SCR",
-					"MM_DEL_PROFILE_BTN",
-					"MM_DEL_REPLAY_BTN",
-					"MM_DEL_SAVE_BTN",
-					"MM_DIFFICULTY_BTN",
-					"MM_DIFFICULTY_COMBO",
-					"MM_ENDMISSION_SCR",
-					"MM_GAME_ANGLESENS",
-					"MM_GAME_ANGLESENS_SLIDER",
-					"MM_GAME_LIST",
-					"MM_GAME_MOUSE_SLIDER",
-					"MM_GAME_MOUSESPEED",
-					"MM_GAME_SCR",
-					"MM_GAME_SCROLLRATE",
-					"MM_GAME_SCROLLRATE_SLIDER",
-					"MM_GAME_TOOLTIPS",
-					"MM_GAME_TOOLTIPS_COMBO",
-					"MM_GO_BTN",
-					"MM_GRAPHICS_BUMP",
-					"MM_GRAPHICS_BUMP_CHAOS",
-					"MM_GRAPHICS_BUMP_CHAOS_COMBO",
-					"MM_GRAPHICS_BUMP_COMBO",
-					"MM_GRAPHICS_COLORDEPTH",
-					"MM_GRAPHICS_COLORDEPTH_COMBO",
-					"MM_GRAPHICS_COMPRESS",
-					"MM_GRAPHICS_COMPRESS_COMBO",
-					"MM_GRAPHICS_FURROWS",
-					"MM_GRAPHICS_FURROWS_COMBO",
-					"MM_GRAPHICS_GAMMA",
-					"MM_GRAPHICS_GAMMA_SLIDER",
-					"MM_GRAPHICS_LOD",
-					"MM_GRAPHICS_LOD_COMBO",
-					"MM_GRAPHICS_LOD_SLIDER",
-					"MM_GRAPHICS_MODE",
-					"MM_GRAPHICS_MODE_COMBO",
-					"MM_GRAPHICS_OCCLUSION",
-					"MM_GRAPHICS_OCCLUSION_COMBO",
-					"MM_GRAPHICS_POINT_LIGHT",
-					"MM_GRAPHICS_POINT_LIGHT_COMBO",
-					"MM_GRAPHICS_REFLECTION",
-					"MM_GRAPHICS_REFLECTION_COMBO",
-					"MM_GRAPHICS_RESOLUTION",
-					"MM_GRAPHICS_RESOLUTION_COMBO",
-					"MM_GRAPHICS_SCR",
-					"MM_GRAPHICS_SHADOWS",
-					"MM_GRAPHICS_SHADOWS_COMBO",
-					"MM_GRAPHICS_SHADOWS_SAMPLES",
-					"MM_GRAPHICS_SHADOWS_SAMPLES_COMBO",
-					"MM_INGAME_APPLY_BTN",
-					"MM_INGAME_CUSTOM_SCR",
-					"MM_INMISSION_LOAD_BTN",
-					"MM_INMISSION_OPTIONS_BTN",
-					"MM_INMISSION_QUIT_BTN",
-					"MM_INMISSION_RESTART_BTN",
-					"MM_INMISSION_RESUME_BTN",
-					"MM_INMISSION_SAVE_BTN",
-					"MM_INMISSION_SCR",
-					"MM_IP_BTN",
-					"MM_IP_INPUT",
-					"MM_JOIN_BTN",
-					"MM_LAN_BTN",
-					"MM_LAN_CREATE_GAME_BTN",
-					"MM_LAN_CREATE_GAMESPY_LOGO",
-					"MM_LAN_GAME_MAP",
-					"MM_LAN_GAME_MAP_DESCR_TXT",
-					"MM_LAN_GAME_SPEED_BTN",
-					"MM_LAN_GAME_SPEED_SLIDER",
-					"MM_LAN_GAMESPY_LOGO",
-					"MM_LAN_LOBBY_GAMESPY_LOGO",
-					"MM_LAN_MAP_LIST",
-					"MM_LAN_PLAYER_NAME_INPUT",
-					"MM_LAN_SCR",
-					"MM_LOAD_BTN",
-					"MM_LOAD_GO_BTN",
-					"MM_LOAD_IN_GAME_DEL_BTN",
-					"MM_LOAD_IN_GAME_GO_BTN",
-					"MM_LOAD_IN_GAME_MAP",
-					"MM_LOAD_IN_GAME_MAP_DESCR_TXT",
-					"MM_LOAD_IN_GAME_MAP_LIST",
-					"MM_LOAD_IN_GAME_SCR",
-					"MM_LOAD_MAP",
-					"MM_LOAD_MAP_DESCR_TXT",
-					"MM_LOAD_MAP_LIST",
-					"MM_LOAD_REPLAY_DESCR_TXT",
-					"MM_LOAD_REPLAY_GO_BTN",
-					"MM_LOAD_REPLAY_LIST",
-					"MM_LOAD_REPLAY_MAP",
-					"MM_LOAD_REPLAY_SCR",
-					"MM_LOAD_SCR",
-					"MM_LOADING_MISSION_SCR",
-					"MM_LOADING_NOMAD_ICON",
-					"MM_LOADING_NOMAD_TXT",
-					"MM_LOBBY_CHAT_INPUT",
-					"MM_LOBBY_CHAT_TEXT",
-					"MM_LOBBY_GAME_MAP",
-					"MM_LOBBY_GAME_MAP_DESCR_TXT",
-					"MM_LOBBY_GAME_NAME_BTN",
-					"MM_LOBBY_HOST_GAME_MAP",
-					"MM_LOBBY_MAP_LIST",
-					"MM_LOBBY_MAP_LIST_RAMKA1",
-					"MM_LOBBY_MAP_LIST_RAMKA2",
-					"MM_LOBBY_MAP_LIST_RAMKA3",
-					"MM_LOBBY_MAP_LIST_RAMKA4",
-					"MM_LOBBY_PLAYER1_CLAN_BTN",
-					"MM_LOBBY_PLAYER1_CLR_BG",
-					"MM_LOBBY_PLAYER1_CLR_BTN",
-					"MM_LOBBY_PLAYER1_FRM_BTN",
-					"MM_LOBBY_PLAYER1_HC_BTN",
-					"MM_LOBBY_PLAYER1_NAME_BTN",
-					"MM_LOBBY_PLAYER1_READY_BTN",
-					"MM_LOBBY_PLAYER1_SLOT_BTN",
-					"MM_LOBBY_PLAYER2_CLAN_BTN",
-					"MM_LOBBY_PLAYER2_CLR_BG",
-					"MM_LOBBY_PLAYER2_CLR_BTN",
-					"MM_LOBBY_PLAYER2_FRM_BTN",
-					"MM_LOBBY_PLAYER2_HC_BTN",
-					"MM_LOBBY_PLAYER2_NAME_BTN",
-					"MM_LOBBY_PLAYER2_READY_BTN",
-					"MM_LOBBY_PLAYER2_SLOT_BTN",
-					"MM_LOBBY_PLAYER3_CLAN_BTN",
-					"MM_LOBBY_PLAYER3_CLR_BG",
-					"MM_LOBBY_PLAYER3_CLR_BTN",
-					"MM_LOBBY_PLAYER3_FRM_BTN",
-					"MM_LOBBY_PLAYER3_HC_BTN",
-					"MM_LOBBY_PLAYER3_NAME_BTN",
-					"MM_LOBBY_PLAYER3_READY_BTN",
-					"MM_LOBBY_PLAYER3_SLOT_BTN",
-					"MM_LOBBY_PLAYER4_CLAN_BTN",
-					"MM_LOBBY_PLAYER4_CLR_BG",
-					"MM_LOBBY_PLAYER4_CLR_BTN",
-					"MM_LOBBY_PLAYER4_FRM_BTN",
-					"MM_LOBBY_PLAYER4_HC_BTN",
-					"MM_LOBBY_PLAYER4_NAME_BTN",
-					"MM_LOBBY_PLAYER4_READY_BTN",
-					"MM_LOBBY_PLAYER4_SLOT_BTN",
-					"MM_LOBBY_SCR",
-					"MM_LOBBY_START_BORDER",
-					"MM_LOBBY_START_BTN",
-					"MM_MAP_LIST",
-					"MM_MAPWINDOW",
-					"MM_MISSION_DESCR_TXT",
-					"MM_MISSION_LIST",
-					"MM_MISSION_TASK_SCR",
-					"MM_MISSION_TASK_TXT",
-					"MM_NAME_INPUT_SCR",
-					"MM_NEW_PROFILE_BTN",
-					"MM_NOMAD_ICON",
-					"MM_NOMAD_TXT",
-					"MM_ONLINE_BTN",
-					"MM_ONLINE_CREATE_BTN",
-					"MM_ONLINE_CREATE_GAME_BTN",
-					"MM_ONLINE_GAME_LIST",
-					"MM_ONLINE_GAME_MAP",
-					"MM_ONLINE_GAME_MAP_DESCR_TXT",
-					"MM_ONLINE_GAME_SPEED_BTN",
-					"MM_ONLINE_GAME_SPEED_SLIDER",
-					"MM_ONLINE_JOIN_BTN",
-					"MM_ONLINE_LOBBY_GAME_MAP",
-					"MM_ONLINE_LOBBY_GAME_MAP_DESCR_TXT",
-					"MM_ONLINE_LOBBY_GAME_NAME_BTN",
-					"MM_ONLINE_LOBBY_PLAYER1_CLR_BG",
-					"MM_ONLINE_LOBBY_PLAYER1_CLR_BTN",
-					"MM_ONLINE_LOBBY_PLAYER1_FRM_BTN",
-					"MM_ONLINE_LOBBY_PLAYER1_NAME_BTN",
-					"MM_ONLINE_LOBBY_PLAYER1_SLOT_BTN",
-					"MM_ONLINE_LOBBY_PLAYER2_CLR_BG",
-					"MM_ONLINE_LOBBY_PLAYER2_CLR_BTN",
-					"MM_ONLINE_LOBBY_PLAYER2_FRM_BTN",
-					"MM_ONLINE_LOBBY_PLAYER2_NAME_BTN",
-					"MM_ONLINE_LOBBY_PLAYER2_SLOT_BTN",
-					"MM_ONLINE_LOBBY_PLAYER3_CLR_BG",
-					"MM_ONLINE_LOBBY_PLAYER3_CLR_BTN",
-					"MM_ONLINE_LOBBY_PLAYER3_FRM_BTN",
-					"MM_ONLINE_LOBBY_PLAYER3_NAME_BTN",
-					"MM_ONLINE_LOBBY_PLAYER3_SLOT_BTN",
-					"MM_ONLINE_LOBBY_PLAYER4_CLR_BG",
-					"MM_ONLINE_LOBBY_PLAYER4_CLR_BTN",
-					"MM_ONLINE_LOBBY_PLAYER4_FRM_BTN",
-					"MM_ONLINE_LOBBY_PLAYER4_NAME_BTN",
-					"MM_ONLINE_LOBBY_PLAYER4_SLOT_BTN",
-					"MM_ONLINE_LOBBY_SCR",
-					"MM_ONLINE_LOBBY_START_BTN",
-					"MM_ONLINE_MAP_LIST",
-					"MM_ONLINE_PLAYER_NAME_INPUT",
-					"MM_ONLINE_SCR",
-					"MM_OPTIONS",
-					"MM_OPTIONS_BTN",
-					"MM_OPTIONS_GAME",
-					"MM_OPTIONS_GAME_BTN",
-					"MM_OPTIONS_GRAPHICS",
-					"MM_OPTIONS_GRAPHICS_BTN",
-					"MM_OPTIONS_SCR",
-					"MM_OPTIONS_SOUND",
-					"MM_OPTIONS_SOUND_BTN",
-					"MM_PARTICLE_RATE",
-					"MM_PARTICLE_RATE_SLIDER",
-					"MM_PLAYER_NAME_INPUT",
-					"MM_PROFILE_BTN",
-					"MM_PROFILE_LIST",
-					"MM_PROFILE_NAME_INPUT",
-					"MM_PROFILE_SCR",
-					"MM_QUIT_BTN",
-					"MM_QUIT_FROM_BRIEFING_BTN",
-					"MM_QUIT_FROM_STATS_BTN",
-					"MM_RAMKA",
-					"MM_REPLAY_BORDER",
-					"MM_REPLAY_BTN",
-					"MM_REPLAY_LINE",
-					"MM_REPLAY_NAME_INPUT",
-					"MM_RESTART_BTN",
-					"MM_RESULT_TXT",
-					"MM_RESUME_BORDER",
-					"MM_RESUME_BTN",
-					"MM_SAVE_GAME_DEL_BTN",
-					"MM_SAVE_GAME_GO_BTN",
-					"MM_SAVE_GAME_MAP",
-					"MM_SAVE_GAME_MAP_DESCR_TXT",
-					"MM_SAVE_GAME_MAP_LIST",
-					"MM_SAVE_GAME_SCR",
-					"MM_SAVE_NAME_INPUT",
-					"MM_SAVE_REPLAY_BORDER",
-					"MM_SAVE_REPLAY_BTN",
-					"MM_SAVE_REPLAY_DEL_BTN",
-					"MM_SAVE_REPLAY_DESCR_TXT",
-					"MM_SAVE_REPLAY_GO_BTN",
-					"MM_SAVE_REPLAY_LIST",
-					"MM_SAVE_REPLAY_MAP",
-					"MM_SAVE_REPLAY_SCR",
-					"MM_SCENARIO_BTN",
-					"MM_SCENARIO_SCR",
-					"MM_SCREEN_GAME",
-					"MM_SCREEN_GRAPHICS",
-					"MM_SCREEN_OPTIONS",
-					"MM_SCREEN_SOUND",
-					"MM_SELECT_PROFILE_BTN",
-					"MM_SETTINGS",
-					"MM_SETTINGS_COMBO",
-					"MM_SINGLE_BTN",
-					"MM_SINGLE_SCR",
-					"MM_SKIP_BRIEFING_BORDER",
-					"MM_SKIP_BRIEFING_BTN",
-					"MM_SKIP_MISSION_BORDER",
-					"MM_SKIP_MISSION_BTN",
-					"MM_SOUND_MUSIC",
-					"MM_SOUND_MUSIC_COMBO",
-					"MM_SOUND_MUSICVOLUME",
-					"MM_SOUND_MUSICVOLUME_SLIDER",
-					"MM_SOUND_SCR",
-					"MM_SOUND_SOUNDEFFECTS",
-					"MM_SOUND_SOUNDEFFECTS_COMBO",
-					"MM_SOUND_SOUNDVOLUME",
-					"MM_SOUND_SOUNDVOLUME_SLIDER",
-					"MM_SPLASH_LAST",
-					"MM_SPLASH1",
-					"MM_SPLASH2",
-					"MM_SPLASH3",
-					"MM_SPLASH4",
-					"MM_START_BRIEFING_BORDER",
-					"MM_START_MISSION_BTN",
-					"MM_START_SCR",
-					"MM_STATS_BUILDINGS_BTN",
-					"MM_STATS_BUILDINGS_HEAD_LIST",
-					"MM_STATS_BUILDINGS_LIST",
-					"MM_STATS_BUILDINGS_RAMKA",
-					"MM_STATS_GENERAL_BTN",
-					"MM_STATS_GENERAL_HEAD_LIST",
-					"MM_STATS_GENERAL_LIST",
-					"MM_STATS_GENERAL_RAMKA",
-					"MM_STATS_SCR",
-					"MM_STATS_TOTAL_BTN",
-					"MM_STATS_TOTAL_HEAD_LIST",
-					"MM_STATS_TOTAL_LIST",
-					"MM_STATS_TOTAL_RAMKA",
-					"MM_STATS_UNITS_BTN",
-					"MM_STATS_UNITS_HEAD_LIST",
-					"MM_STATS_UNITS_LIST",
-					"MM_STATS_UNITS_RAMKA",
-					"MM_SUBMIT_DIALOG_SCR",
-					"MM_SUBMIT_NO_BORDER",
-					"MM_SUBMIT_NO_BTN",
-					"MM_SUBMIT_OK_BORDER",
-					"MM_SUBMIT_OK_BTN",
-					"MM_SUBMIT_TXT",
-					"MM_SUBMIT_YES_BORDER",
-					"MM_SUBMIT_YES_BTN",
-					"MM_VERSION_TXT",
-					"OFFICER_ID",
-					"OFFICER_PLANT_ID",
-					"PROGRESS_COLLECTED",
-					"PROGRESS_ENERGY",
-					"RAMKA_ID",
-					"RELAY_ID",
-					"REPLAY_PLAYER_BUTTON_ID",
-					"RESULT_WND",
-					"SELPANEL_BRIG_BACK_ID",
-					"SELPANEL_BRIG_BUILD_ID",
-					"SELPANEL_BRIG_CHANGE_ID",
-					"SELPANEL_FIELDOFF_ID",
-					"SELPANEL_FIELDON_ID",
-					"SELPANEL_FRAME_ALARM_ID",
-					"SELPANEL_FRAME_INSTALL_ID",
-					"SELPANEL_FRAME_TELEPORTATE_ID",
-					"SELPANEL_MOVE_ID",
-					"SELPANEL_POWEROFF_ID",
-					"SELPANEL_POWERON_ID",
-					"SELPANEL_SELL_ID",
-					"SELPANEL_SQ_ATTACK_ID",
-					"SELPANEL_SQ_BACK_ID",
-					"SELPANEL_SQ_OFDEF_ID",
-					"SELPANEL_SQ_PATROL_ID",
-					"SELPANEL_START_CHARGE_ID",
-					"SELPANEL_STOP_CHARGE_ID",
-					"SELPANEL_STOP_ID",
-					"SELPANEL_STOP2_ID",
-					"SELPANEL_UNIT_CHARGE_ID",
-					"SELPANEL_UPGRADE_BOMB1_ID  ",
-					"SELPANEL_UPGRADE_BOMB2_ID  ",
-					"SELPANEL_UPGRADE_ELECTRO1_ID ",
-					"SELPANEL_UPGRADE_ELECTRO2_ID ",
-					"SELPANEL_UPGRADE_EMPIRE1_ID",
-					"SELPANEL_UPGRADE_EMPIRE2_ID ",
-					"SELPANEL_UPGRADE_EXODUS1_ID",
-					"SELPANEL_UPGRADE_EXODUS2_ID",
-					"SELPANEL_UPGRADE_FLY_ID ",
-					"SELPANEL_UPGRADE_HARKBACK1_ID ",
-					"SELPANEL_UPGRADE_HARKBACK2_ID ",
-					"SELPANEL_UPGRADE_ID",
-					"SELPANEL_UPGRADE_LASER1_ID ",
-					"SELPANEL_UPGRADE_LASER2_ID ",
-					"SELPANEL_UPGRADE_OMEGA_ID ",
-					"SELPANEL_UPGRADE_ROCKET1_ID",
-					"SELPANEL_UPGRADE_ROCKET2_ID",
-					"SELPANEL_UPGRADE_SUBTERRA_ID ",
-					"SOLDIER_ID",
-					"SOLDIER_PLANT_ID",
-					"SPEED_100",
-					"SPEED_150",
-					"SPEED_50",
-					"SPEED_PAUSE",
-					"SQUAD_DISINTEGRATE_ID",
-					"SQUAD_UNIT1",
-					"SQUAD_UNIT10",
-					"SQUAD_UNIT11",
-					"SQUAD_UNIT12",
-					"SQUAD_UNIT13",
-					"SQUAD_UNIT14",
-					"SQUAD_UNIT15",
-					"SQUAD_UNIT16",
-					"SQUAD_UNIT17",
-					"SQUAD_UNIT18",
-					"SQUAD_UNIT19",
-					"SQUAD_UNIT2",
-					"SQUAD_UNIT20",
-					"SQUAD_UNIT21",
-					"SQUAD_UNIT22",
-					"SQUAD_UNIT23",
-					"SQUAD_UNIT24",
-					"SQUAD_UNIT25",
-					"SQUAD_UNIT3",
-					"SQUAD_UNIT4",
-					"SQUAD_UNIT5",
-					"SQUAD_UNIT6",
-					"SQUAD_UNIT7",
-					"SQUAD_UNIT8",
-					"SQUAD_UNIT9",
-					"STATIC_BOMB_ID",
-					"STATION_ELECTRO_LAB_ID",
-					"STATION_EMPIRE_LAB_ID",
-					"STATION_EXODUS_LAB_ID",
-					"STATION_HARKBACK_LAB_ID",
-					"STATION1_ID",
-					"STATION2_ID",
-					"STATION3_ID",
-					"STATION4_ID",
-					"STATION5_ID",
-					"TAB_BUILD_ID",
-					"TAB_SQUAD_ID",
-					"TASK_BUTTON_ID",
-					"TECHNIC_ID",
-					"TECHNIC_PLANT_ID",
-					"TOGETHER_ID",
-					"WORKAREA2_ID",
-					"WORKAREA3_ID",
-					"WORKAREA4_ID",
-					"YADRO_EX_ID",
-					"YADRO_ID"
-					#endregion
-				};
-			enabled_controls_lst_.Items.AddRange(items);
+					case 0: query.InnerText = "DIFFICULTY_EASY"; break;
+					case 1: query.InnerText = "DIFFICULTY_NORMAL"; break;
+					case 2: query.InnerText = "DIFFICULTY_HARD"; break;
+				}
+				// set handicap
+				query = player_nodes[i].SelectSingleNode("*[@name=\"handicap\"]");
+				query.InnerText = player_data_[i].handicap_.ToString();
+			}
+			// set trigger settings
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/array[@name=\"players\"]"
+				);
+			query.RemoveAll();
+			((XmlElement)query).SetAttribute("name", "players");
+			for (int i = 0; i != player_data_.Length; ++i)
+				query.AppendChild(CreateTriggerNode(
+					player_data_[i].triggers_
+					? default_trigger_name
+					: i.ToString(),
+					doc
+					));
+			for (int i = 0; i != player_nodes.Count; ++i)
+			{
+				query = player_nodes[i].SelectSingleNode(
+					"array[@name=\"TriggerChainNames\"]"
+					);
+				player_data_[i].triggers_ = (null != query);
+			}
+			player_nodes = null;
+			// set control settings
+			query = doc.SelectSingleNode(
+				"/script"
+				+ "/set[@name=\"SavePrm\"]"
+				+ "/set[@name=\"manualData\"]"
+				+ "/array[@name=\"controls\"]"
+				);
+			query.RemoveAll();
+			((XmlElement)query).SetAttribute("name", "controls");
+			foreach (ControlData data in controls_lst_.Items)
+				query.AppendChild(CreateControlNode(data, doc));
+			// save
+			doc.Save(file_name);
+		}
+
+		private XmlElement CreateControlNode(ControlData data, XmlDocument doc)
+		{
+			XmlElement root = doc.CreateElement("set");
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"value",
+					"controlID",
+					doc),
+				control_id_prefix + data.ID));
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"value",
+					"enabled",
+					doc),
+				data.enabled ? "true" : "false"));
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+				"value",
+				"visible",
+				doc),
+				data.visible ? "true" : "false"));
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"value",
+					"flashing",
+					doc),
+				data.flashing ? "true" : "false"));
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"int",
+					"tabNumber",
+					doc),
+				data.tab_number.ToString()));
+			return root;
+		}
+
+		private XmlElement CreateSoundtrackNode(string track_name, string file_name, XmlDocument doc) 
+		{
+			XmlElement root = doc.CreateElement("set");
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"string",
+					"trackName",
+					doc),
+				track_name));
+			root.AppendChild(SetElementContent(
+				CreateNamedElement(
+					"string",
+					"fileName",
+					doc),
+				file_name));
+			return root;
+		}
+
+		private XmlElement CreateTriggerNode(string file_name, XmlDocument doc)
+		{
+			XmlElement name_node = CreateNamedElement("string", "name", doc);
+			name_node.InnerText = file_name;
+			XmlElement names_container_node = doc.CreateElement("set");
+			names_container_node.AppendChild(name_node);
+			XmlElement names_node = CreateNamedElement("array", "TriggerChainNames", doc);
+			names_node.AppendChild(names_container_node);
+			names_node.AppendChild(CreateNamedElement("array", "triggerChainNames", doc));
+			XmlElement root = doc.CreateElement("set");
+			root.AppendChild(names_node);
+			return root;
+
+		}
+
+		private XmlElement CreateNamedElement(string type, string name, XmlDocument doc)
+		{
+			XmlElement element = doc.CreateElement(type);
+			element.SetAttribute("name", name);
+			return element;
+		}
+
+		private XmlElement SetElementContent(XmlElement element, string content)
+		{
+			element.InnerText = content;
+			return element;
 		}
 
 		private void InitializePlayers()
@@ -954,7 +844,6 @@ namespace MissionEdit
 
 		private int          current_player_; // for change through SetPlayer only
 		private string       file_name_;
-		private System.Windows.Forms.Button edit_trigger_btn_;
 		private PlayerData[] player_data_;
 
 		#endregion
@@ -967,6 +856,7 @@ namespace MissionEdit
 
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.Resources.ResourceManager resources = new System.Resources.ResourceManager(typeof(MainForm));
 			this.button_pnl_ = new System.Windows.Forms.Panel();
 			this.interface_btn_ = new MissionEdit.FlatButton();
@@ -1000,6 +890,7 @@ namespace MissionEdit
 			this.world_name_edt_ = new System.Windows.Forms.TextBox();
 			this.label1 = new System.Windows.Forms.Label();
 			this.player_pg_ = new MultipanelLib.Page();
+			this.edit_trigger_btn_ = new System.Windows.Forms.Button();
 			this.player_enabled_chk_ = new System.Windows.Forms.CheckBox();
 			this.player_cb_ = new System.Windows.Forms.ComboBox();
 			this.empire_rb_ = new System.Windows.Forms.RadioButton();
@@ -1020,13 +911,16 @@ namespace MissionEdit
 			this.player_type_cb_ = new System.Windows.Forms.ComboBox();
 			this.label7 = new System.Windows.Forms.Label();
 			this.interface_pg_ = new MultipanelLib.Page();
-			this.remove_controls_btn_ = new System.Windows.Forms.Button();
-			this.add_controls_btn_ = new System.Windows.Forms.Button();
-			this.label20 = new System.Windows.Forms.Label();
-			this.label13 = new System.Windows.Forms.Label();
-			this.disabled_controls_lst_ = new System.Windows.Forms.ListBox();
-			this.enabled_controls_lst_ = new System.Windows.Forms.ListBox();
-			this.edit_trigger_btn_ = new System.Windows.Forms.Button();
+			this.control_remove_btn_ = new System.Windows.Forms.Button();
+			this.control_new_btn_ = new System.Windows.Forms.Button();
+			this.control_properties_ = new System.Windows.Forms.PropertyGrid();
+			this.controls_lst_ = new System.Windows.Forms.ListBox();
+			this.toolbar_ = new System.Windows.Forms.ToolBar();
+			this.open_btn_ = new System.Windows.Forms.ToolBarButton();
+			this.save_btn_ = new System.Windows.Forms.ToolBarButton();
+			this.about_btn_ = new System.Windows.Forms.ToolBarButton();
+			this.toolbar_images_ = new System.Windows.Forms.ImageList(this.components);
+			this.remove_all_btn_ = new System.Windows.Forms.Button();
 			this.button_pnl_.SuspendLayout();
 			this.multipanel.SuspendLayout();
 			this.world_pg_.SuspendLayout();
@@ -1050,9 +944,9 @@ namespace MissionEdit
 			this.button_pnl_.Controls.Add(this.player_btn_);
 			this.button_pnl_.Controls.Add(this.world_btn_);
 			this.button_pnl_.Dock = System.Windows.Forms.DockStyle.Left;
-			this.button_pnl_.Location = new System.Drawing.Point(0, 0);
+			this.button_pnl_.Location = new System.Drawing.Point(0, 34);
 			this.button_pnl_.Name = "button_pnl_";
-			this.button_pnl_.Size = new System.Drawing.Size(80, 239);
+			this.button_pnl_.Size = new System.Drawing.Size(80, 245);
 			this.button_pnl_.TabIndex = 1;
 			// 
 			// interface_btn_
@@ -1097,12 +991,12 @@ namespace MissionEdit
 			this.multipanel.Controls.Add(this.player_pg_);
 			this.multipanel.Controls.Add(this.interface_pg_);
 			this.multipanel.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.multipanel.Location = new System.Drawing.Point(80, 0);
+			this.multipanel.Location = new System.Drawing.Point(80, 34);
 			this.multipanel.Name = "multipanel";
 			this.multipanel.Pages.Add(this.world_pg_);
 			this.multipanel.Pages.Add(this.player_pg_);
 			this.multipanel.Pages.Add(this.interface_pg_);
-			this.multipanel.Size = new System.Drawing.Size(392, 239);
+			this.multipanel.Size = new System.Drawing.Size(392, 245);
 			this.multipanel.TabIndex = 0;
 			// 
 			// world_pg_
@@ -1119,7 +1013,7 @@ namespace MissionEdit
 			this.world_pg_.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.world_pg_.Location = new System.Drawing.Point(0, 0);
 			this.world_pg_.Name = "world_pg_";
-			this.world_pg_.Size = new System.Drawing.Size(392, 239);
+			this.world_pg_.Size = new System.Drawing.Size(392, 245);
 			this.world_pg_.TabIndex = 0;
 			this.world_pg_.Text = "World";
 			// 
@@ -1429,9 +1323,17 @@ namespace MissionEdit
 			this.player_pg_.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.player_pg_.Location = new System.Drawing.Point(0, 0);
 			this.player_pg_.Name = "player_pg_";
-			this.player_pg_.Size = new System.Drawing.Size(392, 239);
+			this.player_pg_.Size = new System.Drawing.Size(392, 245);
 			this.player_pg_.TabIndex = 0;
 			this.player_pg_.Text = "Player";
+			// 
+			// edit_trigger_btn_
+			// 
+			this.edit_trigger_btn_.Location = new System.Drawing.Point(312, 200);
+			this.edit_trigger_btn_.Name = "edit_trigger_btn_";
+			this.edit_trigger_btn_.Size = new System.Drawing.Size(64, 20);
+			this.edit_trigger_btn_.TabIndex = 22;
+			this.edit_trigger_btn_.Text = "Edit";
 			// 
 			// player_enabled_chk_
 			// 
@@ -1617,7 +1519,7 @@ namespace MissionEdit
 			// 
 			this.player_type_cb_.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 			this.player_type_cb_.Items.AddRange(new object[] {
-																				 "player",
+																				 "human",
 																				 "AI"});
 			this.player_type_cb_.Location = new System.Drawing.Point(288, 80);
 			this.player_type_cb_.Name = "player_type_cb_";
@@ -1634,87 +1536,121 @@ namespace MissionEdit
 			// 
 			// interface_pg_
 			// 
-			this.interface_pg_.Controls.Add(this.remove_controls_btn_);
-			this.interface_pg_.Controls.Add(this.add_controls_btn_);
-			this.interface_pg_.Controls.Add(this.label20);
-			this.interface_pg_.Controls.Add(this.label13);
-			this.interface_pg_.Controls.Add(this.disabled_controls_lst_);
-			this.interface_pg_.Controls.Add(this.enabled_controls_lst_);
+			this.interface_pg_.Controls.Add(this.remove_all_btn_);
+			this.interface_pg_.Controls.Add(this.control_remove_btn_);
+			this.interface_pg_.Controls.Add(this.control_new_btn_);
+			this.interface_pg_.Controls.Add(this.control_properties_);
+			this.interface_pg_.Controls.Add(this.controls_lst_);
 			this.interface_pg_.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.interface_pg_.Location = new System.Drawing.Point(0, 0);
 			this.interface_pg_.Name = "interface_pg_";
-			this.interface_pg_.Size = new System.Drawing.Size(392, 239);
+			this.interface_pg_.Size = new System.Drawing.Size(392, 245);
 			this.interface_pg_.TabIndex = 0;
 			this.interface_pg_.Text = "Interface";
 			// 
-			// remove_controls_btn_
+			// control_remove_btn_
 			// 
-			this.remove_controls_btn_.Location = new System.Drawing.Point(180, 120);
-			this.remove_controls_btn_.Name = "remove_controls_btn_";
-			this.remove_controls_btn_.Size = new System.Drawing.Size(32, 23);
-			this.remove_controls_btn_.TabIndex = 5;
-			this.remove_controls_btn_.Text = "<<";
-			this.remove_controls_btn_.Click += new System.EventHandler(this.remove_controls_btn__Click);
+			this.control_remove_btn_.Enabled = false;
+			this.control_remove_btn_.Location = new System.Drawing.Point(104, 200);
+			this.control_remove_btn_.Name = "control_remove_btn_";
+			this.control_remove_btn_.Size = new System.Drawing.Size(72, 23);
+			this.control_remove_btn_.TabIndex = 5;
+			this.control_remove_btn_.Text = "&Remove";
+			this.control_remove_btn_.Click += new System.EventHandler(this.control_remove_btn__Click);
 			// 
-			// add_controls_btn_
+			// control_new_btn_
 			// 
-			this.add_controls_btn_.Location = new System.Drawing.Point(180, 88);
-			this.add_controls_btn_.Name = "add_controls_btn_";
-			this.add_controls_btn_.Size = new System.Drawing.Size(32, 23);
-			this.add_controls_btn_.TabIndex = 4;
-			this.add_controls_btn_.Text = ">>";
-			this.add_controls_btn_.Click += new System.EventHandler(this.add_controls_btn__Click);
+			this.control_new_btn_.Location = new System.Drawing.Point(16, 200);
+			this.control_new_btn_.Name = "control_new_btn_";
+			this.control_new_btn_.Size = new System.Drawing.Size(72, 23);
+			this.control_new_btn_.TabIndex = 4;
+			this.control_new_btn_.Text = "&New";
+			this.control_new_btn_.Click += new System.EventHandler(this.control_new_btn__Click);
 			// 
-			// label20
+			// control_properties_
 			// 
-			this.label20.Location = new System.Drawing.Point(232, 16);
-			this.label20.Name = "label20";
-			this.label20.Size = new System.Drawing.Size(144, 16);
-			this.label20.TabIndex = 3;
-			this.label20.Text = "Disabled";
+			this.control_properties_.CommandsVisibleIfAvailable = true;
+			this.control_properties_.HelpVisible = false;
+			this.control_properties_.LargeButtons = false;
+			this.control_properties_.LineColor = System.Drawing.SystemColors.ScrollBar;
+			this.control_properties_.Location = new System.Drawing.Point(168, 16);
+			this.control_properties_.Name = "control_properties_";
+			this.control_properties_.PropertySort = System.Windows.Forms.PropertySort.Alphabetical;
+			this.control_properties_.Size = new System.Drawing.Size(208, 168);
+			this.control_properties_.TabIndex = 3;
+			this.control_properties_.Text = "PropertyGrid";
+			this.control_properties_.ToolbarVisible = false;
+			this.control_properties_.ViewBackColor = System.Drawing.SystemColors.Window;
+			this.control_properties_.ViewForeColor = System.Drawing.SystemColors.WindowText;
+			this.control_properties_.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.control_properties__PropertyValueChanged);
 			// 
-			// label13
+			// controls_lst_
 			// 
-			this.label13.Location = new System.Drawing.Point(16, 16);
-			this.label13.Name = "label13";
-			this.label13.Size = new System.Drawing.Size(136, 16);
-			this.label13.TabIndex = 2;
-			this.label13.Text = "Enabled";
+			this.controls_lst_.HorizontalScrollbar = true;
+			this.controls_lst_.IntegralHeight = false;
+			this.controls_lst_.Location = new System.Drawing.Point(16, 16);
+			this.controls_lst_.Name = "controls_lst_";
+			this.controls_lst_.Size = new System.Drawing.Size(136, 168);
+			this.controls_lst_.Sorted = true;
+			this.controls_lst_.TabIndex = 0;
+			this.controls_lst_.SelectedIndexChanged += new System.EventHandler(this.controls_lst__SelectedIndexChanged);
 			// 
-			// disabled_controls_lst_
+			// toolbar_
 			// 
-			this.disabled_controls_lst_.HorizontalScrollbar = true;
-			this.disabled_controls_lst_.Location = new System.Drawing.Point(224, 40);
-			this.disabled_controls_lst_.Name = "disabled_controls_lst_";
-			this.disabled_controls_lst_.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
-			this.disabled_controls_lst_.Size = new System.Drawing.Size(152, 186);
-			this.disabled_controls_lst_.Sorted = true;
-			this.disabled_controls_lst_.TabIndex = 1;
+			this.toolbar_.Appearance = System.Windows.Forms.ToolBarAppearance.Flat;
+			this.toolbar_.Buttons.AddRange(new System.Windows.Forms.ToolBarButton[] {
+																												this.open_btn_,
+																												this.save_btn_,
+																												this.about_btn_});
+			this.toolbar_.Divider = false;
+			this.toolbar_.DropDownArrows = true;
+			this.toolbar_.ImageList = this.toolbar_images_;
+			this.toolbar_.Location = new System.Drawing.Point(0, 0);
+			this.toolbar_.Name = "toolbar_";
+			this.toolbar_.ShowToolTips = true;
+			this.toolbar_.Size = new System.Drawing.Size(472, 34);
+			this.toolbar_.TabIndex = 2;
+			this.toolbar_.TextAlign = System.Windows.Forms.ToolBarTextAlign.Right;
+			this.toolbar_.ButtonClick += new System.Windows.Forms.ToolBarButtonClickEventHandler(this.toolbar__ButtonClick);
 			// 
-			// enabled_controls_lst_
+			// open_btn_
 			// 
-			this.enabled_controls_lst_.HorizontalScrollbar = true;
-			this.enabled_controls_lst_.Location = new System.Drawing.Point(16, 40);
-			this.enabled_controls_lst_.Name = "enabled_controls_lst_";
-			this.enabled_controls_lst_.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
-			this.enabled_controls_lst_.Size = new System.Drawing.Size(152, 186);
-			this.enabled_controls_lst_.Sorted = true;
-			this.enabled_controls_lst_.TabIndex = 0;
+			this.open_btn_.ImageIndex = 0;
+			this.open_btn_.Text = "&Open";
 			// 
-			// edit_trigger_btn_
+			// save_btn_
 			// 
-			this.edit_trigger_btn_.Location = new System.Drawing.Point(312, 200);
-			this.edit_trigger_btn_.Name = "edit_trigger_btn_";
-			this.edit_trigger_btn_.Size = new System.Drawing.Size(64, 20);
-			this.edit_trigger_btn_.TabIndex = 22;
-			this.edit_trigger_btn_.Text = "Edit";
+			this.save_btn_.ImageIndex = 1;
+			this.save_btn_.Text = "&Save";
+			// 
+			// about_btn_
+			// 
+			this.about_btn_.ImageIndex = 2;
+			this.about_btn_.Text = "About";
+			// 
+			// toolbar_images_
+			// 
+			this.toolbar_images_.ColorDepth = System.Windows.Forms.ColorDepth.Depth24Bit;
+			this.toolbar_images_.ImageSize = new System.Drawing.Size(24, 24);
+			this.toolbar_images_.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("toolbar_images_.ImageStream")));
+			this.toolbar_images_.TransparentColor = System.Drawing.Color.Magenta;
+			// 
+			// remove_all_btn_
+			// 
+			this.remove_all_btn_.Location = new System.Drawing.Point(192, 200);
+			this.remove_all_btn_.Name = "remove_all_btn_";
+			this.remove_all_btn_.Size = new System.Drawing.Size(72, 23);
+			this.remove_all_btn_.TabIndex = 6;
+			this.remove_all_btn_.Text = "Remove All";
+			this.remove_all_btn_.Click += new System.EventHandler(this.remove_all_btn__Click);
 			// 
 			// MainForm
 			// 
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
-			this.ClientSize = new System.Drawing.Size(472, 239);
+			this.ClientSize = new System.Drawing.Size(472, 279);
 			this.Controls.Add(this.multipanel);
 			this.Controls.Add(this.button_pnl_);
+			this.Controls.Add(this.toolbar_);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.MaximizeBox = false;
 			this.Name = "MainForm";
@@ -1741,7 +1677,7 @@ namespace MissionEdit
 		#endregion
 
 		#region data
-		
+
 		private MissionEdit.FlatButton             interface_btn_;
 		private MissionEdit.FlatButton             player_btn_;
 		private MissionEdit.FlatButton             world_btn_;
@@ -1749,8 +1685,8 @@ namespace MissionEdit
 		private MultipanelLib.Page                 interface_pg_;
 		private MultipanelLib.Page                 player_pg_;
 		private MultipanelLib.Page                 world_pg_;
-		private System.Windows.Forms.Button        add_controls_btn_;
-		private System.Windows.Forms.Button        remove_controls_btn_;
+		private System.Windows.Forms.Button        control_remove_btn_;
+		private System.Windows.Forms.Button        edit_trigger_btn_;
 		private System.Windows.Forms.CheckBox      player_enabled_chk_;
 		private System.Windows.Forms.CheckBox      player_triggers_chk_;
 		private System.Windows.Forms.ComboBox      player_cb_;
@@ -1766,7 +1702,6 @@ namespace MissionEdit
 		private System.Windows.Forms.Label         label10;
 		private System.Windows.Forms.Label         label11;
 		private System.Windows.Forms.Label         label12;
-		private System.Windows.Forms.Label         label13;
 		private System.Windows.Forms.Label         label14;
 		private System.Windows.Forms.Label         label15;
 		private System.Windows.Forms.Label         label16;
@@ -1774,7 +1709,6 @@ namespace MissionEdit
 		private System.Windows.Forms.Label         label18;
 		private System.Windows.Forms.Label         label19;
 		private System.Windows.Forms.Label         label2;
-		private System.Windows.Forms.Label         label20;
 		private System.Windows.Forms.Label         label3;
 		private System.Windows.Forms.Label         label4;
 		private System.Windows.Forms.Label         label5;
@@ -1782,8 +1716,7 @@ namespace MissionEdit
 		private System.Windows.Forms.Label         label7;
 		private System.Windows.Forms.Label         label8;
 		private System.Windows.Forms.Label         label9;
-		private System.Windows.Forms.ListBox       disabled_controls_lst_;
-		private System.Windows.Forms.ListBox       enabled_controls_lst_;
+		private System.Windows.Forms.ListBox       controls_lst_;
 		private System.Windows.Forms.NumericUpDown alpha_distance_ud_;
 		private System.Windows.Forms.NumericUpDown omega_distance_ud_;
 		private System.Windows.Forms.NumericUpDown player_handicap_ud_;
@@ -1791,6 +1724,7 @@ namespace MissionEdit
 		private System.Windows.Forms.NumericUpDown spiral_priority_ud_;
 		private System.Windows.Forms.NumericUpDown spiral_time_ud_;
 		private System.Windows.Forms.Panel         button_pnl_;
+		private System.Windows.Forms.PropertyGrid  control_properties_;
 		private System.Windows.Forms.RadioButton   empire_rb_;
 		private System.Windows.Forms.RadioButton   exodus_rb_;
 		private System.Windows.Forms.RadioButton   harckback_rb_;
