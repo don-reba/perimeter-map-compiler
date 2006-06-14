@@ -34,9 +34,23 @@
 #include "info wnd.h"
 #include "preview wnd.h"
 #include "project data.h"
-#include "../resource.h"
+#include "resource.h"
 
 #include <commctrl.h>
+
+//------------
+// some macros
+//------------
+
+#ifdef MacroSafeWndCall
+#error MacroSafeWndCall is already defined
+#else
+#define MacroSafeWndCall(wnd, call) \
+	if (0 != wnd.hwnd_)              \
+	{                                \
+		wnd.call;                     \
+	}
+#endif
 
 //----------------------------
 // additional message crackers
@@ -57,7 +71,7 @@ InfoWnd::InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed)
 	,zero_level_changes_ignored_(0)
 {}
 
-bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect, bool enabled)
+bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 {
 	// create the window
 	hwnd_ = CreateDialogParam(
@@ -80,7 +94,7 @@ bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect, bool enabled)
 		0,
 		0,
 		SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE);
-	EnableWindow(hwnd_, enabled ? TRUE : FALSE);
+	EnableWindow(hwnd_, TRUE);
 	return true;
 }
 
@@ -129,16 +143,6 @@ void InfoWnd::OnColorStatic(Msg<WM_CTLCOLORSTATIC> &msg)
 		msg.handled_ = true;
 	}
 }
-#define HANDLE_SP_CHANGE(num, s_sfx, c_sfx)                                 \
-	case IDC_SP##num##_##c_sfx:                                              \
-		if (EN_CHANGE == msg.CodeNotify())                                    \
-		{                                                                     \
-		const UINT max_val(exp2(MacroProjectData(ID_POWER_##c_sfx)) - 1);     \
-			UINT val(GetDlgItemInt(hwnd_, IDC_SP##num##_##c_sfx, NULL, TRUE)); \
-			val = __min(val, max_val);                                         \
-			MacroProjectData(ID_SP_##num).##s_sfx = val;                       \
-			preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_##num);         \
-		} break
 
 void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 {
@@ -158,7 +162,7 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 				DeleteObject(fog_colour_);
 				fog_colour_ = CreateSolidBrush(MacroProjectData(ID_FOG_COLOUR));
 				InvalidateRect(GetDlgItem(hwnd_, IDC_FOG_COLOUR), NULL, true);
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_FOG_COLOUR);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_FOG_COLOUR));
 			}
 		} break;
 	case IDC_FOG_END:
@@ -166,14 +170,14 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 		{
 			unsigned int val(GetDlgItemInt(hwnd_, IDC_FOG_END, NULL, FALSE));
 			MacroProjectData(ID_FOG_END) = val;
-			preview_wnd_.ProjectDataChanged(ProjectData::ID_FOG_END);
+			MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_FOG_END));
 		} break;
 	case IDC_FOG_START:
 		if (EN_CHANGE == msg.CodeNotify())
 		{
 			UINT val(GetDlgItemInt(hwnd_, IDC_FOG_START, NULL, FALSE));
 			MacroProjectData(ID_FOG_START) = val;
-			preview_wnd_.ProjectDataChanged(ProjectData::ID_FOG_START);
+			MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_FOG_START));
 		} break;
 	case IDC_LOCATION_LIST:
 		if (CBN_SELCHANGE == msg.CodeNotify())
@@ -199,7 +203,7 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 			case 3: index = 4; break;
 			case 4: index = 0; break;
 			}
-			preview_wnd_.HighlightMarker(index);
+			MacroSafeWndCall(preview_wnd_, HighlightMarker(index));
 		} break;
 	case IDC_LOCATION_X:
 		if (EN_CHANGE == msg.CodeNotify())
@@ -241,23 +245,23 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 			{
 			case 0:
 				MacroProjectData(ID_SP_1).y = val;
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_1);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_SP_1));
 				break;
 			case 1:
 				MacroProjectData(ID_SP_2).y = val;
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_2);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_SP_2));
 				break;
 			case 2:
 				MacroProjectData(ID_SP_3).y = val;
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_3);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_SP_3));
 				break;
 			case 3:
 				MacroProjectData(ID_SP_4).y = val;
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_4);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_SP_4));
 				break;
 			case 4:
 				MacroProjectData(ID_SP_0).y = val;
-				preview_wnd_.ProjectDataChanged(ProjectData::ID_SP_0);
+				MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_SP_0));
 				break;
 			}
 		} break;
@@ -268,7 +272,7 @@ void InfoWnd::OnCommand(Msg<WM_COMMAND> &msg)
 			UINT val(GetDlgItemInt(hwnd_, IDC_ZERO_PLAST, NULL, TRUE));
 			val = __min(val, max_val);
 			MacroProjectData(ID_ZERO_LEVEL) = val;
-			preview_wnd_.ProjectDataChanged(ProjectData::ID_ZERO_LEVEL);
+			MacroSafeWndCall(preview_wnd_, ProjectDataChanged(ProjectData::ID_ZERO_LEVEL));
 			if (zero_level_changes_ignored_ >= 1 && IsWindowVisible(hwnd_))
 				SetTimer(hwnd_, 0, 3000, NULL);
 			else

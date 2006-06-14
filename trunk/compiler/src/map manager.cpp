@@ -34,7 +34,7 @@
 #include "app data.h"
 #include "btdb.h"
 #include "map manager.h"
-#include "../resource.h"
+#include "resource.h"
 #include "resource management.h"
 #include "task common.h"
 
@@ -67,11 +67,10 @@ void MapManager::OnCommand(Msg<WM_COMMAND> &msg)
 	switch (msg.CtrlId())
 	{
 	case IDOK:
-	case IDCANCEL:
-		EndDialog(hwnd_, 0);
+	case IDCANCEL: EndDialog(hwnd_, 0);
 		break;
-	case IDC_DELETE_MAP:
-		OnDeleteMap(msg);
+	case IDC_DELETE_MAP: OnDeleteMap(msg); break;
+	case IDC_SHOW_ALL:   OnShowAll  (msg); break;
 	}
 }
 
@@ -109,31 +108,37 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 		ScreenToClient(hwnd_, &rect);
 		delete_btn_offset_ = rect.top - client.cy;
 	}
-	// get a list of maps installed by set difference of folder names in "RESOURCE\Worlds"
-	//  and the list of reserved map names
-	std::set<tstring> map_list;
+	// get the list of folders in "RESOURCE\Worlds"
 	{
-		// get the list of folders in "RESOURCE\Worlds"
-		std::set<tstring> prm_list;
+		// get the "RESOURCE\Worlds" path
+		TCHAR path[MAX_PATH];
+		PathCombine(path, install_path_.c_str(), _T("RESOURCE\\Worlds\\*"));
+		// get the folder names
 		{
-			// get the "RESOURCE\Worlds" path
-			TCHAR path[MAX_PATH];
-			PathCombine(path, install_path_.c_str(), _T("RESOURCE\\Worlds\\*"));
-			// get the folder names
+			max_string_size_ = 0;
+			HANDLE find_handle;
+			WIN32_FIND_DATA find_data;
+			find_handle = FindFirstFile(path, &find_data);
+			while (INVALID_HANDLE_VALUE != find_handle)
 			{
-				HANDLE find_handle;
-				WIN32_FIND_DATA find_data;
-				find_handle = FindFirstFile(path, &find_data);
-				while (INVALID_HANDLE_VALUE != find_handle)
+				if (0 != (FILE_ATTRIBUTE_DIRECTORY & find_data.dwFileAttributes)
+					&& 0 != _tcscmp(find_data.cFileName, ".") 
+					&& 0 != _tcscmp(find_data.cFileName, ".."))
 				{
-					if (0 != (FILE_ATTRIBUTE_DIRECTORY & find_data.dwFileAttributes))
-						prm_list.insert(find_data.cFileName);
-					if (FALSE == FindNextFile(find_handle, &find_data))
-						break;
+					size_t length(_tcslen(find_data.cFileName));
+					if (length > max_string_size_)
+						max_string_size_ = length;
+					include_.push_back(find_data.cFileName);
 				}
-				FindClose(find_handle);
+				if (FALSE == FindNextFile(find_handle, &find_data))
+					break;
 			}
+			FindClose(find_handle);
+			++max_string_size_;
 		}
+		// sort the folder names and remove duplicates
+		std::sort(include_.begin(), include_.end());
+		std::unique(include_.begin(), include_.end());
 		// get the list of reserved map names
 		std::set<tstring> reserved_list;
 		{
@@ -176,23 +181,18 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 			reserved_list.insert(_T("."));
 			reserved_list.insert(_T(".."));
 		}
-		// get the set difference
-		std::set_difference(
-			prm_list.begin(),
-			prm_list.end(),
+		// get the set intersection
+		std::set_intersection(
+			include_.begin(),
+			include_.end(),
 			reserved_list.begin(),
 			reserved_list.end(),
-			std::inserter(map_list, map_list.begin()));
+			std::inserter(exclude_, exclude_.begin()));
 	}
 	// set up the map list
 	{
 		HWND map_list_ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));
 		ListView_SetExtendedListViewStyleEx(map_list_ctrl, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
-		enum Column
-		{
-			COL_NAME,
-			COL_SIZE
-		};
 		// add columns
 		{
 			LVCOLUMN column;
@@ -208,30 +208,7 @@ void MapManager::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 			column.fmt     = LVCFMT_RIGHT;
 			ListView_InsertColumn(map_list_ctrl, COL_SIZE, &column);
 		}
-		// find out the maximum string length
-		size_t max_string_size(0);
-		foreach (tstring &map, map_list)
-			max_string_size = __max(max_string_size, map.size());
-		max_string_size = __max(32, max_string_size + 1);
-		// feed in the list
-		ListView_SetItemCount(map_list_ctrl, map_list.size());
-		vector<TCHAR> item_text_vector(max_string_size);
-		LVITEM item;
-		item.mask = LVIF_TEXT;
-		item.iItem = 0;
-		item.pszText = &item_text_vector[0];
-		foreach (tstring &map, map_list)
-		{
-			// map name
-			item.iSubItem = COL_NAME;
-			_tcscpy(item.pszText, map.c_str());
-			ListView_InsertItem(map_list_ctrl, &item);
-			// map size
-			item.iSubItem = COL_SIZE;
-			_tcscpy(item.pszText, GetMapFilesSize(map.c_str()).c_str());
-			ListView_SetItem(map_list_ctrl, &item);
-			++item.iItem;
-		}
+		FillList(false);
 	}
 	msg.result_  = TRUE;
 	msg.handled_ = true;
@@ -269,15 +246,15 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 {
 	vector<TCHAR> path_vector(MAX_PATH); // buffer for path manipulations
 	TCHAR *path(&path_vector[0]);
-	// get the index of the map to delete
+	// the the list view control
 	const HWND ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));
+	// get the index of the map to delete
 	const int sel_index(ListView_GetSelectionMark(ctrl));
 	if (0 > sel_index)
 		return;
 	// get the name
-	tstring name;
 	ListView_GetItemText(ctrl, sel_index, 0, path, MAX_PATH);
-	name = path;
+	const tstring name(path);
 	// create a list of files to delete
 	vector<TCHAR> files_list_vector;
 	TCHAR *files_list(&files_list_vector[0]);
@@ -320,9 +297,24 @@ void MapManager::OnDeleteMap(Msg<WM_COMMAND> &msg)
 		Btdb btdb(PathCombine(path, install_path_.c_str(), _T("RESOURCE\\LocData\\Russian\\Text\\Texts.btdb")));
 		btdb.RemoveMapEntry(name.c_str()); // WARN: not UNICODE safe
 	}
+	// remove the map from the stored names arrays
+	{
+		vector<tstring>::iterator item;
+		item = std::lower_bound(include_.begin(), include_.end(), name);
+		_ASSERTE(*item == name);
+		include_.erase(item);
+		item = std::lower_bound(exclude_.begin(), exclude_.end(), name);
+		if (exclude_.end() != item && *item == name)
+			exclude_.erase(item);
+	}
 	// wrap up
 	msg.result_  = FALSE;
 	msg.handled_ = true;
+}
+
+void MapManager::OnShowAll(Msg<WM_COMMAND> &msg)
+{
+	FillList(BST_CHECKED == Button_GetCheck(GetDlgItem(hwnd_, IDC_SHOW_ALL)));
 }
 
 void MapManager::ProcessMessage(WndMsg &msg)
@@ -503,4 +495,37 @@ tstring MapManager::GetMapFilesSize(LPCTSTR map_name)
 		_tcscpy(size_str + _tcslen(size_str), _T(" GB"));
 	}
 	return size_str;
+}
+
+void MapManager::FillList(bool show_all)
+{
+	// get the list
+	HWND map_list_ctrl(GetDlgItem(hwnd_, IDC_MAP_LIST));
+	SetWindowRedraw(map_list_ctrl, FALSE);
+	ListView_DeleteAllItems(map_list_ctrl);
+	// feed in the list
+	if (show_all)
+		ListView_SetItemCount(map_list_ctrl, include_.size());
+	else
+		ListView_SetItemCount(map_list_ctrl, include_.size() - exclude_.size());
+	vector<TCHAR> item_text_vector(max_string_size_);
+	LVITEM item;
+	item.mask = LVIF_TEXT;
+	item.iItem = 0;
+	item.pszText = &item_text_vector[0];
+	foreach (tstring &map, include_)
+	{
+		if (!show_all && std::binary_search(exclude_.begin(), exclude_.end(), map))
+			continue;
+		// map name
+		item.iSubItem = COL_NAME;
+		_tcscpy(item.pszText, map.c_str());
+		ListView_InsertItem(map_list_ctrl, &item);
+		// map size
+		item.iSubItem = COL_SIZE;
+		_tcscpy(item.pszText, GetMapFilesSize(map.c_str()).c_str());
+		ListView_SetItem(map_list_ctrl, &item);
+		++item.iItem;
+	}
+	SetWindowRedraw(map_list_ctrl, TRUE);
 }

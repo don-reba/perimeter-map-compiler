@@ -45,7 +45,8 @@ public:
 	PMCWindow();
 // interface
 public:
-	RECT GetRect() const;
+	RECT GetRect()     const;
+	bool IsRectValid() const;
 	virtual void ToggleWaitCursor(bool on);
 // message handlers
 protected:
@@ -63,5 +64,6 @@ protected:
 private:
 	HCURSOR cursor_;
 	HCURSOR old_cursor_;
+	bool    is_rect_valid_;
 	RECT    window_rect_;
 };

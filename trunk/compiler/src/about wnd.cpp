@@ -32,7 +32,7 @@
 #include "StdAfx.h"
 
 #include "about wnd.h"
-#include "../resource.h"
+#include "resource.h"
 #include "resource management.h"
 #include "task common.h"
 

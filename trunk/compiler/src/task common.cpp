@@ -31,7 +31,7 @@
 
 #include "stdafx.h"
 
-#include "../resource.h"
+#include "resource.h"
 #include "preview wnd.h"
 #include "project data.h"
 #include "resource management.h"

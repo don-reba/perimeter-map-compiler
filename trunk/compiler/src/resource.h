@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by Compiler.rc
+// Used by f:\My Files\Alexey Badalov\Programming\Edit Perimeter\Compiler\Compiler.rc
 //
 #define IDC_MYICON                      2
 #define IDOK2                           3
@@ -143,6 +143,7 @@
 #define ID_HELP_                        32807
 #define ID_HELP_RU                      32808
 #define ID_HELP_EN                      32809
+#define IDC_SHOW_ALL                    32810
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

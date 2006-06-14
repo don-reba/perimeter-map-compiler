@@ -34,6 +34,13 @@
 
 class MapManager : public PMCWindow
 {
+// nested types
+private:
+	enum Column
+	{
+		COL_NAME,
+		COL_SIZE
+	};
 // interface
 public:
 	INT_PTR DoModal(HWND parent_wnd, const char *install_path);
@@ -46,6 +53,7 @@ private:
 	void OnSize         (Msg<WM_SIZE>          &msg);
 	// command
 	void OnDeleteMap(Msg<WM_COMMAND> &msg);
+	void OnShowAll  (Msg<WM_COMMAND> &msg);
 // internal function
 protected:
 	void ProcessMessage(WndMsg &msg);
@@ -54,9 +62,13 @@ private:
 private:
 	void    GetFilesList(LPCTSTR map_name, vector<tstring> &files, bool recurse = true);
 	tstring GetMapFilesSize(LPCTSTR map_name);
+	void    FillList(bool show_all);
 // data
 	tstring install_path_;
 	RECT    map_list_border_;
 	SIZE    min_size_;
 	LONG    delete_btn_offset_;
+	size_t  max_string_size_;
+	vector<tstring> include_;
+	vector<tstring> exclude_;
 };

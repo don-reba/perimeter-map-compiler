@@ -36,7 +36,7 @@
 #include "project manager.h"
 #include "project settings wnd.h"
 #include "project tasks.h"
-#include "../resource.h"
+#include "resource.h"
 
 //----------------------------------
 // ProjectSettingsWnd implementation

@@ -104,11 +104,20 @@ public:
 public:
 	struct PanelInfo
 	{
-		PanelInfo(PanelWindow *panel, WORD image_id, LPCTSTR tip)
-			:panel_(panel), image_id_(image_id), tip_(tip) {}
+		PanelInfo(
+			PanelWindow *panel,
+			WORD image_id,
+			LPCTSTR tip,
+			RECT   &creation_rect)
+			:panel_(panel)
+			,image_id_(image_id)
+			,tip_(tip)
+			,creation_rect_(creation_rect)
+		{}
 		PanelWindow *panel_;
 		WORD         image_id_;
 		LPCTSTR      tip_;
+		RECT         creation_rect_;
 	};
 private:
 	struct TasksLeft : ProjectManager::TasksLeft
@@ -127,8 +136,14 @@ private:
 	};
 	struct PanelData
 	{
-		PanelData() : button_hwnd_(NULL), image_(NULL) {}
+		PanelData()
+			:button_hwnd_(NULL)
+			,image_      (NULL)
+			,created_    (false)
+		{}
 		HWND         button_hwnd_;
+		bool         created_;
+		RECT         creation_rect_;
 		HBITMAP      image_;
 		WORD         image_id_;
 		PanelWindow *panel_;
@@ -153,6 +168,7 @@ public:
 	void AddPanelWnds(PanelInfo (&panels)[panel_count]);
 	bool Create(POINT position);
 	void OpenProject(LPCTSTR path);
+	void ShowPanel(int panel_id, bool show);
 	void UnpackShrub(LPCTSTR path);
 // message handlers
 private:
@@ -187,13 +203,20 @@ protected:
 private:
 	static VOID CALLBACK ToolTipCleanupCallback(HWND hwnd, UINT msg_id, DWORD data, LRESULT result);
 private:
-	bool    AddPanelWnd(PanelWindow *panel, WORD image_id, WORD panel_index, RECT &button_rect, LPCTSTR tip);
+	bool    AddPanelWnd(
+		PanelWindow *panel,
+		WORD         image_id,
+		WORD         panel_index,
+		RECT        &button_rect,
+		RECT        &creation_rect,
+		LPCTSTR      tip);
 	void    AddToolTip(HWND hwnd, LPCTSTR text);
 	void    ChangeToolTipText(HWND hwnd, LPCTSTR text);
 	HBITMAP CreateButtonImage(WORD image_id);
 	tstring GetFilePathDlg(LPCTSTR title, LPCTSTR filter);
 	tstring GetFolderPathDlg(LPCTSTR title);
 	void    SetMenuState(MenuState state);
+	void    ShowPanel(PanelData &panel, bool show);
 	void    ToggleBusyIcon(bool busy, LPCTSTR message);
 	void    ToggleStateIcon(MenuState state);
 //data

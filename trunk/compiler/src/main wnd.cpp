@@ -36,7 +36,7 @@
 #include "map manager.h"
 #include "project create wnd.h"
 #include "project settings wnd.h"
-#include "../resource.h"
+#include "resource.h"
 #include "version detector.h"
 
 #include <map>
@@ -120,7 +120,13 @@ void MainWnd::AddPanelWnds(MainWnd::PanelInfo (&panels)[MainWnd::panel_count])
 		button_rect.top    = position.y;
 		button_rect.right  = button_rect.left + MainWndMetrics::btn.cx;
 		button_rect.bottom = button_rect.top  + MainWndMetrics::btn.cy;
-		AddPanelWnd(panels[i].panel_, panels[i].image_id_, i, button_rect, panels[i].tip_);
+		AddPanelWnd(
+			panels[i].panel_,
+			panels[i].image_id_,
+			i,
+			button_rect,
+			panels[i].creation_rect_,
+			panels[i].tip_);
 		position.x += MainWndMetrics::btn.cx + MainWndMetrics::intro;
 	}
 }
@@ -319,6 +325,29 @@ void MainWnd::OpenProject(LPCTSTR path)
 	ToggleStateIcon(MS_PROJECT);
 }
 
+void MainWnd::ShowPanel(int panel_id, bool show)
+{
+	ShowPanel(panels_[panel_id], show);
+}
+
+void MainWnd::ShowPanel(PanelData &panel, bool show)
+{
+	// delayed creation
+	if (show && !panel.panel_->hwnd_)
+	{
+		panel.created_ = panel.panel_->Create(hwnd_, panel.creation_rect_);
+		// disable button if creation fails
+		if (!panel.created_)
+			EnableWindow(panel.button_hwnd_, FALSE);
+	}
+	if (panel.created_)
+	{
+		// show the window
+		ShowWindow(panel.panel_->hwnd_, show ? SW_SHOW : SW_HIDE);
+		SetFocus(hwnd_);
+	}
+}
+
 void MainWnd::UnpackShrub(LPCTSTR path)
 {
 	if (project_manager_.UnpackShrub(path, hwnd_))
@@ -331,10 +360,10 @@ void MainWnd::UnpackShrub(LPCTSTR path)
 void MainWnd::OnEnabled(Msg<WM_ENABLE> &msg)
 {
 	BOOL is_enabled(msg.IsEnabled() ? TRUE : FALSE);
-	EnableWindow(info_wnd_.hwnd_,       is_enabled);
-	EnableWindow(preference_wnd_.hwnd_, is_enabled);
-	EnableWindow(preview_wnd_.hwnd_,    is_enabled);
-	EnableWindow(stat_wnd_.hwnd_,       is_enabled);
+	if (0 != info_wnd_.hwnd_)       EnableWindow(info_wnd_.hwnd_,       is_enabled);
+	if (0 != preference_wnd_.hwnd_) EnableWindow(preference_wnd_.hwnd_, is_enabled);
+	if (0 != preview_wnd_.hwnd_)    EnableWindow(preview_wnd_.hwnd_,    is_enabled);
+	if (0 != stat_wnd_.hwnd_)       EnableWindow(stat_wnd_.hwnd_,       is_enabled);
 }
 
 void MainWnd::OnProjectOpen(Msg<WM_USR_PROJECT_OPEN> &msg)
@@ -354,6 +383,8 @@ void MainWnd::OnSysColorChange(Msg<WM_SYSCOLORCHANGE> &msg)
 	for (size_t i(0); i != panel_count; ++i)
 	{
 		PanelData &panel(panels_[i]);
+		if (!panel.created_)
+			continue;
 		HBITMAP image(CreateButtonImage(panel.image_id_));
 		SendMessage(panel.button_hwnd_, BM_SETIMAGE, IMAGE_BITMAP, ri_cast<LPARAM>(image));
 		DeleteObject(panel.image_);
@@ -452,15 +483,15 @@ void MainWnd::OnCommand(Msg<WM_COMMAND> &msg)
 	case ID_TOOLS_IMPORTSCRIPT:   OnImportScript   (msg); break;
 	case ID_TOOLS_PREFERENCES:    OnPreferences    (msg); break;
 	case ID_TOOLS_SAVETHUMBNAIL:  OnSaveThumbnail  (msg); break;
-	}
-	// check for panel button messages
-	for(PanelData *i(panels_); i != panels_ + panel_count; ++i)
-	{
-		if (msg.CtrlId() == i->panel_id_)
+	default:
+		// check for panel button messages
+		for(PanelData *panel(panels_); panel != panels_ + panel_count; ++panel)
 		{
-			DWORD check(Button_GetCheck(i->button_hwnd_));
-			ShowWindow(i->panel_->hwnd_, (check == BST_CHECKED) ? SW_SHOW : SW_HIDE);
-			SetFocus(hwnd_);
+			if (msg.CtrlId() == panel->panel_id_)
+			{
+				DWORD check(Button_GetCheck(panel->button_hwnd_));
+				ShowPanel(*panel, check == BST_CHECKED);
+			}
 		}
 	}
 }
@@ -609,7 +640,13 @@ VOID CALLBACK MainWnd::ToolTipCleanupCallback(HWND hwnd, UINT msg_id, DWORD data
 	delete [] ri_cast<TCHAR*>(data);
 }
 
-bool MainWnd::AddPanelWnd(PanelWindow *panel, WORD image_id, WORD panel_index, RECT &button_rect, LPCTSTR tip)
+bool MainWnd::AddPanelWnd(
+	PanelWindow *panel,
+	WORD         image_id,
+	WORD         panel_index,
+	RECT        &button_rect,
+	RECT        &creation_rect,
+	LPCTSTR      tip)
 {
 	WORD panel_id = ID_PANEL_WND_0 + panel_index;
 	// create the corresponding button
@@ -641,6 +678,7 @@ bool MainWnd::AddPanelWnd(PanelWindow *panel, WORD image_id, WORD panel_index, R
 	// add the PanelData structure
 	{
 		panels_[panel_index].button_hwnd_ = button;
+		panels_[panel_index].creation_rect_ = creation_rect;
 		panels_[panel_index].image_       = image;
 		panels_[panel_index].image_id_    = image_id;
 		panels_[panel_index].panel_       = panel;

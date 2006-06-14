@@ -529,7 +529,12 @@ void ProjectManager::InstallMap(LPCTSTR install_path, uint version)
 		TaskCommon::MapInfo::LoadFromGlobal()));
 	if (PS_PROJECT == project_state_)
 		AddTask(new LoadProjectDataTask(error_hwnd_));
-	AddTask(new InstallMapTask(error_hwnd_, install_path, version, MacroAppData(ID_RENAME_TO_UNREGISTERED)));
+	AddTask(new InstallMapTask(
+		error_hwnd_,
+		install_path,
+		version,
+		MacroProjectData(ID_CUSTOM_ZERO_LAYER),
+		MacroAppData(ID_RENAME_TO_UNREGISTERED)));
 	if (PS_PROJECT == project_state_)
 		AddTask(new FreeProjectDataTask());
 }

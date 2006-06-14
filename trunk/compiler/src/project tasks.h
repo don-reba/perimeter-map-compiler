@@ -230,7 +230,12 @@ class InstallMapTask : public Task, public ErrorHandler
 {
 // construction/destruction
 public:
-	InstallMapTask(HWND &hwnd, LPCTSTR install_path, uint version, bool rename_to_unregistered);
+	InstallMapTask(
+		HWND    &hwnd,
+		LPCTSTR  install_path,
+		uint     version,
+		bool     custom_zero_layer,
+		bool     rename_to_unregistered);
 // Task interface
 public:
 	void operator() ();
@@ -245,6 +250,7 @@ private:
 	HWND          hwnd_;
 	const tstring install_path_;
 	const uint    version_;
+	const bool    custom_zero_layer_;
 	const bool    rename_to_unregistered_;
 };
 

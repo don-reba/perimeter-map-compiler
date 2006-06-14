@@ -53,6 +53,8 @@ public:
 	PanelWindow();
 // interface
 public:
+	virtual bool Create(HWND parent_wnd, const RECT &window_rect) = 0;
+public:
 	bool IsVisible() const;
 	void SetVisibilityEvent(ToggleVisibility *visibility_event);
 	void SetVisibilityNotification(ToggleVisibility *visibility_notification);

@@ -1,6 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "resource.h"
+#include "src\resource.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -31,7 +31,7 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 
 1 TEXTINCLUDE 
 BEGIN
-    "resource.h\0"
+    "src\\resource.h\0"
 END
 
 2 TEXTINCLUDE 
@@ -260,16 +260,18 @@ BEGIN
                     BS_AUTORADIOBUTTON | WS_TABSTOP,120,143,47,10
 END
 
-IDD_MAP_MANAGER DIALOGEX 0, 0, 148, 116
+IDD_MAP_MANAGER DIALOGEX 0, 0, 148, 130
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_VISIBLE | 
     WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Manage Maps"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    PUSHBUTTON      "Delete",IDC_DELETE_MAP,53,95,40,14
+    PUSHBUTTON      "Delete",IDC_DELETE_MAP,53,109,40,14
     CONTROL         "",IDC_MAP_LIST,"SysListView32",LVS_REPORT | 
                     LVS_SINGLESEL | LVS_ALIGNLEFT | LVS_NOSORTHEADER | 
                     WS_BORDER | WS_TABSTOP,7,7,134,83
+    CONTROL         "show all",IDC_SHOW_ALL,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,95,41,10
 END
 
 IDD_PROJECT_SETTINGS DIALOGEX 0, 0, 113, 98
@@ -372,7 +374,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 141
         TOPMARGIN, 7
-        BOTTOMMARGIN, 109
+        BOTTOMMARGIN, 123
     END
 
     IDD_PROJECT_SETTINGS, DIALOG

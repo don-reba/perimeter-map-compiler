@@ -31,7 +31,7 @@
 
 #include "stdafx.h"
 
-#include "../resource.h"
+#include "resource.h"
 #include "btdb.h"
 #include "info wnd.h"
 #include "main wnd.h"
@@ -236,14 +236,16 @@ void ImportScriptTask::operator() ()
 //--------------------------------
 
 InstallMapTask::InstallMapTask(
-	HWND &hwnd,
-	LPCTSTR install_path,
-	uint version,
-	bool rename_to_unregistered)
+	HWND    &hwnd,
+	LPCTSTR  install_path,
+	uint     version,
+	bool     custom_zero_layer,
+	bool     rename_to_unregistered)
 	:ErrorHandler           (hwnd)
 	,hwnd_                  (hwnd)
 	,install_path_          (install_path)
 	,version_               (version)
+	,custom_zero_layer_     (custom_zero_layer)
 	,rename_to_unregistered_(rename_to_unregistered)
 {}
 
@@ -305,7 +307,7 @@ void InstallMapTask::operator() ()
 	}
 	// create and save output.vmp
 	PathCombine(str, folder_path, _T("output.vmp"));
-	SaveVMP(heightmap, texture, task_data_.zero_layer_, str, *this);
+	SaveVMP(heightmap, texture, custom_zero_layer_ ? NULL : task_data_.zero_layer_, str, *this);
 	// create and save inDam.act
 	PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(texture, str, *this);

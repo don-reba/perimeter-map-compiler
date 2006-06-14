@@ -52,7 +52,7 @@ public:
 	InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed);
 // interface
 public:
-	bool Create(HWND parent_wnd, const RECT &window_rect, bool enabled = true);
+	bool Create(HWND parent_wnd, const RECT &window_rect);
 	void Update(bool read_only = false);
 // message handlers
 private:

@@ -32,7 +32,7 @@
 #include "StdAfx.h"
 
 #include "app data.h"
-#include "../resource.h"
+#include "resource.h"
 #include "version detector.h"
 
 #include <commctrl.h>
