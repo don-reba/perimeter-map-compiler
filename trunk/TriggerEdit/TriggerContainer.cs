@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
 using System.Xml;
 using TriggerEdit.Definitions;
@@ -369,6 +370,7 @@ namespace TriggerEdit
 			public string comment_;
 		}
 
+
 		#endregion
 
 		//----------
@@ -698,16 +700,20 @@ namespace TriggerEdit
 					names.Add(descriptions_[i].name_, i);
 			}
 			// add links
+			SerializationErrorsForm errors_form = new SerializationErrorsForm();
 			for (int i = 1; i != count_; ++i)
 			{
+				errors_form.SetCurrentTrigger(descriptions_[i].name_);
+				// get the links for this trigger
 				XmlNodeList link_nodes = trigger_nodes[i - 1].SelectNodes(
 					"array[@name=\"outcomingLinks\"]/set");
 				foreach (XmlNode link_node in link_nodes)
 				{
+					string ref_name = "";
 					try
 					{
 						// get name
-						string ref_name = link_node.SelectSingleNode(
+						ref_name = link_node.SelectSingleNode(
 							"string[@name=\"triggerName\"]"
 							).InnerText.Trim();
 						if (!names.Contains(ref_name))
@@ -731,21 +737,13 @@ namespace TriggerEdit
 					}
 					catch (Exception e)
 					{
-						string msg = e.ToString();
-						if (
-							DialogResult.OK != MessageBox.Show(
-								string.Format(
-									"Invalid message link in \"{0}\".\n\n{1}",
-									descriptions_[i].name_,
-									e),
-								"Warning",
-								MessageBoxButtons.OKCancel,
-								MessageBoxIcon.Warning)
-							)
-							return false;
+						errors_form.AddLinkError(ref_name, e.Message);
 					}
 				}
 			}
+			errors_form.Finish();
+			if (errors_form.ContainsErrors)
+				errors_form.ShowDialog();
 			return true;
 		}
 

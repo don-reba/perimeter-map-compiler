@@ -926,7 +926,7 @@ namespace TriggerEdit
 		public class Condition : ICloneable
 		{
 			#region interface
-
+static int count = 0;
 			public static Condition CreateInstance(XmlNode node)
 			{
 				Condition condition;
@@ -942,6 +942,7 @@ namespace TriggerEdit
 				// get type information
 				try
 				{
+					++count;
 					// initialize main object
 					Type condition_type = Type.GetType("TriggerEdit.Definitions." + code);
 					condition = (Condition)Activator.CreateInstance(condition_type);
@@ -963,10 +964,9 @@ namespace TriggerEdit
 							BitEnum bit_enum = (BitEnum)property.GetValue(condition, null);
 							if (null == bit_enum)
 								continue;
-							if (property_node.Name == "disjunction")
+							if (property_node.HasChildNodes)
 							{
-								XmlNodeList value_nodes = property_node.SelectNodes("value");
-								foreach (XmlNode value_node in value_nodes)
+								foreach (XmlNode value_node in property_node.ChildNodes)
 									bit_enum[Enum.Parse(
 										bit_enum.GetEnumType(),
 										value_node.InnerText.Trim())] = true;
@@ -1260,8 +1260,8 @@ namespace TriggerEdit
 				get { return playerType_; }
 				set { playerType_ = value; }
 			}
-			private int spiralChargingPercent_;
-			public  int spiralChargingPercent
+			private float spiralChargingPercent_;
+			public  float spiralChargingPercent
 			{
 				get { return spiralChargingPercent_; }
 				set { spiralChargingPercent_ = value; }
@@ -1416,8 +1416,8 @@ namespace TriggerEdit
 		}
 		public class ConditionOutOfEnergyCapacity : Condition
 		{
-			private int chargingPercent_;
-			public  int chargingPercent
+			private float chargingPercent_;
+			public  float chargingPercent
 			{
 				get { return chargingPercent_; }
 				set { chargingPercent_ = value; }
@@ -1620,7 +1620,7 @@ namespace TriggerEdit
 		public class Action
 		{
 			#region interface
-
+static int count = 0;
 			public static Action CreateInstance(XmlNode node)
 			{
 				Action action;
@@ -1636,10 +1636,10 @@ namespace TriggerEdit
 				// get type information
 				try
 				{
+					++count;
 					// initialize main object
 					Type action_type = Type.GetType("TriggerEdit.Definitions." + code);
 					action = (Action)Activator.CreateInstance(action_type);
-					Debug.Assert(action.GetType() != typeof(ActionSetCameraAtObject));
 					// set properties
 					PropertyInfo[] properties = action_type.GetProperties();
 					foreach (PropertyInfo property in properties)
@@ -1647,7 +1647,9 @@ namespace TriggerEdit
 						XmlNode property_node = node.SelectSingleNode(
 							"*[@name=\"" + property.Name + "\"]");
 						if (null == property_node)
-								continue;
+							continue;
+						if ("" == property_node.InnerText)
+							continue;
 						if (
 							property.Name == "attackTimer"   ||
 							property.Name == "delayTimer"    ||
@@ -1705,12 +1707,24 @@ namespace TriggerEdit
 								null);
 						}
 						else if (property.PropertyType == typeof(BitEnum))
-							property.SetValue(
-								action,
-								BitEnum.Parse(
-									((BitEnum)property.GetValue(action, null)).GetEnumType(),
-									property_node.InnerText.Trim()),
-								null);
+						{
+							BitEnum bit_enum = (BitEnum)property.GetValue(action, null);
+							if (null == bit_enum)
+								continue;
+							if (property_node.HasChildNodes)
+							{
+								foreach (XmlNode value_node in property_node.ChildNodes)
+									bit_enum[Enum.Parse(
+										bit_enum.GetEnumType(),
+										value_node.InnerText.Trim())] = true;
+							}
+							else
+							{
+								bit_enum[Enum.Parse(
+									bit_enum.GetEnumType(),
+									property_node.InnerText.Trim())] = true;
+							}
+						}
 						else if (property.PropertyType.IsEnum)
 							property.SetValue(
 								action,

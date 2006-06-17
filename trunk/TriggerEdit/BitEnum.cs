@@ -84,14 +84,19 @@ namespace TriggerEdit
 
 		public static BitEnum Parse(Type enum_type, string data)
 		{
+			string[] tokens = data.Split(new char[] {'|'});
+			return Parse(enum_type, tokens);
+		}
+
+		public static BitEnum Parse(Type enum_type, string[] tokens)
+		{
 			BitEnum bit_enum = new BitEnum(enum_type);
 			FieldInfo[] fields = enum_type.GetFields();
-			string[] tokens = data.Split(new char[] {'|'});
 			foreach(string token in tokens)
 				bit_enum[
 					Array.IndexOf(
-						fields,
-						enum_type.GetField(token.Trim()))
+					fields,
+					enum_type.GetField(token.Trim()))
 					] = true;
 			return bit_enum;
 		}

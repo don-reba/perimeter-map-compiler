@@ -1754,6 +1754,8 @@ namespace TriggerEdit
 			camera_.IncrementZoom(e.Delta / 120);
 			while (camera_.Zoom < 1.0f)
 				camera_.IncrementZoom();
+			while (camera_.Zoom > 1024.0f)
+				camera_.DecrementZoom();
 			OnZoomChanged(new ZoomEventArgs(camera_.Zoom));
 			base.OnMouseWheel (e);
 		}

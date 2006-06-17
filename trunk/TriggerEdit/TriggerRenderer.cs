@@ -114,11 +114,11 @@ namespace TriggerEdit
 						-marker_layout_.TextOffset.Height);
 					font_.DrawText(
 						sprite_,
-						(triggers.descriptions_[i].action_ != null)
+						(DisplayAction && triggers.descriptions_[i].action_ != null)
 						? string.Format(
-						"{0}:\n{1}",
-						triggers.descriptions_[i].name_,
-						triggers.descriptions_[i].action_.Name)
+							"{0}:\n{1}",
+							triggers.descriptions_[i].name_,
+							triggers.descriptions_[i].action_.Name)
 						: triggers.descriptions_[i].name_,
 						rect,
 						DrawTextFormat.WordBreak,
@@ -141,11 +141,11 @@ namespace TriggerEdit
 						-marker_layout_.TextOffset.Height);
 					font_.DrawText(
 						sprite_,
-						(description.action_ != null)
+						(DisplayAction && description.action_ != null)
 						? string.Format(
-						"{0}:\n{1}",
-						description.name_,
-						description.action_.Name)
+							"{0}:\n{1}",
+							description.name_,
+							description.action_.Name)
 						: description.name_,
 						rect,
 						DrawTextFormat.WordBreak,
