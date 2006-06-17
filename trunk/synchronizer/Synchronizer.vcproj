@@ -82,7 +82,7 @@
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="0"
 				OptimizeForWindowsApplication="TRUE"
-				PreprocessorDefinitions="WIN32;NDEBUG"
+				PreprocessorDefinitions="WIN32;NDEBUG;PRE_RELEASE"
 				StringPooling="TRUE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -113,7 +113,7 @@
 				Name="VCPreLinkEventTool"/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="PERIMETER_ET"/>
+				PreprocessorDefinitions="PERIMETER"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
 			<Tool
