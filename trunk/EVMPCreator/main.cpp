@@ -1,4 +1,5 @@
-#include <FreeImage\Wrapper\FreeImagePlus\FreeImagePlus.h>
+#include "..\include\FreeImage\FreeImagePlus.h"
+
 #include <fstream>
 #include <iostream>
 
