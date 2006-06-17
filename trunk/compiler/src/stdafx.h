@@ -61,10 +61,11 @@ typedef std::basic_ostringstream<TCHAR, std::char_traits<TCHAR>, std::allocator<
 #include <vector>
 using std::vector;
 // third party libraries
-#include <bzip2-1.0.2\bzlib.h>
-#include "..\FreeImage\FreeImagePlus.h"
-#include <jasper\jasper.h>
-#include <tinyxml\tinyxml.h>
+#include "..\..\include\bzlib\bzlib.h"
+#include "..\..\include\FreeImage\FreeImagePlus.h"
+#include "..\..\include\jasper\jasper.h"
+#include "..\..\include\tinyxml\tinyxml.h"
+#include "..\..\include\tinyxpath\xpath_processor.h"
 // project-wide utilites
 #include "util.h"
 #include "foreach.h"
