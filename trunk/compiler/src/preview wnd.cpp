@@ -731,6 +731,21 @@ void PreviewWnd::BuildZeroLayerVB()
 bool PreviewWnd::InitializeDevice()
 {
 	HRESULT result;
+	// find an adapter that supports acceleration
+	const UINT adapter_count = d3d_->GetAdapterCount();
+	UINT adapter_index = 0;
+	D3DCAPS9 caps;
+	for (;adapter_index != adapter_count; ++adapter_index)
+	{
+		result = d3d_->GetDeviceCaps(adapter_index, D3DDEVTYPE_HAL, &caps);
+		if (D3D_OK == result)
+			break;
+	}
+	if (adapter_count == adapter_index)
+	{
+		MacroDisplayError("No 3D acceleration has been discovered.");
+		return false;
+	}
 	// get window dimensions
 	RECT client_rect;
 	GetClientRect(hwnd_, &client_rect);
@@ -748,7 +763,7 @@ bool PreviewWnd::InitializeDevice()
 	if (NULL == device_)
 	{
 		result = d3d_->CreateDevice(
-			D3DADAPTER_DEFAULT,
+			adapter_index,
 			D3DDEVTYPE_HAL,
 			hwnd_,
 			D3DCREATE_HARDWARE_VERTEXPROCESSING,

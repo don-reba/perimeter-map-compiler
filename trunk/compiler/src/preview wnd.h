@@ -218,6 +218,7 @@ protected:
 	void ProcessMessage(WndMsg &msg);
 private:
 	void BuildZeroLayerVB();
+	bool CreateDevice();
 	bool InitializeDevice();
 	void MakeProjectiveMatrix();
 	void MakeViewMatrix();

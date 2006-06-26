@@ -35,6 +35,7 @@
 #pragma warning(disable: 4702)
 #pragma warning(disable: 4355)
 #pragma warning(disable: 4512)
+#pragma warning(disable: 4189)
 
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #define _WIN32_WINDOWS 0x0401    // require Win98 or NT 4 at minimum

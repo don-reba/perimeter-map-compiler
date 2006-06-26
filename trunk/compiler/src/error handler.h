@@ -37,14 +37,14 @@
 class ErrorHandler
 {
 public:
-	ErrorHandler(HWND &hwnd);
+	ErrorHandler(HWND hwnd);
 public:
 	void DisplayError(
 		const tstring &cause,
 		const tstring &function,
 		int line);
 protected:
-	HWND &error_hwnd_;
+	HWND error_hwnd_;
 };
 
 #define MacroDisplayError(cause) \

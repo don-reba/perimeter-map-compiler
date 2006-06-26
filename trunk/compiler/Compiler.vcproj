@@ -37,7 +37,8 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib Wininet.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib ..\lib\libjasper.lib ..\lib\libbz2.lib ..\lib\FreeImage.lib ..\lib\FreeImagePlus.lib ..\lib\tinyxmld_STL.lib"
+				AdditionalDependencies="comctl32.lib shell32.lib shlwapi.lib Wininet.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib ..\lib\libjasper.lib ..\lib\libbz2.lib ..\lib\FreeImaged.lib ..\lib\FreeImagePlusd.lib ..\lib\tinyxmld_STL.lib"
+				ShowProgress="0"
 				OutputFile="$(OutDir)/Compiler.exe"
 				LinkIncremental="2"
 				IgnoreDefaultLibraryNames="LIBCMT"
@@ -275,6 +276,9 @@
 				RelativePath=".\src\task common.cpp">
 			</File>
 			<File
+				RelativePath=".\src\task resource manager.cpp">
+			</File>
+			<File
 				RelativePath=".\src\task resources.cpp">
 			</File>
 			<File
@@ -371,6 +375,12 @@
 			</File>
 			<File
 				RelativePath=".\src\task common.h">
+			</File>
+			<File
+				RelativePath=".\src\task resource manager.h">
+			</File>
+			<File
+				RelativePath=".\src\task resource.h">
 			</File>
 			<File
 				RelativePath=".\src\task resources.h">

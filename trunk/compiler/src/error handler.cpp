@@ -39,7 +39,7 @@
 
 const char * const log_name("error log.txt");
 
-ErrorHandler::ErrorHandler(HWND &hwnd)
+ErrorHandler::ErrorHandler(HWND hwnd)
 	:error_hwnd_(hwnd)
 {}
 

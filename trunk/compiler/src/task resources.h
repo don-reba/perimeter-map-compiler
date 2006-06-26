@@ -61,7 +61,6 @@ namespace TaskCommon
 		void Save(LPCTSTR path);
 		void Unpack(TiXmlNode *node, BYTE *buffer, const vector<bool> &mask);
 		BYTE *data_;
-		WORD *data16_;
 		SIZE size_;
 	};
 
