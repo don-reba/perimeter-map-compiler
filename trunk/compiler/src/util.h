@@ -32,40 +32,40 @@
 //----------------------------------------------
 // holds a critical section within its life span
 //----------------------------------------------
-class AutoCriticalSection
-{
-public:
-	AutoCriticalSection(CRITICAL_SECTION *section) : section(section)
-	{
-		in_section = true;
-		if (NULL != section)
-			EnterCriticalSection(section);
-	}
-	~AutoCriticalSection()
-	{
-		if (NULL != section && in_section)
-			LeaveCriticalSection(section);
-		in_section = false;
-	}
-	void Enter()
-	{
-		if (!in_section)
-		{
-			in_section = true;
-			if (NULL != section)
-				EnterCriticalSection(section);
-		}
-	}
-	void Leave()
-	{
-		if (NULL != section)
-			LeaveCriticalSection(section);
-		in_section = false;
-	}
-protected:
-	CRITICAL_SECTION *section;
-	bool in_section;
-};
+//class AutoCriticalSection
+//{
+//public:
+//	AutoCriticalSection(CRITICAL_SECTION *section) : section(section)
+//	{
+//		in_section = true;
+//		if (NULL != section)
+//			EnterCriticalSection(section);
+//	}
+//	~AutoCriticalSection()
+//	{
+//		if (NULL != section && in_section)
+//			LeaveCriticalSection(section);
+//		in_section = false;
+//	}
+//	void Enter()
+//	{
+//		if (!in_section)
+//		{
+//			in_section = true;
+//			if (NULL != section)
+//				EnterCriticalSection(section);
+//		}
+//	}
+//	void Leave()
+//	{
+//		if (NULL != section)
+//			LeaveCriticalSection(section);
+//		in_section = false;
+//	}
+//protected:
+//	CRITICAL_SECTION *section;
+//	bool in_section;
+//};
 
 inline int exp2(unsigned int n)
 {

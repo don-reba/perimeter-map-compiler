@@ -38,6 +38,9 @@
 #include "task common.h"
 
 #include <stdexcept>
+#include <loki/ScopeGuard.h>
+
+using namespace Loki;
 
 //-------------------------------
 // project manager implementation
@@ -69,7 +72,8 @@ ProjectManager::~ProjectManager()
 	if (NULL != processor_thread_)
 	{
 		{
-			AutoCriticalSection acs(&processor_section_);
+			EnterCriticalSection(&processor_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &processor_section_);
 			stop_processing_ = true;
 		}
 		ResumeThread(processor_thread_);
@@ -653,7 +657,8 @@ DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
 		// interract with the ProjectManager object
 		{
 			ProjectManager *obj(ri_cast<ProjectManager*>(parameter));
-			AutoCriticalSection acs(&obj->processor_section_);
+			EnterCriticalSection(&obj->processor_section_);
+			ScopeGuard acs = MakeGuard(LeaveCriticalSection, &obj->processor_section_);
 			// processing should be suspended if the corrsponding flag is set
 			if (obj->stop_processing_)
 				break;
@@ -662,7 +667,8 @@ DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
 			// processing should be suspended if the queue is empty
 			if (obj->tasks_.empty())
 			{
-				acs.Leave();
+				acs.Dismiss();
+				LeaveCriticalSection(&obj->processor_section_);
 				SuspendThread(GetCurrentThread());
 				continue;
 			}
@@ -674,13 +680,15 @@ DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
 		// this is a very convenient place for catching exceptions
 		try
 		{
-			AutoCriticalSection(&Task::task_data_.section_);
+			EnterCriticalSection(&Task::task_data_.section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &Task::task_data_.section_);
 			(*task)();
 		}
 		catch (std::bad_alloc)
 		{
 			ProjectManager *obj(ri_cast<ProjectManager*>(parameter));
-			AutoCriticalSection acs(&obj->processor_section_);
+			EnterCriticalSection(&obj->processor_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->processor_section_);
 			obj->MacroDisplayError(_T("There was not enough memory to carry out a task.\nThe queued tasks will be cancelled."));
 			while (!obj->tasks_.empty())
 			{
@@ -693,7 +701,8 @@ DWORD WINAPI ProjectManager::ProcessorThread(LPVOID parameter)
 			ProjectManager *obj(ri_cast<ProjectManager*>(parameter));
 			tstring msg(e.Msg());
 			msg += _T("\nThe queued tasks will been cancelled.");
-			AutoCriticalSection acs(&obj->processor_section_);
+			EnterCriticalSection(&obj->processor_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->processor_section_);
 			obj->MacroDisplayError(msg.c_str());
 			while (!obj->tasks_.empty())
 			{
@@ -711,7 +720,8 @@ void ProjectManager::AddTask(Task *task)
 	_RPT0(_CRT_WARN, typeid(*task).name());
 	_RPT0(_CRT_WARN, "\n");
 	{
-		AutoCriticalSection acs(&processor_section_);
+		EnterCriticalSection(&processor_section_);
+		LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &processor_section_);
 		tasks_.push(task);
 		(*tasks_left_)(tasks_.size());
 	}

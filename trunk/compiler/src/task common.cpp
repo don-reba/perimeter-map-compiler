@@ -601,7 +601,7 @@ namespace TaskCommon
 			for (LONG r(0); r != map_size.cy; ++r)
 			{
 				for (LONG c(0); c != map_size.cx; ++c)
-					*img_iter++ = *ihm_iter++ << 3;
+					*img_iter++ = static_cast<WORD>(*ihm_iter++ << 3);
 				++ihm_iter;
 			}
 			img.save("pre_blur.tiff", TIFF_NONE);

@@ -33,6 +33,10 @@
 
 #include "file tracker.h"
 
+#include <loki/ScopeGuard.h>
+
+using namespace Loki;
+
 //---------------------------
 // FileTracker implementation
 //---------------------------
@@ -59,7 +63,8 @@ FileTracker::~FileTracker()
 
 void FileTracker::SetDatum(Resource id, LPCTSTR file_name, const FILETIME &last_write)
 {
-	AutoCriticalSection acs(&tracker_section_);
+	EnterCriticalSection(&tracker_section_);
+	LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
 	FileDatum datum;
 	datum.active_     = true;
 	datum.file_name_  = file_name;
@@ -69,7 +74,8 @@ void FileTracker::SetDatum(Resource id, LPCTSTR file_name, const FILETIME &last_
 
 void FileTracker::EnableDatum(Resource id, bool enable)
 {
-	AutoCriticalSection acs(&tracker_section_);
+	EnterCriticalSection(&tracker_section_);
+	LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
 	files_[id].active_ = enable;
 }
 
@@ -100,7 +106,8 @@ void FileTracker::Stop()
 	if (NULL != tracker_thread_)
 	{
 		{
-			AutoCriticalSection acs(&tracker_section_);
+			EnterCriticalSection(&tracker_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
 			SetEvent(stop_tracking_event_);
 		}
 		const DWORD timeout(8000); // 8 seconds
@@ -137,7 +144,8 @@ DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
 	}
 	// initial file check
 	{
-		AutoCriticalSection acs(&obj->tracker_section_);
+		EnterCriticalSection(&obj->tracker_section_);
+		LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->tracker_section_);
 		obj->CheckFiles();
 	}
 	// file check cycle
@@ -148,7 +156,8 @@ DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
 		if (WAIT_OBJECT_0 + 1 == wait_result)
 			break;
 		{
-			AutoCriticalSection acs(&obj->tracker_section_);
+			EnterCriticalSection(&obj->tracker_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->tracker_section_);
 			obj->CheckFiles();
 		}
 		FindNextChangeNotification(handles[0]);
