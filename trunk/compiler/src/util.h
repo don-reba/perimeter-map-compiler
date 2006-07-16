@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -28,44 +28,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //-----------------------------------------------------------------------------
 
-
-//----------------------------------------------
-// holds a critical section within its life span
-//----------------------------------------------
-//class AutoCriticalSection
-//{
-//public:
-//	AutoCriticalSection(CRITICAL_SECTION *section) : section(section)
-//	{
-//		in_section = true;
-//		if (NULL != section)
-//			EnterCriticalSection(section);
-//	}
-//	~AutoCriticalSection()
-//	{
-//		if (NULL != section && in_section)
-//			LeaveCriticalSection(section);
-//		in_section = false;
-//	}
-//	void Enter()
-//	{
-//		if (!in_section)
-//		{
-//			in_section = true;
-//			if (NULL != section)
-//				EnterCriticalSection(section);
-//		}
-//	}
-//	void Leave()
-//	{
-//		if (NULL != section)
-//			LeaveCriticalSection(section);
-//		in_section = false;
-//	}
-//protected:
-//	CRITICAL_SECTION *section;
-//	bool in_section;
-//};
 
 inline int exp2(unsigned int n)
 {

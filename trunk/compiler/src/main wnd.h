@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -109,9 +109,9 @@ public:
 			WORD image_id,
 			LPCTSTR tip,
 			RECT   &creation_rect)
-			:panel_(panel)
-			,image_id_(image_id)
-			,tip_(tip)
+			:panel_        (panel)
+			,image_id_     (image_id)
+			,tip_          (tip)
 			,creation_rect_(creation_rect)
 		{}
 		PanelWindow *panel_;
@@ -127,20 +127,15 @@ private:
 	private:
 		HWND &hwnd_;
 	};
-	struct TogglePanelVisibility : PanelWindow::ToggleVisibility
+	struct ToggleButton
 	{
-		TogglePanelVisibility(HWND button);
-		~TogglePanelVisibility();
-		virtual void operator() (bool on);
 		HWND button_;
 	};
 	struct PanelData
 	{
-		PanelData()
-			:button_hwnd_(NULL)
-			,image_      (NULL)
-			,created_    (false)
-		{}
+		PanelData();
+		void on();
+		void off();
 		HWND         button_hwnd_;
 		bool         created_;
 		RECT         creation_rect_;
@@ -148,7 +143,6 @@ private:
 		WORD         image_id_;
 		PanelWindow *panel_;
 		WORD         panel_id_;
-		TogglePanelVisibility *toggle_panel_visibility_;
 	};
 	enum MenuState
 	{

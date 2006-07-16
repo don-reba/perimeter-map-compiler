@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -103,70 +103,6 @@ namespace TaskCommon
 		}
 		CloseHandle(hFile);
 		return dwFileSize;
-	}
-
-	void SaveHardness(
-		LPCTSTR       path,
-		const BYTE   *buffer,
-		SIZE          size,
-		ErrorHandler &error_handler)
-	{
-		_ASSERTE(NULL != buffer);
-		const WORD   width        (static_cast<WORD>(size.cx));
-		const WORD   height       (static_cast<WORD>(size.cy));
-		const WORD   result_width (width / 2);
-		const WORD   result_height(height / 4);
-		const size_t buffer_size  (width * height);
-		// create the byte array corressponding to the resized image
-		// NOTE: much of the following can be done with FreeImage, albeit very slowly
-		vector<bool> bits;
-		bits.resize(result_width * result_height);
-		{
-			const BYTE *i(buffer); // buffer iterator
-			uint b_i(0);           // bits iterator
-			for (uint y(0); y != result_height; ++y)
-			{
-				vector<bool> row; // buffer for disjunction of four consecutive rows
-				row.resize(result_width);
-				// fill the row
-				for (WORD x(0); x != result_width; ++x)
-					row[x] = i[0] != 0 || i[1] != 0, i += 2;
-				for (WORD x(0); x != result_width; ++x)
-					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
-				for (WORD x(0); x != result_width; ++x)
-					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
-				for (WORD x(0); x != result_width; ++x)
-					row[x] = row[x] || i[0] != 0 || i[1] != 0, i += 2;
-				// copy the row
-				for (WORD x(0); x != result_width; ++x)
-					bits[b_i++] = row[x];
-			}
-		}
-		// layout the file
-		BYTE *file(new BYTE[buffer_size / 64 + 4]);
-		DWORD magic_number(MAKELONG(result_width / 8, result_height));
-		CopyMemory(file, &magic_number, 4);
-		CopyMemory(file + 4, ri_cast<const BYTE*>(&bits._Myvec[0]), buffer_size / 64); // HACK: implementation-dependant
-		// save
-		SaveMemToFile(path, file, buffer_size / 64 + 4, error_handler);
-	}
-
-	void SaveHeightmap(LPCTSTR path, const BYTE *buffer, SIZE size, ErrorHandler &error_handler)
-	{
-		// initialize the heightmap image
-		fipImage image(
-			FIT_BITMAP,
-			static_cast<WORD>(size.cx),
-			static_cast<WORD>(size.cy),
-			8);
-		// fill the image
-		if (NULL != buffer)
-			CopyMemory(image.accessPixels(), buffer, size.cx * size.cy);
-		else
-			ZeroMemory(image.accessPixels(), size.cx * size.cy);
-		// save the image
-		if (FALSE == image.save(path, BMP_DEFAULT))
-			error_handler.MacroDisplayError(_T("Heightmap could not be saved."));
 	}
 	
 	bool SaveMemToFile(LPCTSTR path, const BYTE *buffer, DWORD size, ErrorHandler &error_handler)
@@ -377,38 +313,6 @@ namespace TaskCommon
 		ReplaceSubstringSeq(&sph_string[0], sph_string.size(), seq, result);
 		sph_out << result;
 	}
-
-	void SaveTexture(
-		LPCTSTR path,
-		const BYTE *buffer,
-		const COLORREF palette[256],
-		SIZE size,
-		ErrorHandler &error_handler)
-	{
-		// initialize the texture image
-		fipImage image(
-			FIT_BITMAP,
-			static_cast<WORD>(size.cx),
-			static_cast<WORD>(size.cy),
-			8);
-		// fill the image
-		if (NULL != buffer)
-		{
-			CopyMemory(image.accessPixels(), buffer, size.cx * size.cy);
-			CopyMemory(image.getPalette(), palette, 256 * 4); // ASSUME sizeof(COLORREF) == 4
-		}
-		else
-		{
-			ZeroMemory(image.accessPixels(), size.cx * size.cy);
-			FillMemory(image.getPalette(), 256 * 4, 0xFF);
-		}
-		// convert the image to 24 bits (for easier editing)
-		if (FALSE == image.convertTo24Bits())
-			error_handler.MacroDisplayError(_T("Could not convert the texture to 24-bit."));
-		// save the image
-		if (FALSE == image.save(path, BMP_SAVE_RLE))
-			error_handler.MacroDisplayError(_T("Texture could not be saved"));
-	}
 	
 	// create a thumbnail version of the map texture and save it
 	bool SaveThumb(
@@ -419,14 +323,14 @@ namespace TaskCommon
 		SIZE             size,
 		ErrorHandler    &error_handler)
 	{
-		SIZE img_size(texture.size_);
+		SIZE img_size(texture.info_.size_);
 		// initialize the map preview image
 		fipImage image(FIT_BITMAP, static_cast<WORD>(img_size.cx), static_cast<WORD>(img_size.cy), 24);
 		// fill the image with data from the texture and from the lightmap
 		{
 			const BYTE *lightmap_i(lightmap.data_);
 			const BYTE *texture_i(texture.indices_);
-			const BYTE * const texture_end(texture_i + texture.size_.cx * texture.size_.cy);
+			const BYTE * const texture_end(texture_i + img_size.cx * img_size.cy);
 			BYTE *image_i(image.accessPixels());
 			while (texture_i != texture_end)
 			{
@@ -444,12 +348,11 @@ namespace TaskCommon
 		}
 		// paint all pixels underneath which the heightmap is zero black
 		// TODO: merge the two loops
-		switch (heightmap.GetBpp())
+		switch (heightmap.bpp_)
 		{
 		case 8:
 			{
-				const Heightmap8 &heightmap(ri_cast<const Heightmap8&>(heightmap));
-				const BYTE *heightmap_ptr(heightmap.data_);
+				const BYTE *heightmap_ptr(heightmap.data8_);
 				BYTE *image_data(image.accessPixels());
 				for (LONG r(0); r != img_size.cy; ++r)
 				{
@@ -464,8 +367,7 @@ namespace TaskCommon
 			} break;
 		case 16:
 			{
-				const Heightmap16 &heightmap(ri_cast<const Heightmap16&>(heightmap));
-				const WORD *heightmap_ptr(heightmap.data_);
+				const WORD *heightmap_ptr(heightmap.data16_);
 				BYTE *image_data(image.accessPixels());
 				for (LONG r(0); r != img_size.cy; ++r)
 				{
@@ -508,11 +410,11 @@ namespace TaskCommon
 		LPCTSTR          path,
 		ErrorHandler    &error_handler)
 	{
-		switch (heightmap.GetBpp())
+		switch (heightmap.bpp_)
 		{
 		case 8:
 			SaveVMP(
-				ri_cast<const Heightmap8&>(heightmap),
+				heightmap,
 				texture,
 				zero_layer,
 				path,
@@ -520,7 +422,7 @@ namespace TaskCommon
 			break;
 		case 16:
 			SaveVMP(
-				ri_cast<const Heightmap16&>(heightmap),
+				heightmap,
 				texture,
 				zero_layer,
 				path,
@@ -529,17 +431,17 @@ namespace TaskCommon
 		}
 	}
 
-	void SaveVMP(
-		const Heightmap8 &heightmap,
-		const Texture    &texture,
-		const ZeroLayer  *zero_layer,
-		LPCTSTR           path,
-		ErrorHandler     &error_handler)
+	void SaveVMP8(
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		const ZeroLayer *zero_layer,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler)
 	{
-		_ASSERTE(NULL != heightmap.data_);
+		_ASSERTE(NULL != heightmap.data8_);
 		_ASSERTE(NULL != texture.indices_);
 		// get dimensions of the map
-		SIZE map_size(texture.size_);
+		SIZE map_size(texture.info_.size_);
 		// allocate memory
 		const size_t map_data_size(map_size.cx * map_size.cy);
 		const size_t vmp_size(map_data_size * 4 + 20);
@@ -573,13 +475,13 @@ namespace TaskCommon
 		bool *null_pixels(NULL);
 		{
 			// allocate memory
-			const size_t heightmap_data_size(heightmap.size_.cx * heightmap.size_.cy);
+			const size_t heightmap_data_size(heightmap.info_.size_.cx * heightmap.info_.size_.cy);
 			int_heightmap = new int [heightmap_data_size];
 			null_pixels   = new bool[heightmap_data_size];
 			// set iterators
 					int  *       int_heightmap_iter(int_heightmap);
 					bool *       null_pixels_iter  (null_pixels);
-			const BYTE *       heightmap_iter    (heightmap.data_);
+			const BYTE *       heightmap_iter    (heightmap.data8_);
 			const BYTE * const heightmap_end     (heightmap_iter + heightmap_data_size);
 			// main loop
 			while (heightmap_iter != heightmap_end)
@@ -592,8 +494,8 @@ namespace TaskCommon
 			}
 		}
 		// interpolate heightmap
-		GaussianBlur(int_heightmap, heightmap.size_);
-		GaussianBlur(int_heightmap, heightmap.size_);
+		GaussianBlur(int_heightmap, heightmap.info_.size_);
+		GaussianBlur(int_heightmap, heightmap.info_.size_);
 		{
 			fipImage img(FIT_UINT16, (WORD)map_size.cy, (WORD)map_size.cx, 16);
 			WORD *img_iter((WORD*)img.accessPixels());
@@ -664,17 +566,17 @@ namespace TaskCommon
 		delete [] vmp;
 	}
 
-	void SaveVMP(
-		const Heightmap16 &heightmap,
-		const Texture     &texture,
-		const ZeroLayer   *zero_layer,
-		LPCTSTR            path,
-		ErrorHandler      &error_handler)
+	void SaveVMP16(
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		const ZeroLayer *zero_layer,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler)
 	{
-		_ASSERTE(NULL != heightmap.data_);
+		_ASSERTE(NULL != heightmap.data16_);
 		_ASSERTE(NULL != texture.indices_);
 		// get dimensions of the map
-		SIZE map_size(texture.size_);
+		SIZE map_size(texture.info_.size_);
 		// allocate memory
 		const size_t map_data_size(map_size.cx * map_size.cy);
 		const size_t vmp_size(map_data_size * 4 + 20);
@@ -707,14 +609,14 @@ namespace TaskCommon
 		// and the third with the 5 least significant
 		// ASSUME the heightmap is 13-bit
 		{
-			const WORD *heightmap_iter(heightmap.data_);
+			const WORD *heightmap_iter(heightmap.data16_);
 			for (LONG r(0); r != map_size.cy; ++r)
 			{
 				for (LONG c(0); c != map_size.cx; ++c)
 					*vmp_iter++ = static_cast<BYTE>(*heightmap_iter++ >> 5);
 				++heightmap_iter;
 			}
-			heightmap_iter = heightmap.data_;
+			heightmap_iter = heightmap.data16_;
 			if (NULL != zero_layer)
 			{
 				const ZeroLayer &zero_layer_ref(*zero_layer);
@@ -759,15 +661,15 @@ namespace TaskCommon
 
 	COLORREF AverageColour(const Texture &texture, const Heightmap &heightmap)
 	{
-		switch (heightmap.GetBpp())
+		switch (heightmap.bpp_)
 		{
-		case 8:  return AverageColour8 (texture, ri_cast<const Heightmap8&> (heightmap));
-		case 16: return AverageColour16(texture, ri_cast<const Heightmap16&>(heightmap));
+		case 8:  return AverageColour8 (texture, heightmap);
+		case 16: return AverageColour16(texture, heightmap);
 		}
 		return 0;
 	}
 
-	COLORREF AverageColour8(const Texture &texture, const Heightmap8 &heightmap)
+	COLORREF AverageColour8(const Texture &texture, const Heightmap &heightmap)
 	{
 		const BYTE *texture_iter;
 		const BYTE *heightmap_iter;
@@ -778,10 +680,10 @@ namespace TaskCommon
 		uint sum;
 		LONG r, c; // row, column
 		// count the number of non-null pixels of the heightmap
-		heightmap_iter = heightmap.data_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		heightmap_iter = heightmap.data8_;
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 				if (0 != *heightmap_iter++)
 					++half_size;
 			++heightmap_iter;
@@ -789,11 +691,11 @@ namespace TaskCommon
 		half_size /= 2;
 		// count the number of occurences of each value of blue
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data8_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetBValue(texture.palette_[*texture_iter])];
@@ -816,11 +718,11 @@ namespace TaskCommon
 		median_b = static_cast<BYTE>(color_iter - color_count);
 		// count the number of occurences of each value of green
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data8_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetGValue(texture.palette_[*texture_iter])];
@@ -843,11 +745,11 @@ namespace TaskCommon
 		median_g = static_cast<BYTE>(color_iter - color_count);
 		// count the number of occurences of each value of green
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data8_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetRValue(texture.palette_[*texture_iter])];
@@ -871,7 +773,7 @@ namespace TaskCommon
 		return RGB(median_r, median_g, median_b);
 	}
 
-	COLORREF AverageColour16(const Texture &texture, const Heightmap16 &heightmap)
+	COLORREF AverageColour16(const Texture &texture, const Heightmap &heightmap)
 	{
 		const BYTE *texture_iter;
 		const WORD *heightmap_iter;
@@ -882,10 +784,10 @@ namespace TaskCommon
 		uint sum;
 		LONG r, c; // row, column
 		// count the number of non-null pixels of the heightmap
-		heightmap_iter = heightmap.data_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		heightmap_iter = heightmap.data16_;
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 				if (0 != *heightmap_iter++)
 					++half_size;
 			++heightmap_iter;
@@ -893,11 +795,11 @@ namespace TaskCommon
 		half_size /= 2;
 		// count the number of occurences of each value of blue
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data16_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetBValue(texture.palette_[*texture_iter])];
@@ -920,11 +822,11 @@ namespace TaskCommon
 		median_b = static_cast<BYTE>(color_iter - color_count);
 		// count the number of occurences of each value of green
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data16_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetGValue(texture.palette_[*texture_iter])];
@@ -947,11 +849,11 @@ namespace TaskCommon
 		median_g = static_cast<BYTE>(color_iter - color_count);
 		// count the number of occurences of each value of green
 		ZeroMemory(color_count, num_colors * sizeof(int));
-		heightmap_iter = heightmap.data_;
+		heightmap_iter = heightmap.data16_;
 		texture_iter = texture.indices_;
-		for (r = 0; r != texture.size_.cy; ++r)
+		for (r = 0; r != texture.info_.size_.cy; ++r)
 		{
-			for (c = 0; c != texture.size_.cx; ++c)
+			for (c = 0; c != texture.info_.size_.cx; ++c)
 			{
 				if (0 != *heightmap_iter)
 					++color_count[GetRValue(texture.palette_[*texture_iter])];
@@ -977,20 +879,20 @@ namespace TaskCommon
 
 	float AverageHeight(const Heightmap &heightmap)
 	{
-		switch(heightmap.GetBpp())
+		switch(heightmap.bpp_)
 		{
-		case 8:  return AverageHeight8 (ri_cast<const Heightmap8&> (heightmap));
-		case 16: return AverageHeight16(ri_cast<const Heightmap16&>(heightmap));
+		case 8:  return AverageHeight8 (heightmap);
+		case 16: return AverageHeight16(heightmap);
 		}
 		return 0.0f;
 	}
 
-	float AverageHeight8(const Heightmap8 &heightmap)
+	float AverageHeight8(const Heightmap &heightmap)
 	{
 		double sum(0);
 		int n(0);
-		const BYTE* i(heightmap.data_);
-		const BYTE* end(i + heightmap.size_.cx * heightmap.size_.cy);
+		const BYTE* i(heightmap.data8_);
+		const BYTE* end(i + heightmap.info_.size_.cx * heightmap.info_.size_.cy);
 		for (; i != end; ++i)
 			if (*i != 0)
 			{
@@ -1005,12 +907,12 @@ namespace TaskCommon
 		return static_cast<float>(sum);
 	}
 
-	float AverageHeight16(const Heightmap16 &heightmap)
+	float AverageHeight16(const Heightmap &heightmap)
 	{
 		double sum(0);
 		int n(0);
-		const WORD* i(heightmap.data_);
-		const WORD* end(i + heightmap.size_.cx * heightmap.size_.cy);
+		const WORD* i(heightmap.data16_);
+		const WORD* end(i + heightmap.info_.size_.cx * heightmap.info_.size_.cy);
 		for (; i != end; ++i)
 			if (*i != 0)
 			{
@@ -1082,7 +984,7 @@ namespace TaskCommon
 							*texture_iterator++ = GetRValue(colour);
 							*texture_iterator++ = 0xFF; // alpha
 						}
-						offset += texture.size_.cx - allocation.width_;
+						offset += texture.info_.size_.cx - allocation.width_;
 					}
 				}
 				else
@@ -1101,14 +1003,14 @@ namespace TaskCommon
 							*texture_iterator++ = static_cast<BYTE>(__min(0xFF, (GetRValue(colour) * i_light) / factor));
 							*texture_iterator++ = 0xFF; // alpha
 						}
-						offset += texture.size_.cx - allocation.width_;
+						offset += texture.info_.size_.cx - allocation.width_;
 					}
 				}
 				// prepare for the next cycle
 				initial_offset += allocation.width_;
 				++texture_index;
 			}
-			initial_offset += texture.size_.cx * (allocation.height_ - 1);
+			initial_offset += texture.info_.size_.cx * (allocation.height_ - 1);
 		}
 	}
 
@@ -1140,7 +1042,7 @@ namespace TaskCommon
 							*texture_iterator++ = val;  // R
 							*texture_iterator++ = 0xFF; // A
 						}
-						offset += hardness.size_.cx - allocation.width_;
+						offset += hardness.info_.size_.cx - allocation.width_;
 					}
 				}
 				else
@@ -1159,14 +1061,14 @@ namespace TaskCommon
 							*texture_iterator++ = val;  // R
 							*texture_iterator++ = 0xFF; // A
 						}
-						offset += hardness.size_.cx - allocation.width_;
+						offset += hardness.info_.size_.cx - allocation.width_;
 					}
 				}
 				// prepare for the next cycle
 				initial_offset += allocation.width_;
 				++texture_index;
 			}
-			initial_offset += hardness.size_.cx * (allocation.height_ - 1);
+			initial_offset += hardness.info_.size_.cx * (allocation.height_ - 1);
 		}
 	}
 
@@ -1198,7 +1100,7 @@ namespace TaskCommon
 							*texture_iterator++ = val;  // R
 							*texture_iterator++ = 0xFF; // A
 						}
-						offset += zero_layer.size_.cx - allocation.width_;
+						offset += zero_layer.info_.size_.cx - allocation.width_;
 					}
 				}
 				else
@@ -1216,14 +1118,14 @@ namespace TaskCommon
 							*texture_iterator++ = val;  // R
 							*texture_iterator++ = 0xFF; // A
 						}
-						offset += zero_layer.size_.cx - allocation.width_;
+						offset += zero_layer.info_.size_.cx - allocation.width_;
 					}
 				}
 				// prepare for the next cycle
 				initial_offset += allocation.width_;
 				++texture_index;
 			}
-			initial_offset += zero_layer.size_.cx * (allocation.height_ - 1);
+			initial_offset += zero_layer.info_.size_.cx * (allocation.height_ - 1);
 		}
 	}
 
@@ -1299,10 +1201,10 @@ namespace TaskCommon
 	// the algorithm takes two passes over the heightmap:
 	//  at first pass it checks progressively coarser grids, determining which areas are "flat enough"
 	//  at second pass it checks progressively finer grids, converting flat areas to quads, and aligning edges
-	void Triangulate(const Heightmap8 &heightmap, vector<SimpleVertex> &vertices, float mesh_threshold)
+	void Triangulate(const Heightmap &heightmap, vector<SimpleVertex> &vertices, float mesh_threshold)
 	{
 		int n; // map power
-		SIZE map_size = { heightmap.size_.cx - 1, heightmap.size_.cy - 1 };
+		SIZE map_size = { heightmap.info_.size_.cx, heightmap.info_.size_.cy };
 		// check preconditions and calculate n
 		{
 			int power_x(log2(map_size.cx));
@@ -1312,6 +1214,26 @@ namespace TaskCommon
 			_ASSERTE(power_x < 14);       // sanity check
 			_ASSERTE(power_y < 14);       // sanity check
 			_ASSERTE(power_x == power_y); // TODO: add the capability of handling non-square maps
+		}
+		// get the source data
+		vector<BYTE> src_data_v;
+		const BYTE *src_data(NULL);
+		switch (heightmap.bpp_)
+		{
+		case 8:
+			{
+				src_data = heightmap.data8_;
+			} break;
+		case 16:
+			{
+				const int size(heightmap.size_.cx * heightmap.size_.cy);
+				src_data_v.reserve(size);
+				for (int i(0); i != size; ++i)
+					src_data_v.push_back((BYTE)((heightmap.data16_[i] >> 5) & 0xFF));
+				src_data = &src_data_v[0];
+			} break;
+		default:
+			return;
 		}
 		// allocate and initialize storage for the algorithm
 		vector<bool> *regions(new vector<bool>[n - 1]);
@@ -1332,19 +1254,19 @@ namespace TaskCommon
 			{
 				for (int yi(0); yi != map_size.cy / 2; ++yi)
 				{
-					int offset = xi * (map_size.cx + 1) * 2 + (map_size.cx + 1) + yi * 2 + 1;
+					int offset(xi * (map_size.cx + 1) * 2 + (map_size.cx + 1) + yi * 2 + 1);
 					// stop if any of the underlying points are zero
 					for (int y(-1); y != 2; ++y)
 						for (int x(-1); x != 2; ++x)
-							if (heightmap.data_[offset + y * (map_size.cx + 1) + x] == 0)
+							if (src_data[offset + y * (map_size.cx + 1) + x] == 0)
 								goto end;
 					// check if the region is flat enough
 					if (Flatness(
-						(float)heightmap.data_[offset - 1],
-						(float)heightmap.data_[offset + 1],
-						(float)heightmap.data_[offset - map_size.cx - 1],
-						(float)heightmap.data_[offset + map_size.cx + 1],
-						(float)heightmap.data_[offset],
+						(float)src_data[offset - 1],
+						(float)src_data[offset + 1],
+						(float)src_data[offset - map_size.cx - 1],
+						(float)src_data[offset + map_size.cx + 1],
+						(float)src_data[offset],
 						1.0f) < threshold)
 						regions[0][index] = true;
 				end:
@@ -1373,11 +1295,11 @@ namespace TaskCommon
 						int side(radius + radius); // length of a side of the region
 						int offset((map_size.cx + 1) * (side * xi + radius) + side * yi + radius);
 						if (Flatness(
-							(float)heightmap.data_[offset - radius],
-							(float)heightmap.data_[offset + radius],
-							(float)heightmap.data_[offset - (map_size.cx + 1) * radius],
-							(float)heightmap.data_[offset + (map_size.cx + 1) * radius],
-							(float)heightmap.data_[offset],
+							(float)src_data[offset - radius],
+							(float)src_data[offset + radius],
+							(float)src_data[offset - (map_size.cx + 1) * radius],
+							(float)src_data[offset + (map_size.cx + 1) * radius],
+							(float)src_data[offset],
 							(float)radius) < threshold)
 						{
 							regions[k - 1][index] = true;
@@ -1436,7 +1358,7 @@ namespace TaskCommon
 					short t_coord(static_cast<short>(b_coord + side));
 					// calculate heightmap values at the corners of the region
 					{
-						BYTE *offset(heightmap.data_ + side * ((map_size.cx + 1) * yi + xi));
+						const BYTE *offset(src_data + side * ((map_size.cx + 1) * yi + xi));
 						bl_val = *offset;
 						br_val = *(offset + side);
 						offset += side * (map_size.cx + 1);
@@ -1605,7 +1527,7 @@ namespace TaskCommon
 				short b_coord(yi + yi);
 				short t_coord(b_coord + 2);
 				// calculate heightmap values at the corners of the region
-				BYTE *offset(heightmap.data_ + 2 * ((map_size.cx + 1) * yi + xi));
+				const BYTE *offset(src_data + 2 * ((map_size.cx + 1) * yi + xi));
 				bl_val = *offset;
 				br_val = *(offset + 2);
 				offset += 2 * (map_size.cx + 1);

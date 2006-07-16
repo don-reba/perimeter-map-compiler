@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -47,6 +47,10 @@ int APIENTRY _tWinMain(
 	LPTSTR    lpCmdLine,
 	int       nCmdShow)
 {
+	//_CrtSetDbgFlag(
+	//	_CRTDBG_ALLOC_MEM_DF
+	//	| _CRTDBG_CHECK_ALWAYS_DF
+	//	| _CRTDBG_LEAK_CHECK_DF);
 	App app;
 	if (!app.Initialize(hInstance, lpCmdLine))
 		return 1;

@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -507,7 +507,6 @@ void MainWnd::OnDestroy(Msg<WM_DESTROY> &msg)
 	// destroy buttons
 	for(PanelData *i(panels_); i != panels_ + panel_count; ++i)
 	{
-		delete i->toggle_panel_visibility_;
 		if (NULL != i->button_hwnd_)
 			DestroyWindow(i->button_hwnd_);
 		if (NULL != i->image_)
@@ -673,18 +672,18 @@ bool MainWnd::AddPanelWnd(
 	HBITMAP image(CreateButtonImage(image_id));
 	SendMessage(button, BM_SETIMAGE, IMAGE_BITMAP, ri_cast<LPARAM>(image));
 	AddToolTip(button, tip);
-	// set the pannel's ToggleVisibility functor
-	panel->SetVisibilityEvent(new TogglePanelVisibility(button));
 	// add the PanelData structure
 	{
-		panels_[panel_index].button_hwnd_ = button;
+		panels_[panel_index].button_hwnd_   = button;
 		panels_[panel_index].creation_rect_ = creation_rect;
-		panels_[panel_index].image_       = image;
-		panels_[panel_index].image_id_    = image_id;
-		panels_[panel_index].panel_       = panel;
-		panels_[panel_index].panel_id_    = panel_id;
-		panels_[panel_index].toggle_panel_visibility_ = new TogglePanelVisibility(button);
+		panels_[panel_index].image_         = image;
+		panels_[panel_index].image_id_      = image_id;
+		panels_[panel_index].panel_         = panel;
+		panels_[panel_index].panel_id_      = panel_id;
 	}
+	// subscribe to the panel visibility events
+	panel->on_show_ += PanelWindow::on_show_t::delegate_t(&panels_[panel_index], &PanelData::on);
+	panel->on_hide_ += PanelWindow::on_hide_t::delegate_t(&panels_[panel_index], &PanelData::off);
 	// wrap up
 	++panel_id;
 	return true;
@@ -856,25 +855,29 @@ void MainWnd::SetMenuState(MainWnd::MenuState state)
 		EnableMenuItem(menu, item.first, item.second ? MF_ENABLED : MF_GRAYED);
 }
 
-//----------------------------------------------
-// MainWnd::TogglePanelVisibility implementation
-//----------------------------------------------
+//----------------------------------
+// MainWnd::PanelData implementation
+//----------------------------------
 
-MainWnd::TogglePanelVisibility::TogglePanelVisibility(HWND button)
-	:button_(button)
+MainWnd::PanelData::PanelData()
+	:button_hwnd_(NULL)
+	,image_      (NULL)
+	,created_    (false)
 {}
 
-MainWnd::TogglePanelVisibility::~TogglePanelVisibility()
-{}
-
-void MainWnd::TogglePanelVisibility::operator() (bool on)
+void MainWnd::PanelData::on()
 {
-	Button_SetCheck(button_, on ? BST_CHECKED : BST_UNCHECKED);
+	Button_SetCheck(button_hwnd_, BST_CHECKED);
 }
 
-//-------------------------------
+void MainWnd::PanelData::off()
+{
+	Button_SetCheck(button_hwnd_, BST_UNCHECKED);
+}
+
+//----------------------------------
 // MainWnd::TasksLeft implementation
-//-------------------------------
+//----------------------------------
 
 MainWnd::TasksLeft::TasksLeft(HWND &hwnd)
 	:hwnd_(hwnd)

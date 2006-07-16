@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -53,53 +53,89 @@
 #include <shlobj.h>
 #include <sstream>
 
+#include <loki/ScopeGuard.h>
+
 using namespace RsrcMgmt;
 using namespace TaskCommon;
-
-//------------------------
-// static member instances
-//------------------------
-
-TaskData Task::task_data_;
 
 //----------------------------------------
 // TaskData implementation
 //----------------------------------------
 
-TaskData::TaskData()
-	:hardness_  (NULL)
-	,heightmap_ (NULL)
-	,script_    (NULL)
-	,sky_       (NULL)
-	,surface_   (NULL)
-	,texture_   (NULL)
-	,zero_layer_(NULL)
+TaskData::TaskData(SaveCallback::SaveHandler *save_handler, const HWND &error_hwnd)
+	:um_hardness_  (error_hwnd)
+	,um_heightmap_ (error_hwnd)
+	,um_script_    (error_hwnd)
+	,um_sky_       (error_hwnd)
+	,um_surface_   (error_hwnd)
+	,um_texture_   (error_hwnd)
+	,um_zero_layer_(error_hwnd)
+	,hardness_  (um_hardness_,   manager_)
+	,heightmap_ (um_heightmap_,  manager_)
+	,script_    (um_script_,     manager_)
+	,sky_       (um_sky_,        manager_)
+	,surface_   (um_surface_,    manager_)
+	,texture_   (um_texture_,    manager_)
+	,zero_layer_(um_zero_layer_, manager_)
+	,manager_(error_hwnd)
 {
-	InitializeCriticalSection(&section_);
+	manager_.AddResource(&hardness_  );
+	manager_.AddResource(&heightmap_ );
+	manager_.AddResource(&script_    );
+	manager_.AddResource(&script_    );
+	manager_.AddResource(&sky_       );
+	manager_.AddResource(&surface_   );
+	manager_.AddResource(&texture_   );
+	manager_.AddResource(&zero_layer_);
+	um_hardness_.SetOnSave  (save_handler);
+	um_heightmap_.SetOnSave (save_handler);
+	um_script_.SetOnSave    (save_handler);
+	um_sky_.SetOnSave       (save_handler);
+	um_surface_.SetOnSave   (save_handler);
+	um_texture_.SetOnSave   (save_handler);
+	um_zero_layer_.SetOnSave(save_handler);
 }
 
-TaskData::~TaskData()
+void TaskData::SetResourceManagerEnabled(bool enable)
 {
-	DeleteCriticalSection(&section_);
+	manager_.SetEnabled(enable);
 }
 
 //--------------------------------------
 // CreateDefaultFilesTask implementation
 //--------------------------------------
 
-CreateDefaultFilesTask::CreateDefaultFilesTask(HWND &error_hwnd)
+CreateDefaultFilesTask::CreateDefaultFilesTask(const HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
 {}
 
-void CreateDefaultFilesTask::operator() ()
+void CreateDefaultFilesTask::operator() (TaskData &data)
 {
+	using namespace Loki;
 	TCHAR path[MAX_PATH];
-	PathCombine(path, task_data_.project_folder_.c_str(), _T("heightmap.bmp"));
-	DeleteFile(path);
-	SaveHeightmap(path, NULL, task_data_.map_size_, *this);
-	PathCombine(path, task_data_.project_folder_.c_str(), _T("texture.bmp"));
-	DeleteFile(path);
-	SaveTexture(path, NULL, NULL, task_data_.map_size_, *this);
+	::PathCombine(path, data.project_folder_.c_str(), _T("heightmap.png"));
+	::DeleteFile(path);
+	{
+		Heightmap::info_t &info(data.heightmap_.GetInfo());
+		info.path_ = path;
+		info.size_ = data.map_size_;
+		Heightmap &heightmap(data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		heightmap.MakeDefault();
+		heightmap.Save();
+	}
+	::PathCombine(path, data.project_folder_.c_str(), _T("texture.png"));
+	::DeleteFile(path);
+	{
+		Texture::info_t &info(data.texture_.GetInfo());
+		info.path_              = path;
+		info.size_              = data.map_size_;
+		info.fast_quantization_ = true;
+		Texture &texture(data.texture_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+		texture.MakeDefault();
+		texture.Save();
+	}
 }
 
 //----------------------------------
@@ -112,7 +148,7 @@ ChangeProjectTask::ChangeProjectTask(InfoWnd &info_wnd, PreviewWnd &preview_wnd,
 	,read_only_  (read_only)
 {}
 
-void ChangeProjectTask::operator() ()
+void ChangeProjectTask::operator() (TaskData &data)
 {
 	info_wnd_.Update(read_only_);
 	preview_wnd_.ProjectChanged();
@@ -122,76 +158,69 @@ void ChangeProjectTask::operator() ()
 // CreateResourceTask implementation
 //----------------------------------
 
-CreateResourceTask::CreateResourceTask(uint id, HWND error_hwnd)
+CreateResourceTask::CreateResourceTask(uint id, const HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
 	,id_(id)
 {}
 
-void CreateResourceTask::operator() ()
+void CreateResourceTask::operator() (TaskData &data)
 {
+	using namespace Loki;
 	TCHAR path[MAX_PATH];
-	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
+	const TCHAR * const folder_path(data.project_folder_.c_str());
 	switch (id_)
 	{
 	case RS_HARDNESS:
-		PathCombine(path, folder_path, _T("hardness.bmp"));
-		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		::PathCombine(path, folder_path, _T("hardness.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(path))
 		{
-			Hardness hardness(task_data_.map_size_, error_hwnd_);
+			Hardness::info_t &info(data.hardness_.GetInfo());
+			info.path_ = path;
+			info.size_ = data.map_size_;
+			Hardness &hardness(data.hardness_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.hardness_, &TaskResource<Hardness>::CheckIn);
 			hardness.MakeDefault();
-			hardness.Save(path);
+			hardness.Save();
 		}
 		break;
 	case RS_ZERO_LAYER:
-		PathCombine(path, folder_path, _T("zero layer.bmp"));
-		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		::PathCombine(path, folder_path, _T("zero layer.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(path))
 		{
-			ZeroLayer zero_layer(task_data_.map_size_, error_hwnd_);
+			ZeroLayer::info_t &info(data.zero_layer_.GetInfo());
+			info.path_ = path;
+			info.size_ = data.map_size_;
+			ZeroLayer &zero_layer(data.zero_layer_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.zero_layer_, &TaskResource<ZeroLayer>::CheckIn);
 			zero_layer.MakeDefault();
-			zero_layer.Save(path);
+			zero_layer.Save();
 		}
 		break;
 	case RS_SKY:
-		PathCombine(path, folder_path, _T("sky.bmp"));
-		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		::PathCombine(path, folder_path, _T("sky.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(path))
 		{
-			Sky sky(error_hwnd_);
+			Sky::info_t &info(data.sky_.GetInfo());
+			info.path_ = path;
+			Sky &sky(data.sky_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.sky_, &TaskResource<Sky>::CheckIn);
 			sky.MakeDefault();
-			sky.Save(path);
+			sky.Save();
 		}
 		break;
 	case RS_SURFACE:
-		PathCombine(path, folder_path, _T("surface.bmp"));
-		if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(path))
+		::PathCombine(path, folder_path, _T("surface.bmp"));
+		if (INVALID_FILE_ATTRIBUTES == ::GetFileAttributes(path))
 		{
-			Surface surface(error_hwnd_);
+			Surface::info_t &info(data.surface_.GetInfo());
+			info.path_ = path;
+			Surface &surface(data.surface_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.surface_, &TaskResource<Surface>::CheckIn);
 			surface.MakeDefault();
-			surface.Save(path);
+			surface.Save();
 		}
 		break;
 	}
-}
-
-//-----------------------------------
-// FreeProjectDataTask implementation
-//-----------------------------------
-
-void FreeProjectDataTask::operator() ()
-{
-	delete task_data_.hardness_;
-	delete task_data_.heightmap_;
-	delete task_data_.script_;
-	delete task_data_.sky_;
-	delete task_data_.surface_;
-	delete task_data_.texture_;
-	delete task_data_.zero_layer_;
-	task_data_.hardness_   = NULL;
-	task_data_.heightmap_  = NULL;
-	task_data_.script_     = NULL;
-	task_data_.sky_        = NULL;
-	task_data_.surface_    = NULL;
-	task_data_.texture_    = NULL;
-	task_data_.zero_layer_ = NULL;
 }
 
 //--------------------------------
@@ -203,7 +232,7 @@ ImportScriptTask::ImportScriptTask(LPCTSTR script_path, LPCTSTR xml_path)
 	,xml_   (xml_path)
 {}
 
-void ImportScriptTask::operator() ()
+void ImportScriptTask::operator() (TaskData &data)
 {
 	XmlCreator xml_creator;
 	{
@@ -236,11 +265,11 @@ void ImportScriptTask::operator() ()
 //--------------------------------
 
 InstallMapTask::InstallMapTask(
-	HWND    &hwnd,
-	LPCTSTR  install_path,
-	uint     version,
-	bool     custom_zero_layer,
-	bool     rename_to_unregistered)
+	const HWND &hwnd,
+	LPCTSTR     install_path,
+	uint        version,
+	bool        custom_zero_layer,
+	bool        rename_to_unregistered)
 	:ErrorHandler           (hwnd)
 	,hwnd_                  (hwnd)
 	,install_path_          (install_path)
@@ -249,21 +278,25 @@ InstallMapTask::InstallMapTask(
 	,rename_to_unregistered_(rename_to_unregistered)
 {}
 
-void InstallMapTask::operator() ()
+void InstallMapTask::operator() (TaskData &data)
 {
-	_ASSERTE(task_data_.heightmap_ != NULL);
-	_ASSERTE(task_data_.texture_   != NULL);
-	Heightmap &heightmap (*task_data_.heightmap_);
-	Texture   &texture   (*task_data_.texture_);
-	TCHAR      str        [MAX_PATH];
-	TCHAR      folder_path[MAX_PATH];
-	bool       overwriting(false);
+	using namespace Loki;
+	// get the heightmap
+	Heightmap &heightmap(data.heightmap_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+	// get the texture
+	Texture &texture(data.texture_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+	// initialize variables
+	TCHAR str        [MAX_PATH];
+	TCHAR folder_path[MAX_PATH];
+	bool  overwriting(false);
 	// get the name to use for stuff that needs a name
 	// this is the map name for a registered map, and "UNREGISTERED" otherwise
 	// ASSUME shrubs are registered
 	tstring folder_name(
-		(PS_SHRUB == task_data_.project_state_ || !rename_to_unregistered_)
-		? task_data_.map_name_
+		(PS_SHRUB == data.project_state_ || !rename_to_unregistered_)
+		? data.map_name_
 		: _T("UNREGISTERED"));
 	// create a directory for the map
 	{
@@ -279,7 +312,7 @@ void InstallMapTask::operator() ()
 			break;
 		case ERROR_ALREADY_EXISTS:
 			{
-				if (PS_SHRUB == task_data_.project_state_ && IDCANCEL == MessageBox(
+				if (PS_SHRUB == data.project_state_ && IDCANCEL == MessageBox(
 					hwnd_,
 					_T("Map with this name already exists. Continuing will overwrite its contents."),
 					_T("Warning"),
@@ -293,30 +326,35 @@ void InstallMapTask::operator() ()
 	}
 	// create and save map.tga
 	{
-		Lightmap lightmap(task_data_.map_size_, error_hwnd_);
+		Lightmap lightmap(error_hwnd_);
 		lightmap.Create(heightmap);
-		PathCombine(str, folder_path, _T("map.tga"));
+		::PathCombine(str, folder_path, _T("map.tga"));
 		SIZE size = { 128, 128 };
 		SaveThumb(heightmap, lightmap, texture, str, size, *this);
 	}
 	// create and save world.ini
 	{
-		PathCombine(str, folder_path, _T("world.ini"));
+		MapInfo &map_info(data.map_info_);
+		::PathCombine(str, folder_path, _T("world.ini"));
 		std::ofstream world_ini(str, std::ios_base::binary | std::ios_base::out);
-		world_ini << task_data_.map_info_.GenerateWorldIni();
+		world_ini << map_info.GenerateWorldIni();
 	}
 	// create and save output.vmp
-	PathCombine(str, folder_path, _T("output.vmp"));
-	SaveVMP(heightmap, texture, custom_zero_layer_ ? NULL : task_data_.zero_layer_, str, *this);
+	{
+		ZeroLayer &zero_layer(data.zero_layer_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.zero_layer_, &TaskResource<ZeroLayer>::CheckIn);
+		::PathCombine(str, folder_path, _T("output.vmp"));
+		SaveVMP(heightmap, texture, custom_zero_layer_ ? NULL : &zero_layer, str, *this);
+	}
 	// create and save inDam.act
-	PathCombine(str, folder_path, _T("inDam.act"));
+	::PathCombine(str, folder_path, _T("inDam.act"));
 	SavePalette(texture, str, *this);
 	// append Texts.btdb
 	{
 		tstring language;
 		// get the language of the distribution
 		{
-			PathCombine(str, install_path_.c_str(), "Perimeter.ini");
+			::PathCombine(str, install_path_.c_str(), "Perimeter.ini");
 			std::ifstream ini(str);
 			if (!ini.is_open())
 			{
@@ -337,78 +375,78 @@ void InstallMapTask::operator() ()
 			}
 		}
 		//GetPrivateProfileString("Game", "DefaultLanguage", "Russian--", language, language_size, str);
-		PathCombine(str, install_path_.c_str(), "RESOURCE\\LocData");
-		PathCombine(str, str, language.c_str());
-		PathCombine(str, str, "Text\\Texts.btdb");
-		AppendBTDB(str, folder_name.c_str());
+		::PathCombine(str, install_path_.c_str(), "RESOURCE\\LocData");
+		::PathCombine(str, str, language.c_str());
+		::PathCombine(str, str, "Text\\Texts.btdb");
+		AppendBTDB(str, folder_name.c_str(), data.project_state_, data.map_name_);
 	}
 	// append WORLDS.PRM
-	PathCombine(str, install_path_.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
+	::PathCombine(str, install_path_.c_str(), "RESOURCE\\Worlds\\WORLDS.PRM");
 	AppendWorldsPrm(str, folder_name.c_str(), version_);
 	// save up.tga
-	PathCombine(str, folder_path, _T("up.tga"));
-	if (NULL != task_data_.sky_)
-		task_data_.sky_->Save(str);
-	else
+	::PathCombine(str, folder_path, _T("up.tga"));
 	{
-		Sky sky(error_hwnd_);
-		sky.MakeDefault();
-		sky.Save(str);
+		Sky &sky(data.sky_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.sky_, &TaskResource<Sky>::CheckIn);
+		sky.SaveAs(str);
 	}
 	// leveledSurfaceTexture.tga
-	PathCombine(str, folder_path, _T("leveledSurfaceTexture.tga"));
-	if (NULL != task_data_.sky_)
-		task_data_.surface_->Save(str);
-	else
+	::PathCombine(str, folder_path, _T("leveledSurfaceTexture.tga"));
 	{
-		Surface surface(error_hwnd_);
-		surface.MakeDefault();
-		surface.Save(str);
+		Surface &surface(data.surface_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.surface_, &TaskResource<Surface>::CheckIn);
+		surface.SaveAs(str);
 	}
 	// create and save hardness.bin
-	if (NULL != task_data_.hardness_)
+	::PathCombine(str, folder_path, _T("leveledSurfaceTexture.tga"));
 	{
-		PathCombine(str, folder_path, _T("hardness.bin"));
-		SaveHardness(str, task_data_.hardness_->data_, task_data_.map_size_, *this);
+		Hardness &hardness(data.hardness_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.hardness_, &TaskResource<Hardness>::CheckIn);
+		hardness.SaveAs(str);
 	}
 	// generate mission files
-	switch (version_)
 	{
-	case 1:
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission(folder_path, folder_name.c_str(), false);
-		break;
-	case 2:
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission2(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission2(folder_path, folder_name.c_str(), false);
-		PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
-		PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
-		SaveMission2(folder_path, folder_name.c_str(), false);
-		break;
-	default:
-		DebugBreak();
+		MapInfo &map_info(data.map_info_);
+		switch (version_)
+		{
+		case 1:
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission(map_info, folder_path, folder_name.c_str(), false);
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission(map_info, folder_path, folder_name.c_str(), false);
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission(map_info, folder_path, folder_name.c_str(), false);
+			break;
+		case 2:
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission2(map_info, folder_path, folder_name.c_str(), false);
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Multiplayer"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission2(map_info, folder_path, folder_name.c_str(), false);
+			::PathCombine(folder_path, install_path_.c_str(), _T("RESOURCE\\Battle\\SURVIVAL"));
+			::PathCombine(folder_path, folder_path, folder_name.c_str()); // WARN: not compatible with Unicode
+			SaveMission2(map_info, folder_path, folder_name.c_str(), false);
+			break;
+		default:
+			DebugBreak();
+		}
 	}
 }
 
 // set the appropriate entry of Texts.btdb to the name of the map
-void InstallMapTask::AppendBTDB(LPCTSTR path, LPCTSTR folder_name)
+void InstallMapTask::AppendBTDB(
+	LPCTSTR      path,
+	LPCTSTR      folder_name,
+	ProjectState project_state,
+	tstring      map_name)
 {
 	// set a prefix for the map name
-	const char * const prefix((PS_SHRUB == task_data_.project_state_) ? "" : "[U]");
+	const char * const prefix((PS_SHRUB == project_state) ? "" : "[U]");
 	const size_t prefix_size = strlen(prefix);
-	// get the name of the map
-	tstring map_name(task_data_.map_name_);
 	// prefix name of the map
 	map_name.insert(0, prefix);
 	// replace some characters in the name of the map by others
@@ -513,7 +551,11 @@ void InstallMapTask::AppendWorldsPrm(LPCTSTR path, LPCTSTR folder_name, uint ver
 }
 
 // v 1.01
-void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool survival)
+void InstallMapTask::SaveMission(
+	MapInfo map_info,
+	LPCTSTR path,
+	LPCTSTR folder_name,
+	bool    survival)
 {
 	TCHAR str[MAX_PATH];
 	// create an empty ".dat" file
@@ -527,23 +569,20 @@ void InstallMapTask::SaveMission(LPCTSTR path, LPCTSTR folder_name, bool surviva
 	// create the ".spg" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".spg"));
-	if (NULL != task_data_.script_)
-	{
-		std::ofstream spg_file(str);
-		ScriptCreator script_creator(spg_file);
-		if (!script_creator.Create(task_data_.script_->doc_))
-			SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
-	}
-	else
-		SaveSPG(task_data_.map_info_, str, folder_name, survival, *this);
+	// save
+	SaveSPG(map_info, str, folder_name, survival, *this);
 	// create the ".sph" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".sph"));
 	SaveSPH(str, folder_name, survival, *this);
 }
 
-// v 1.02 beta
-void InstallMapTask::SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool survival)
+// v 1.02
+void InstallMapTask::SaveMission2(
+	MapInfo map_info,
+	LPCTSTR path,
+	LPCTSTR folder_name,
+	bool    survival)
 {
 	TCHAR str[MAX_PATH];
 	// create an empty ".dat" file
@@ -557,92 +596,85 @@ void InstallMapTask::SaveMission2(LPCTSTR path, LPCTSTR folder_name, bool surviv
 	// create the ".spg" file
 	_tcscpy(str, path);
 	PathAddExtension(str, _T(".spg"));
-	if (NULL != task_data_.script_)
-	{
-		std::ofstream spg_file(str);
-		ScriptCreator script_creator(spg_file);
-		if (!script_creator.Create(task_data_.script_->doc_))
-			SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
-	}
-	else
-		SaveSPG2(task_data_.map_info_, str, folder_name, survival, *this);
+	// save
+	SaveSPG2(map_info, str, folder_name, survival, *this);
 }
 
 //-----------------------------------
 // LoadProjectDataTask implementation
 //-----------------------------------
 
-LoadProjectDataTask::LoadProjectDataTask(const IdsType  &ids, HWND &error_hwnd)
-	:ErrorHandler(error_hwnd)
-	,ids_        (ids)
-{}
-
-LoadProjectDataTask::LoadProjectDataTask(HWND &error_hwnd)
-	:ErrorHandler(error_hwnd)
-{
-	ids_.set();
-}
-
-void LoadProjectDataTask::operator() ()
-{
-	// preconditions
-	_ASSERTE(NULL == task_data_.hardness_);
-	_ASSERTE(NULL == task_data_.heightmap_);
-	_ASSERTE(NULL == task_data_.script_);
-	_ASSERTE(NULL == task_data_.sky_);
-	_ASSERTE(NULL == task_data_.surface_);
-	_ASSERTE(NULL == task_data_.texture_);
-	_ASSERTE(NULL == task_data_.zero_layer_);
-	// locals
-	TCHAR path[MAX_PATH];
-	// load
-	const TCHAR * const folder_path(task_data_.project_folder_.c_str());
-	if (ids_[RS_ZERO_LAYER])
-	{
-		task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
-		task_data_.zero_layer_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_ZERO_LAYER].c_str()));
-	}
-	if (ids_[RS_HARDNESS])
-	{
-		task_data_.hardness_ = new Hardness(task_data_.map_size_, error_hwnd_);
-		task_data_.hardness_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_HARDNESS].c_str()));
-	}
-	if (ids_[RS_HEIGHTMAP])
-	{
-		task_data_.heightmap_ = LoadHeightmap(
-			task_data_.map_size_,
-			*this,
-			PathCombine(path, folder_path, task_data_.file_names_[RS_HEIGHTMAP].c_str()),
-			ids_[RS_ZERO_LAYER] ? task_data_.zero_layer_ : NULL,
-			task_data_.map_info_.zero_level_);
-	}
-	if (ids_[RS_SCRIPT])
-	{
-		task_data_.script_ = new Script(error_hwnd_);
-		if (!task_data_.script_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SCRIPT].c_str())))
-		{
-			delete task_data_.script_;
-			task_data_.script_ = NULL;
-		}
-	}
-	if (ids_[RS_SKY])
-	{
-		task_data_.sky_ = new Sky(error_hwnd_);
-		task_data_.sky_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SKY].c_str()));
-	}
-	if (ids_[RS_SURFACE])
-	{
-		task_data_.surface_ = new Surface(error_hwnd_);
-		task_data_.surface_->Load(PathCombine(path, folder_path, task_data_.file_names_[RS_SURFACE].c_str()));
-	}
-	if (ids_[RS_TEXTURE])
-	{
-		task_data_.texture_ = new Texture(task_data_.map_size_, error_hwnd_);
-		task_data_.texture_->Load(
-			PathCombine(path, folder_path, task_data_.file_names_[RS_TEXTURE].c_str()),
-			task_data_.fast_quantization_);
-	}
-}
+//LoadProjectDataTask::LoadProjectDataTask(const IdsType  &ids, HWND &error_hwnd)
+//	:ErrorHandler(error_hwnd)
+//	,ids_        (ids)
+//{}
+//
+//LoadProjectDataTask::LoadProjectDataTask(HWND &error_hwnd)
+//	:ErrorHandler(error_hwnd)
+//{
+//	ids_.set();
+//}
+//
+//void LoadProjectDataTask::operator() (TaskData &data)
+//{
+//	// preconditions
+//	_ASSERTE(NULL == data.hardness_);
+//	_ASSERTE(NULL == data.heightmap_);
+//	_ASSERTE(NULL == data.script_);
+//	_ASSERTE(NULL == data.sky_);
+//	_ASSERTE(NULL == data.surface_);
+//	_ASSERTE(NULL == data.texture_);
+//	_ASSERTE(NULL == data.zero_layer_);
+//	// locals
+//	TCHAR path[MAX_PATH];
+//	// load
+//	const TCHAR * const folder_path(data.project_folder_.c_str());
+//	if (ids_[RS_ZERO_LAYER])
+//	{
+//		data.zero_layer_ = new ZeroLayer(data.map_size_, error_hwnd_);
+//		data.zero_layer_->Load(PathCombine(path, folder_path, data.file_names_[RS_ZERO_LAYER].c_str()));
+//	}
+//	if (ids_[RS_HARDNESS])
+//	{
+//		data.hardness_ = new Hardness(data.map_size_, error_hwnd_);
+//		data.hardness_->Load(PathCombine(path, folder_path, data.file_names_[RS_HARDNESS].c_str()));
+//	}
+//	if (ids_[RS_HEIGHTMAP])
+//	{
+//		data.heightmap_ = LoadHeightmap(
+//			data.map_size_,
+//			*this,
+//			PathCombine(path, folder_path, data.file_names_[RS_HEIGHTMAP].c_str()),
+//			ids_[RS_ZERO_LAYER] ? data.zero_layer_ : NULL,
+//			data.map_info_.zero_level_);
+//	}
+//	if (ids_[RS_SCRIPT])
+//	{
+//		data.script_ = new Script(error_hwnd_);
+//		if (!data.script_->Load(PathCombine(path, folder_path, data.file_names_[RS_SCRIPT].c_str())))
+//		{
+//			delete data.script_;
+//			data.script_ = NULL;
+//		}
+//	}
+//	if (ids_[RS_SKY])
+//	{
+//		data.sky_ = new Sky(error_hwnd_);
+//		data.sky_->Load(PathCombine(path, folder_path, data.file_names_[RS_SKY].c_str()));
+//	}
+//	if (ids_[RS_SURFACE])
+//	{
+//		data.surface_ = new Surface(error_hwnd_);
+//		data.surface_->Load(PathCombine(path, folder_path, data.file_names_[RS_SURFACE].c_str()));
+//	}
+//	if (ids_[RS_TEXTURE])
+//	{
+//		data.texture_ = new Texture(data.map_size_, error_hwnd_);
+//		data.texture_->Load(
+//			PathCombine(path, folder_path, data.file_names_[RS_TEXTURE].c_str()),
+//			data.fast_quantization_);
+//	}
+//}
 
 //-----------------------------------------
 // NotifyResourceCreatedTask implementation
@@ -653,7 +685,7 @@ NotifyResourceCreatedTask::NotifyResourceCreatedTask(Resource id, HWND main_hwnd
 	,main_hwnd_(main_hwnd)
 {}
 
-void NotifyResourceCreatedTask::operator() ()
+void NotifyResourceCreatedTask::operator() (TaskData &data)
 {
 	SendResourceCreated(main_hwnd_, id_);
 }
@@ -666,7 +698,7 @@ NotifyProjectOpenTask::NotifyProjectOpenTask(HWND main_hwnd)
 	:main_hwnd_(main_hwnd)
 {}
 
-void NotifyProjectOpenTask::operator() ()
+void NotifyProjectOpenTask::operator() (TaskData &data)
 {
 	SendProjectOpen(main_hwnd_);
 }
@@ -679,7 +711,7 @@ NotifyProjectUnpackedTask::NotifyProjectUnpackedTask(HWND main_hwnd)
 	:main_hwnd_(main_hwnd)
 {}
 
-void NotifyProjectUnpackedTask::operator() ()
+void NotifyProjectUnpackedTask::operator() (TaskData &data)
 {
 	SendProjectUnpacked(main_hwnd_);
 }
@@ -689,12 +721,12 @@ void NotifyProjectUnpackedTask::operator() ()
 //-----------------------------
 
 PackShrubTask::PackShrubTask(
-	bool custom_hardness,
-	bool custom_sky,
-	bool custom_surface,
-	bool custom_zero_layer,
-	bool use_registration,
-	HWND &error_hwnd)
+	bool        custom_hardness,
+	bool        custom_sky,
+	bool        custom_surface,
+	bool        custom_zero_layer,
+	bool        use_registration,
+	const HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
 	,custom_hardness_  (custom_hardness)
 	,custom_sky_       (custom_sky)
@@ -703,102 +735,107 @@ PackShrubTask::PackShrubTask(
 	,use_registration_ (use_registration)
 {}
 
-void PackShrubTask::operator() ()
+void PackShrubTask::operator() (TaskData &data)
 {
-	_ASSERTE(NULL != task_data_.heightmap_);
-	_ASSERTE(NULL != task_data_.texture_);
-	_ASSERTE(NULL != task_data_.hardness_);
-	_ASSERTE(NULL != task_data_.sky_);
-	_ASSERTE(NULL != task_data_.surface_);
-	_ASSERTE(NULL != task_data_.zero_layer_);
-	Hardness  &hardness  (*task_data_.hardness_);
-	Heightmap &heightmap (*task_data_.heightmap_);
-	Sky       &sky       (*task_data_.sky_);
-	Surface   &surface   (*task_data_.surface_);
-	Texture   &texture   (*task_data_.texture_);
-	ZeroLayer &zero_layer(*task_data_.zero_layer_);
+	using namespace Loki;
+	// check out hardness
+	Hardness  &hardness(data.hardness_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.hardness_, &TaskResource<Hardness>::CheckIn);
+	// check out heightmap
+	Heightmap &heightmap (data.heightmap_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+	// check out sky
+	Sky &sky(data.sky_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.sky_, &TaskResource<Sky>::CheckIn);
+	// check out surface
+	Surface &surface(data.surface_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.surface_, &TaskResource<Surface>::CheckIn);
+	// check out texture
+	Texture &texture(data.texture_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+	// check out zero layer
+	ZeroLayer &zero_layer(data.zero_layer_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.zero_layer_, &TaskResource<ZeroLayer>::CheckIn);
 	// calculate the checksum and register the map
 	{
 		DWORD   checksum(0);
-		BYTE   *data;
+		BYTE   *checksum_data;
 		size_t  size;
 		// heightmap
-		switch (heightmap.GetBpp())
+		switch (heightmap.bpp_)
 		{
 		case 8:
 			{
-				const Heightmap8 &heightmap8(ri_cast<const Heightmap8&>(heightmap));
-				data = heightmap8.data_;
-				size = heightmap8.size_.cx * heightmap8.size_.cy;
-				checksum = CalculateChecksum(data, size, checksum);
+				checksum_data = heightmap.data8_;
+				size = heightmap.info_.size_.cx * heightmap.info_.size_.cy;
+				checksum = CalculateChecksum(checksum_data, size, checksum);
 			} break;
 		case 16:
 			{
-				const Heightmap16 &heightmap16(ri_cast<const Heightmap16&>(heightmap));
-				data = ri_cast<BYTE*>(heightmap16.data_);
-				size = heightmap16.size_.cx * heightmap16.size_.cy * 2;
-				checksum = CalculateChecksum(data, size, checksum);
+				checksum_data = ri_cast<BYTE*>(heightmap.data16_);
+				size = heightmap.info_.size_.cx * heightmap.info_.size_.cy * 2;
+				checksum = CalculateChecksum(checksum_data, size, checksum);
 			} break;
 		}
 		// texture
-		data = texture.indices_;
-		size = texture.size_.cx * texture.size_.cy;
-		checksum = CalculateChecksum(data, size, checksum);
-		data = ri_cast<BYTE*>(texture.palette_);
+		checksum_data = texture.indices_;
+		size = texture.info_.size_.cx * texture.info_.size_.cy;
+		checksum = CalculateChecksum(checksum_data, size, checksum);
+		checksum_data = ri_cast<BYTE*>(texture.palette_);
 		size = 0x100 * sizeof(COLORREF);
-		checksum = CalculateChecksum(data, size, checksum);
+		checksum = CalculateChecksum(checksum_data, size, checksum);
 		// hardness
 		if (custom_hardness_)
 		{
-			data = hardness.data_;
-			size = hardness.size_.cx * hardness.size_.cy;
-			checksum = CalculateChecksum(data, size, checksum);
+			checksum_data = hardness.data_;
+			size = hardness.info_.size_.cx * hardness.info_.size_.cy;
+			checksum = CalculateChecksum(checksum_data, size, checksum);
 		}
 		// map info
 		{
-			task_data_.map_info_.GetRawData(&data, &size);
-			checksum = CalculateChecksum(data, size, checksum);
-			delete [] data;
+			data.map_info_.GetRawData(&checksum_data, &size);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
+			delete [] checksum_data;
 			// register the map
 			if (use_registration_)
-				if (!RegisterMap(task_data_.map_name_.c_str(), checksum, *this))
+				if (!RegisterMap(data.map_name_.c_str(), checksum, *this))
 					return;
 		}
 		// script
-		if (NULL != task_data_.script_)
 		{
-			Script &script(*task_data_.script_);
+			Script &script(data.script_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.script_, &TaskResource<Script>::CheckIn);
 			std::stringstream stream;
 			stream << script.doc_;
 			string str(stream.str());
-			data = ri_cast<BYTE*>(&str[0]);
+			checksum_data = ri_cast<BYTE*>(&str[0]);
 			size = str.size();
-			checksum = CalculateChecksum(data, size, checksum);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
 		}
 		// sky
 		if (custom_sky_)
 		{
-			data = ri_cast<BYTE*>(sky.pixels_);
+			checksum_data = ri_cast<BYTE*>(sky.pixels_);
 			size = sky.size_.cx * sky.size_.cy * sizeof(COLORREF);
-			checksum = CalculateChecksum(data, size, checksum);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
 		}
 		// surface
 		if (custom_surface_)
 		{
-			data = surface.indices_;
+			checksum_data = surface.indices_;
 			size = surface.size_.cx * surface.size_.cy;
-			checksum = CalculateChecksum(data, size, checksum);
-			data = ri_cast<BYTE*>(surface.palette_);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
+			checksum_data = ri_cast<BYTE*>(surface.palette_);
 			size = 0x100 * sizeof(COLORREF);
-			checksum = CalculateChecksum(data, size, checksum);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
 		}
 		// zero layer
 		if (custom_zero_layer_)
 		{
 			_ASSERTE(0 == zero_layer.data_.size() % 8);
-			data = ri_cast<BYTE*>(&zero_layer.data_._Myvec[0]);
+			checksum_data = ri_cast<BYTE*>(&zero_layer.data_._Myvec[0]);
 			size = zero_layer.data_.size() / 8;
-			checksum = CalculateChecksum(data, size, checksum);
+			checksum = CalculateChecksum(checksum_data, size, checksum);
 		}
 	}
 	// initialise an XML metadata document
@@ -809,12 +846,12 @@ void PackShrubTask::operator() ()
 	{
 		// compute the sum of the maximum sizes for each resource used
 		vector<size_t> sizes;
-		const size_t map_factor (task_data_.map_size_.cx * task_data_.map_size_.cy);
+		const size_t map_factor (data.map_size_.cx * data.map_size_.cy);
 		sizes.push_back(map_factor);                            // heightmap
 		sizes.push_back(map_factor + 0x100 * sizeof(COLORREF)); // texture
 		sizes.push_back(map_factor / 8);                        // mask
 		if (custom_hardness_)
-			sizes.push_back(hardness.size_.cx * hardness.size_.cy);
+			sizes.push_back(hardness.info_.size_.cx * hardness.info_.size_.cy);
 		if (custom_sky_)
 			sizes.push_back(sky.size_.cx * sky.size_.cy * sizeof(COLORREF));
 		if (custom_surface_)
@@ -828,9 +865,12 @@ void PackShrubTask::operator() ()
 	{
 		BYTE *buffer_iter(buffer);
 		vector<bool> mask;
-		task_data_.map_info_.Pack(*content_node->InsertEndChild(TiXmlElement("map_info")));
-		if (NULL != task_data_.script_)
-			task_data_.script_->Pack(*content_node->InsertEndChild(TiXmlElement("script")));
+		data.map_info_.Pack(*content_node->InsertEndChild(TiXmlElement("map_info")));
+		{
+			Script &script(data.script_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.script_, &TaskResource<Script>::CheckIn);
+			script.Pack(*content_node->InsertEndChild(TiXmlElement("script")));
+		}
 		buffer_iter += heightmap.Pack(
 			*content_node->InsertEndChild(TiXmlElement("heightmap")),
 			buffer_iter,
@@ -917,7 +957,7 @@ void PackShrubTask::operator() ()
 	}
 	// save the packed Biboorat into a shrub file
 	TCHAR path[MAX_PATH];
-	PathCombine(path, task_data_.project_folder_.c_str(), task_data_.map_name_.c_str());
+	PathCombine(path, data.project_folder_.c_str(), data.map_name_.c_str());
 	PathAddExtension(path, _T(".shrub"));
 	SaveMemToFile(path, compressed_buffer, compressed_buffer_size, *this);
 	delete [] compressed_buffer;
@@ -933,22 +973,39 @@ void PackShrubTask::operator() ()
 // SaveThumbTask implementation
 //-----------------------------
 
-SaveThumbTask::SaveThumbTask(HWND &error_hwnd)
+SaveThumbTask::SaveThumbTask(const HWND &error_hwnd)
 	:ErrorHandler(error_hwnd)
 {}
 
-void SaveThumbTask::operator() ()
+void SaveThumbTask::operator() (TaskData &data)
 {
-	_ASSERTE(NULL != task_data_.heightmap_);
-	_ASSERTE(NULL != task_data_.texture_);
-	Heightmap &heightmap(*task_data_.heightmap_);
-	Texture   &texture  (*task_data_.texture_);
-	Lightmap   lightmap(task_data_.map_size_, error_hwnd_);
+	using namespace Loki;
+	// check out heightmap
+	Heightmap &heightmap (data.heightmap_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+	// check out texture
+	Texture &texture(data.texture_.CheckOut());
+	LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+	// create the lightmap
+	Lightmap lightmap(error_hwnd_);
 	lightmap.Create(heightmap);
 	TCHAR path[MAX_PATH];
-	PathCombine(path, task_data_.project_folder_.c_str(), _T("thumbnail.png"));
+	PathCombine(path, data.project_folder_.c_str(), _T("thumbnail.png"));
 	SIZE size = { 256, 256 };
 	SaveThumb(heightmap, lightmap, texture, path, size, *this);
+}
+
+//---------------------------------------------
+// SetResourceManagerEnabledTask implementation
+//---------------------------------------------
+
+SetResourceManagerEnabledTask::SetResourceManagerEnabledTask(bool enable)
+	:enable_(enable)
+{}
+
+void SetResourceManagerEnabledTask::operator() (TaskData &data)
+{
+	data.SetResourceManagerEnabled(enable_);
 }
 
 //------------------------------
@@ -956,22 +1013,14 @@ void SaveThumbTask::operator() ()
 //------------------------------
 
 UnpackShrubTask::UnpackShrubTask(
-		TiXmlDocument  *document,
-		BYTE           *buffer,
-		BYTE           *initial_offset,
-		InfoWnd        &info_wnd,
-		PreviewWnd     &preview_wnd,
-		StatWnd        &stat_wnd,
-		ProjectManager &project_manager,
-		HWND           &error_hwnd)
+		TiXmlDocument *document,
+		BYTE          *buffer,
+		BYTE          *initial_offset,
+		const HWND    &error_hwnd)
 	:ErrorHandler(error_hwnd)
-	,buffer_         (buffer)
-	,initial_offset_ (initial_offset)
-	,document_       (document)
-	,info_wnd_       (info_wnd)
-	,preview_wnd_    (preview_wnd)
-	,project_manager_(project_manager)
-	,stat_wnd_       (stat_wnd)
+	,buffer_        (buffer)
+	,initial_offset_(initial_offset)
+	,document_      (document)
 {}
 
 UnpackShrubTask::~UnpackShrubTask()
@@ -980,110 +1029,80 @@ UnpackShrubTask::~UnpackShrubTask()
 	delete [] initial_offset_;
 }
 
-void UnpackShrubTask::operator() ()
+void UnpackShrubTask::operator() (TaskData &data)
 {
+	using namespace Loki;
 	TiXmlElement *content_node(document_->FirstChildElement("content"));
 	if (NULL == content_node)
 		return;
 	// unpack map info
-	task_data_.map_info_.Unpack(*content_node->FirstChildElement("map_info"));
+	data.map_info_.Unpack(*content_node->FirstChildElement("map_info"));
 	// unpack the heightmap
 	vector<bool> mask;
 	{
-		_ASSERTE(NULL == task_data_.heightmap_);
-		task_data_.heightmap_ = UnpackHeightmap(
-			task_data_.map_size_,
-			*this,
+		Heightmap &heightmap (data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		heightmap.Unpack(
 			content_node->FirstChildElement("heightmap"),
 			buffer_,
 			mask);
-		_ASSERTE(NULL != task_data_.heightmap_);
 	}
 	// unpack the texture
 	{
-		_ASSERTE(NULL == task_data_.texture_);
-		task_data_.texture_ = new Texture(task_data_.map_size_, error_hwnd_);
-		Texture &texture(*task_data_.texture_);
+		Texture &texture(data.texture_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
 		texture.Unpack(content_node->FirstChildElement("texture"), buffer_);
 	}
 	// unpack the hardness map
 	{
-		_ASSERTE(NULL == task_data_.hardness_);
 		TiXmlElement *node(content_node->FirstChildElement("hardness"));
 		if (NULL != node)
 		{
-			task_data_.hardness_ = new Hardness(task_data_.map_size_, error_hwnd_);
-			Hardness &hardness(*task_data_.hardness_);
+		Hardness  &hardness(data.hardness_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.hardness_, &TaskResource<Hardness>::CheckIn);
 			hardness.Unpack(node, buffer_, mask);
 		}
 	}
 	// unpack the script
 	{
-		_ASSERTE(NULL == task_data_.script_);
 		TiXmlElement *node(content_node->FirstChildElement("script"));
 		if (NULL != node)
 		{
-			task_data_.script_ = new Script(error_hwnd_);
-			Script &script(*task_data_.script_);
-			if (!script.Unpack(*node))
-			{
-				delete task_data_.script_;
-				task_data_.script_ = NULL;
-			}
+			Script &script(data.script_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.script_, &TaskResource<Script>::CheckIn);
+			script.Unpack(*node);
 		}
 	}
 	// unpack the sky texture
 	{
-		_ASSERTE(NULL == task_data_.sky_);
 		TiXmlElement *node(content_node->FirstChildElement("sky"));
 		if (NULL != node)
 		{
-			task_data_.sky_ = new Sky(error_hwnd_);
-			Sky &sky(*task_data_.sky_);
+			Sky &sky(data.sky_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.sky_, &TaskResource<Sky>::CheckIn);
 			sky.Unpack(node, buffer_);
 		}
 	}
 	// unpack the surface texture
 	{
-		_ASSERTE(NULL == task_data_.surface_);
 		TiXmlElement *node(content_node->FirstChildElement("surface"));
 		if (NULL != node)
 		{
-			task_data_.surface_ = new Surface(error_hwnd_);
-			Surface &surface(*task_data_.surface_);
+			Surface &surface(data.surface_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.surface_, &TaskResource<Surface>::CheckIn);
 			surface.Unpack(node, buffer_);
 		}
 	}
 	// unpack the zero layer
 	{
-		_ASSERTE(NULL == task_data_.zero_layer_);
 		TiXmlElement *node(content_node->FirstChildElement("zero_layer"));
 		if (NULL != node)
 		{
-			task_data_.zero_layer_ = new ZeroLayer(task_data_.map_size_, error_hwnd_);
-			ZeroLayer &zero_layer(*task_data_.zero_layer_);
+			ZeroLayer &zero_layer(data.zero_layer_.CheckOut());
+			LOKI_ON_BLOCK_EXIT_OBJ(data.zero_layer_, &TaskResource<ZeroLayer>::CheckIn);
 			zero_layer.Unpack(node, buffer_);
 		}
 	}
-}
-
-//----------------------------------------------
-// UnpackShrubTask::OnPanelVisible implemenation
-//----------------------------------------------
-
-UnpackShrubTask::OnPanelVisible::OnPanelVisible(ProjectManager &project_manager)
-	:project_manager_(project_manager)
-{}
-
-void UnpackShrubTask::OnPanelVisible::operator ()(bool on)
-{
-	if (!on)
-		return;
-	IdsType ids;
-	ids.set();
-	ids.set(RS_SKY,     false);
-	ids.set(RS_SURFACE, false);
-	project_manager_.ReloadFiles(ids);
 }
 
 //--------------------------------------------------
@@ -1119,153 +1138,305 @@ UpdateDataTask::UpdateDataTask(
 		file_names_[i] = file_names[i];
 }
 
-void UpdateDataTask::operator() ()
+void UpdateDataTask::operator() (TaskData &data)
 {
-	task_data_.display_hardness_       = display_hardness_;
-	task_data_.display_texture_        = display_texture_;
-	task_data_.display_zero_layer_     = display_zero_layer_;
-	task_data_.enable_lighting_        = enable_lighting_;
-	task_data_.fast_quantization_      = fast_quantization_;
-	task_data_.map_info_               = map_info_;
-	task_data_.map_name_               = map_name_;
-	task_data_.map_size_               = map_size_;
-	task_data_.mesh_threshold_         = mesh_threshold_;
-	task_data_.project_folder_         = project_folder_;
-	task_data_.project_state_          = project_state_;
+	data.display_hardness_       = display_hardness_;
+	data.display_texture_        = display_texture_;
+	data.display_zero_layer_     = display_zero_layer_;
+	data.enable_lighting_        = enable_lighting_;
+	data.fast_quantization_      = fast_quantization_;
+	data.map_info_               = map_info_;
+	data.map_name_               = map_name_;
+	data.map_size_               = map_size_;
+	data.mesh_threshold_         = mesh_threshold_;
+	data.project_folder_         = project_folder_;
+	data.project_state_          = project_state_;
 	for (uint i(0); i != resource_count; ++i)
-		task_data_.file_names_[i] = file_names_[i];
+		data.file_names_[i] = file_names_[i];
+	// set resource info
+	vector<TCHAR> path_v(MAX_PATH);
+	TCHAR *path(&path_v[0]);
+	// hardness
+	{
+		Hardness::info_t &info(data.hardness_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_HARDNESS].c_str());
+		info.path_ = path;
+		// size
+		info.size_ = data.map_size_;
+	}
+	// heightmap
+	{
+		Heightmap::info_t &info(data.heightmap_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_HEIGHTMAP].c_str());
+		info.path_ = path;
+		// size
+		info.size_ = data.map_size_;
+		// zero level
+		info.zero_level_ = data.map_info_.zero_level_;
+	}
+	// script
+	{
+		Script::info_t &info(data.script_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_SCRIPT].c_str());
+		info.path_ = path;
+	}
+	// sky
+	{
+		Sky::info_t &info(data.sky_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_SKY].c_str());
+		info.path_ = path;
+	}
+	// surface
+	{
+		Surface::info_t &info(data.surface_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_SURFACE].c_str());
+		info.path_ = path;
+	}
+	// texture
+	{
+		Texture::info_t &info(data.texture_.GetInfo());
+		// fast quantization
+		info.fast_quantization_ = data.fast_quantization_;
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_TEXTURE].c_str());
+		info.path_ = path;
+		// size
+		info.size_ = data.map_size_;
+	}
+	// zero layer
+	{
+		ZeroLayer::info_t &info(data.zero_layer_.GetInfo());
+		// path
+		PathCombine(path, data.project_folder_.c_str(), data.file_names_[RS_ZERO_LAYER].c_str());
+		info.path_ = path;
+		// size
+		info.size_ = data.map_size_;
+	}
 }
 
-//--------------------------------
-// UpdatePanelsTask implementation
-//--------------------------------
+//-------------------------------
+// UpdatePanelTask implementation
+//-------------------------------
 
-UpdatePanelsTask::UpdatePanelsTask(
-	InfoWnd        &info_wnd,
-	PreviewWnd     &preview_wnd,
+UpdatePanelTask::UpdatePanelTask(
+	IdsType         ids,
+	PanelWindow    &wnd,
+	ProjectManager &project_manager,
+	update_t        update,
+	const HWND     &error_hwnd)
+	:ErrorHandler(error_hwnd)
+	,ids_            (ids)
+	,wnd_            (wnd)
+	,project_manager_(project_manager)
+	,update_         (update)
+{}
+
+void UpdatePanelTask::operator() (TaskData &data)
+{
+	if (wnd_.IsVisible())
+		UpdatePanel(ids_, wnd_, data);
+	else
+		Enqueue();
+}
+
+void UpdatePanelTask::Enqueue()
+{
+	OnPanelVisible &on_panel_visible(GetOnPanelVisible());
+	delegate_t   delegate(&on_panel_visible, &OnPanelVisible::operator());
+	connection_t connection(wnd_.on_show_ += delegate);
+	on_panel_visible.Set(
+		ids_,
+		&project_manager_,
+		update_,
+		connection);
+}
+
+//-----------------------------------------------
+// UpdatePanelTask::OnPanelVisible implementation
+//-----------------------------------------------
+
+UpdatePanelTask::OnPanelVisible::OnPanelVisible()
+	:project_manager_(NULL)
+{}
+
+void UpdatePanelTask::OnPanelVisible::Set(
+	IdsType         ids,
+	ProjectManager *project_manager,
+	update_t        update,
+	connection_t    connection)
+{
+	ids_ |= ids;
+	project_manager_ = project_manager;
+	update_          = update;
+	connection_      = connection;
+}
+
+void UpdatePanelTask::OnPanelVisible::operator() ()
+{
+	(project_manager_->*update_)(ids_);
+	ids_.reset();
+	connection_.disconnect();
+}
+
+//---------------------------------
+// UpdateInfoWndTask implementation
+//---------------------------------
+
+UpdateInfoWndTask::OnPanelVisible UpdateInfoWndTask::on_panel_visible_;
+
+UpdateInfoWndTask::UpdateInfoWndTask(
+	IdsType         ids,
+	InfoWnd        &stat_wnd,
+	ProjectManager &project_manager,
+	const HWND     &error_hwnd)
+	:UpdatePanelTask(ids, stat_wnd, project_manager, &ProjectManager::UpdateStatWnd, error_hwnd)
+{}
+
+void UpdateInfoWndTask::UpdatePanel(
+	IdsType      ids,
+	PanelWindow &wnd,
+	TaskData    &data)
+{}
+
+UpdateInfoWndTask::OnPanelVisible& UpdateInfoWndTask::GetOnPanelVisible()
+{
+	return on_panel_visible_;
+}
+
+//------------------------------------
+// UpdatePreviewWndTask implementation
+//------------------------------------
+
+UpdatePreviewWndTask::OnPanelVisible UpdatePreviewWndTask::on_panel_visible_;
+
+UpdatePreviewWndTask::UpdatePreviewWndTask(
+	IdsType         ids,
+	PreviewWnd     &stat_wnd,
+	ProjectManager &project_manager,
+	const HWND     &error_hwnd)
+	:UpdatePanelTask(ids, stat_wnd, project_manager, &ProjectManager::UpdateStatWnd, error_hwnd)
+{}
+
+void UpdatePreviewWndTask::UpdatePanel(
+	IdsType      ids,
+	PanelWindow &wnd,
+	TaskData    &data)
+{
+	using namespace Loki;
+	PreviewWnd &preview_wnd(ri_cast<PreviewWnd&>(wnd));
+	// create the lightmap, if necessary
+	Lightmap lightmap(error_hwnd_);
+	if (data.enable_lighting_)
+	{
+		Heightmap &heightmap (data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		lightmap.Create(heightmap);
+	}
+	// update the heightmap
+	if (ids[RS_HEIGHTMAP])
+	{
+		Heightmap &heightmap (data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		vector<SimpleVertex> vertices;
+		Triangulate(heightmap, vertices, data.mesh_threshold_);
+		SendSetTerrain(preview_wnd.hwnd_, vertices);
+	}
+	// update the texture
+	if (data.display_texture_)
+	{
+		if (ids[RS_TEXTURE])
+		{
+			TextureAllocation *allocation(SendTextureAllocate(preview_wnd.hwnd_));
+			if (NULL != allocation)
+			{
+				Texture &texture(data.texture_.CheckOut());
+				LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+				CreateTextures(texture, *allocation, lightmap, data.enable_lighting_);
+				SendTextureCommit(preview_wnd.hwnd_);
+				delete allocation;
+			}
+		}
+	}
+	else if (data.display_hardness_)
+	{
+		if (ids[RS_HARDNESS])
+		{
+			TextureAllocation *allocation(SendTextureAllocate(preview_wnd.hwnd_));
+			if (NULL != allocation)
+			{
+				Hardness  &hardness(data.hardness_.CheckOut());
+				LOKI_ON_BLOCK_EXIT_OBJ(data.hardness_, &TaskResource<Hardness>::CheckIn);
+				CreateTextures(hardness, *allocation, lightmap, data.enable_lighting_);
+				SendTextureCommit(preview_wnd.hwnd_);
+				delete allocation;
+			}
+		}
+	}
+	else if (data.display_zero_layer_)
+	{
+		if (ids[RS_ZERO_LAYER])
+		{
+			TextureAllocation *allocation(SendTextureAllocate(preview_wnd.hwnd_));
+			if (NULL != allocation)
+			{
+				ZeroLayer &zero_layer(data.zero_layer_.CheckOut());
+				LOKI_ON_BLOCK_EXIT_OBJ(data.zero_layer_, &TaskResource<ZeroLayer>::CheckIn);
+				CreateTextures(zero_layer, *allocation, lightmap, data.enable_lighting_);
+				SendTextureCommit(preview_wnd.hwnd_);
+				delete allocation;
+			}
+		}
+	}
+}
+
+UpdatePreviewWndTask::OnPanelVisible& UpdatePreviewWndTask::GetOnPanelVisible()
+{
+	return on_panel_visible_;
+}
+
+//---------------------------------
+// UpdateStatWndTask implementation
+//---------------------------------
+
+UpdateStatWndTask::OnPanelVisible UpdateStatWndTask::on_panel_visible_;
+
+UpdateStatWndTask::UpdateStatWndTask(
+	IdsType         ids,
 	StatWnd        &stat_wnd,
 	ProjectManager &project_manager,
-	HWND           &error_hwnd)
-	:ErrorHandler    (error_hwnd)
-	,info_wnd_       (info_wnd)
-	,preview_wnd_    (preview_wnd)
-	,stat_wnd_       (stat_wnd)
-	,project_manager_(project_manager)
+	const HWND     &error_hwnd)
+	:UpdatePanelTask(ids, stat_wnd, project_manager, &ProjectManager::UpdateStatWnd, error_hwnd)
 {}
 
-void UpdatePanelsTask::operator() ()
+void UpdateStatWndTask::UpdatePanel(
+	IdsType      ids,
+	PanelWindow &wnd,
+	TaskData    &data)
 {
-	// what should be loaded
-	IdsType ids(resource_count);
-	ids[RS_HARDNESS]   = (NULL != task_data_.hardness_);
-	ids[RS_HEIGHTMAP]  = (NULL != task_data_.heightmap_);
-	ids[RS_TEXTURE]    = (NULL != task_data_.texture_);
-	ids[RS_ZERO_LAYER] = (NULL != task_data_.zero_layer_);
-	if (ids.none())
-		return;
-	// initialize resources
-	Hardness  &hardness   (*task_data_.hardness_);
-	Heightmap &heightmap  (*task_data_.heightmap_);
-	Lightmap   lightmap   (task_data_.map_size_, error_hwnd_);
-	Texture   &texture    (*task_data_.texture_);
-	ZeroLayer &zero_layer (*task_data_.zero_layer_);
-	if (task_data_.enable_lighting_)
-		lightmap.Create(heightmap);
-	// which panels should be updated
-	bool preview_wnd_visible(preview_wnd_.IsVisible());
-	bool stat_wnd_visible   (stat_wnd_.IsVisible());
-	// stat wnd
-	if (stat_wnd_visible)
+	using namespace Loki;
+	StatWnd &stat_wnd(ri_cast<StatWnd&>(wnd));
+	if (ids[RS_HEIGHTMAP])
 	{
-		if (ids[RS_HEIGHTMAP])
-			stat_wnd_.SetAverageHeight(AverageHeight(heightmap));
-		if (ids[RS_TEXTURE])
-			stat_wnd_.SetAverageColour(AverageColour(texture, heightmap));
+		Heightmap &heightmap (data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		stat_wnd.SetAverageHeight(AverageHeight(heightmap));
 	}
-	else
-		stat_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
-	// preview wnd
-	if (preview_wnd_visible)
+	if (ids[RS_TEXTURE])
 	{
-		// update the heightmap
-		if (ids[RS_HEIGHTMAP])
-			switch (heightmap.GetBpp())
-			{
-			case 8:
-				{
-					vector<SimpleVertex> vertices;
-					Triangulate(ri_cast<const Heightmap8&>(heightmap), vertices, task_data_.mesh_threshold_);
-					SendSetTerrain(preview_wnd_.hwnd_, vertices);
-				} break;
-			case 16:
-				{
-					vector<SimpleVertex> vertices;
-					{
-						Heightmap8 *heightmap8(ri_cast<Heightmap16&>(heightmap));
-						Triangulate(*heightmap8, vertices, task_data_.mesh_threshold_);
-						delete heightmap8;
-					}
-					SendSetTerrain(preview_wnd_.hwnd_, vertices);
-				} break;
-			}
-		// update the texture
-		if (task_data_.display_texture_)
-		{
-			if (ids[RS_TEXTURE])
-			{
-				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-				if (NULL != allocation)
-				{
-					CreateTextures(texture, *allocation, lightmap, task_data_.enable_lighting_);
-					SendTextureCommit(preview_wnd_.hwnd_);
-					delete allocation;
-				}
-			}
-		}
-		else if (task_data_.display_hardness_)
-		{
-			if (ids[RS_HARDNESS])
-			{
-				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-				if (NULL != allocation)
-				{
-					CreateTextures(hardness, *allocation, lightmap, task_data_.enable_lighting_);
-					SendTextureCommit(preview_wnd_.hwnd_);
-					delete allocation;
-				}
-			}
-		}
-		else if (task_data_.display_zero_layer_)
-		{
-			if (ids[RS_ZERO_LAYER])
-			{
-				TextureAllocation *allocation(SendTextureAllocate(preview_wnd_.hwnd_));
-				if (NULL != allocation)
-				{
-					CreateTextures(zero_layer, *allocation, lightmap, task_data_.enable_lighting_);
-					SendTextureCommit(preview_wnd_.hwnd_);
-					delete allocation;
-				}
-			}
-		}
+		Heightmap &heightmap (data.heightmap_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.heightmap_, &TaskResource<Heightmap>::CheckIn);
+		Texture &texture(data.texture_.CheckOut());
+		LOKI_ON_BLOCK_EXIT_OBJ(data.texture_, &TaskResource<Texture>::CheckIn);
+		stat_wnd.SetAverageColour(AverageColour(texture, heightmap));
 	}
-	else
-		preview_wnd_.SetVisibilityNotification(new OnPanelVisible(project_manager_));
 }
 
-//-----------------------------------------------
-// UpdatePanelsTask::OnPanelVisible implemenation
-//-----------------------------------------------
-
-UpdatePanelsTask::OnPanelVisible::OnPanelVisible(ProjectManager &project_manager)
-	:project_manager_(project_manager)
-{}
-
-void UpdatePanelsTask::OnPanelVisible::operator ()(bool on)
+UpdateStatWndTask::OnPanelVisible& UpdateStatWndTask::GetOnPanelVisible()
 {
-	IdsType ids;
-	ids.set();
-	ids.set(RS_SKY,     false);
-	ids.set(RS_SURFACE, false);
-	project_manager_.ReloadFiles(ids);
+	return on_panel_visible_;
 }

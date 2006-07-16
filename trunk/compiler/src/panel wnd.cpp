@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -38,9 +38,7 @@
 //---------------------------
 
 PanelWindow::PanelWindow()
-	:is_visible_             (false)
-	,visibility_event_       (NULL)
-	,visibility_notification_(NULL)
+	:is_visible_(false)
 {}
 
 bool PanelWindow::IsVisible() const
@@ -48,20 +46,6 @@ bool PanelWindow::IsVisible() const
 	return is_visible_;
 }
 
-// PRE: event must be allocated on the heap
-void PanelWindow::SetVisibilityEvent(PanelWindow::ToggleVisibility *visibility_event)
-{
-	_ASSERTE(NULL == visibility_event_);
-	visibility_event_ = visibility_event;
-}
-
-// PRE: notification must be allocated on the heap
-void PanelWindow::SetVisibilityNotification(PanelWindow::ToggleVisibility *visibility_notification)
-{
-	if (NULL != visibility_notification_)
-		delete visibility_notification_;
-	visibility_notification_ = visibility_notification;
-}
 
 void PanelWindow::OnCommand(Msg<WM_COMMAND> &msg)
 {
@@ -69,6 +53,7 @@ void PanelWindow::OnCommand(Msg<WM_COMMAND> &msg)
 	{
 	case IDCANCEL:
 		ShowWindow(hwnd_, SW_HIDE);
+		break;
 	}
 	msg.handled_ = true;
 }
@@ -76,14 +61,12 @@ void PanelWindow::OnCommand(Msg<WM_COMMAND> &msg)
 void PanelWindow::OnShowWindow(Msg<WM_SHOWWINDOW> &msg)
 {
 	is_visible_ = msg.IsShown();
-	if (NULL != visibility_event_)
-		(*visibility_event_)(is_visible_);
-	if (NULL != visibility_notification_ && is_visible_)
-	{
-		(*visibility_notification_)(is_visible_);
-		delete visibility_notification_;
-		visibility_notification_ = NULL;
-	}
+	if (is_visible_)
+		foreach (const on_show_t::delegate_t &delegate, on_show_.delegates_)
+			delegate();
+	else
+		foreach (const on_hide_t::delegate_t &delegate, on_hide_.delegates_)
+			delegate();
 	msg.handled_ = true;
 }
 

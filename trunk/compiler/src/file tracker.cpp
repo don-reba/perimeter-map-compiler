@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -32,6 +32,8 @@
 #include "stdafx.h"
 
 #include "file tracker.h"
+
+#include <process.h>
 
 #include <loki/ScopeGuard.h>
 
@@ -77,6 +79,10 @@ void FileTracker::EnableDatum(Resource id, bool enable)
 	EnterCriticalSection(&tracker_section_);
 	LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
 	files_[id].active_ = enable;
+	// because it is unknown when the file was updated when it should not have been monitored,
+	// reset last_write_ to the current time
+	if (enable)
+		GetSystemTimeAsFileTime(&files_[id].last_write_);
 }
 
 bool FileTracker::Start(LPCTSTR folder_path, FileTracker::FileUpdated *file_updated)
@@ -90,9 +96,9 @@ bool FileTracker::Start(LPCTSTR folder_path, FileTracker::FileUpdated *file_upda
 	folder_path_  = folder_path;
 	// create the processor thread
 	ResetEvent(stop_tracking_event_);
-	DWORD thread_id;
-	tracker_thread_ = CreateThread(NULL, 0, TrackerThread, this, 0, &thread_id);
-	if (NULL == tracker_thread_)
+	uint thread_id;
+	tracker_thread_ = ri_cast<HANDLE>(_beginthreadex(NULL, 0, &TrackerThreadProxy, this, 0, &thread_id));
+	if (0 == tracker_thread_)
 	{
 		MacroDisplayError(_T("File tracking thread could not be created."));
 		return false;
@@ -124,29 +130,31 @@ void FileTracker::Stop()
 		files_[i].active_ = false;
 }
 
-DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
+uint __stdcall FileTracker::TrackerThreadProxy(void *obj)
 {
-	FileTracker *obj(ri_cast<FileTracker*>(parameter));
+	ri_cast<FileTracker*>(obj)->TrackerThread();
+	return 0;
+}
+
+void FileTracker::TrackerThread()
+{
 	// initialize the handle array to wait on
 	const size_t handle_count(2);
 	HANDLE handles[handle_count] =
-	{
-		FindFirstChangeNotification(
-			obj->folder_path_.c_str(),
-			FALSE,
-			FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME),
-		obj->stop_tracking_event_
-	};
+		{
+			FindFirstChangeNotification(
+				folder_path_.c_str(),
+				FALSE,
+				FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME),
+				stop_tracking_event_
+		};
 	if (INVALID_HANDLE_VALUE == handles[0])
-	{
-		obj->MacroDisplayError(_T("Could not begin to track files."));
-		return 1;
-	}
+		MacroDisplayError(_T("Could not begin to track files."));
 	// initial file check
 	{
-		EnterCriticalSection(&obj->tracker_section_);
-		LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->tracker_section_);
-		obj->CheckFiles();
+		EnterCriticalSection(&tracker_section_);
+		LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
+		CheckFiles();
 	}
 	// file check cycle
 	for (;;)
@@ -156,13 +164,12 @@ DWORD WINAPI FileTracker::TrackerThread(LPVOID parameter)
 		if (WAIT_OBJECT_0 + 1 == wait_result)
 			break;
 		{
-			EnterCriticalSection(&obj->tracker_section_);
-			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &obj->tracker_section_);
-			obj->CheckFiles();
+			EnterCriticalSection(&tracker_section_);
+			LOKI_ON_BLOCK_EXIT(LeaveCriticalSection, &tracker_section_);
+			CheckFiles();
 		}
 		FindNextChangeNotification(handles[0]);
 	}
-	return 0;
 }
 
 void FileTracker::CheckFiles()

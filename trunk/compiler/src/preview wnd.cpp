@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -37,6 +37,8 @@
 #include "resource.h"
 
 #include <sstream>
+
+#include <loki/ScopeGuard.h>
 
 //----------
 // constants
@@ -147,6 +149,8 @@ void PreviewWnd::OnExitSizeMove(Msg<WM_EXITSIZEMOVE> &msg)
 {
 	InitializeDevice();
 	Render();
+	msg.result_  = 0;
+	msg.handled_ = true;
 }
 
 void PreviewWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
@@ -630,7 +634,7 @@ void PreviewWnd::OnStateChanged(Msg<WM_USR_STATE_CHANGED> &msg)
 void PreviewWnd::OnTextureAllocate(Msg<WM_USR_TEXTURE_ALLOCATE> &msg)
 {
 	textures_valid_ = false;
-		TextureAllocation *allocation(new TextureAllocation);
+	TextureAllocation *allocation(new TextureAllocation);
 	allocation->width_   = texture_width;
 	allocation->height_  = texture_height;
 	allocation->x_count_ = map_size_.cx / texture_width;
@@ -779,29 +783,56 @@ bool PreviewWnd::InitializeDevice()
 	}
 	else
 	{
-		// wait for the device_ to become accessible
-		for (bool quit(false); !quit;)
+		// check if the device is accessible
+		result = device_->TestCooperativeLevel();
+		switch (result)
 		{
-			result = device_->TestCooperativeLevel();
-			switch (result)
-			{
-			case D3D_OK:
-			case D3DERR_DEVICENOTRESET:
-				quit = true;
-				break;
-			case D3DERR_DRIVERINTERNALERROR:
-				MacroDisplayError(_T("Internal Driver Error on IDirect3DDevice9::TestCooperativeLevel."));
-				DestroyWindow(hwnd_);
-				return false;
-			default:
-				Sleep(500);
-			}
+		case D3DERR_DRIVERINTERNALERROR:
+			MacroDisplayError(_T("Internal Driver Error on IDirect3DDevice9::TestCooperativeLevel."));
+			DestroyWindow(hwnd_);
+			return false;
+		case D3DERR_DEVICELOST:
+			Sleep(100);
+			return false;
+		}
+		if (FAILED(result))
+		{
+			tostringstream stream;
+			stream << "Unknown error on IDirect3DDevice9::TestCooperativeLevel - code 0x"
+			       << std::hex << result
+			       << ".";
+			MacroDisplayError(stream.str());
+			DestroyWindow(hwnd_);
+			return false;
 		}
 		// reset the device_
 		result = device_->Reset(&d3d_params);
-		if ((D3D_OK != result))
+		switch (result)
 		{
-			MacroDisplayError(_T("Direct3DDevice9 could not be reset."));
+		case D3DERR_DRIVERINTERNALERROR:
+			MacroDisplayError(_T("Internal Driver Error on IDirect3DDevice9::Reset."));
+			DestroyWindow(hwnd_);
+			return false;
+		case D3DERR_INVALIDCALL:
+			MacroDisplayError(_T("Invalid call of IDirect3DDevice9::Reset."));
+			DestroyWindow(hwnd_);
+			return false;
+		case D3DERR_OUTOFVIDEOMEMORY:
+		case E_OUTOFMEMORY:
+			MacroDisplayError(_T("Insufficient memory for IDirect3DDevice9::Reset."));
+			DestroyWindow(hwnd_);
+			return false;
+		case D3DERR_DEVICELOST:
+			Sleep(100);
+			return false;
+		};
+		if (FAILED(result))
+		{
+			tostringstream stream;
+			stream << "Unknown error on IDirect3DDevice9::Reset - code 0x"
+			       << std::hex << result
+			       << ".";
+			MacroDisplayError(stream.str());
 			DestroyWindow(hwnd_);
 			return false;
 		}
@@ -919,6 +950,7 @@ void PreviewWnd::PushWorldMatrix(const D3DXMATRIX &matrix)
 
 void PreviewWnd::Render()
 {
+	using namespace Loki;
 	// prevent recursion
 	static int recursion_count(0);
 	const struct CCounter
@@ -958,7 +990,8 @@ void PreviewWnd::Render()
 				// stretch the scene
 				D3DXMATRIX stretch_matrix;
 				D3DXMatrixScaling(&stretch_matrix, 1.0f, 1.0f, world_stretch_);
-				StackedMatrix stacked_stretch_matrix(*this, stretch_matrix);
+				PushWorldMatrix(stretch_matrix);
+				LOKI_ON_BLOCK_EXIT_OBJ(*this, PreviewWnd::PopWorldMatrix);
 				// render terrain
 				if (textures_valid_ && terrain_valid_)
 				{
@@ -1013,7 +1046,8 @@ void PreviewWnd::Render()
 					// set zero layer height
 					D3DXMATRIX zl_height_matrix;
 					D3DXMatrixTranslation(&zl_height_matrix, 0, 0, (zero_level_ + 0.5f) * world_stretch_);
-					StackedMatrix stacked_zlr_height_matrix(*this, zl_height_matrix);
+					PushWorldMatrix(zl_height_matrix);
+					LOKI_ON_BLOCK_EXIT_OBJ(*this, PreviewWnd::PopWorldMatrix);
 					// render
 					device_->SetFVF(ColouredVertex::FVF);
 					if (D3D_OK != device_->SetTexture(0, NULL))
@@ -1040,7 +1074,8 @@ void PreviewWnd::Render()
 							0);
 						D3DXMatrixMultiply(&frame_marker_matrix, &frame_marker_rotation, &frame_marker_matrix);
 					}
-					StackedMatrix stacked_frame_marker_matrix(*this, frame_marker_matrix);
+					PushWorldMatrix(frame_marker_matrix);
+					LOKI_ON_BLOCK_EXIT_OBJ(*this, PreviewWnd::PopWorldMatrix);
 					// render the marker
 					if (D3D_OK != device_->SetStreamSource(0, marker.vertices_, 0, sizeof(ColouredVertex)))
 					{

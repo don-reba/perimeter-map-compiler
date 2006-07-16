@@ -11,7 +11,7 @@
 // • Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution. 
-// • Neither the name of Don Reba nor the names of its contributors may be used
+// • Neither the name of Don Reba nor the names of his contributors may be used
 //   to endorse or promote products derived from this software without specific
 //   prior written permission. 
 // 
@@ -50,16 +50,6 @@ namespace TaskCommon
 	//--------
 
 	DWORD LoadFile(const LPCTSTR name, BYTE *&pBuffer, ErrorHandler &error_handler);
-	void  SaveHardness(
-		LPCTSTR       path,
-		const BYTE   *bufffer,
-		SIZE          size,
-		ErrorHandler &error_handler);
-	void  SaveHeightmap(
-		LPCTSTR path,
-		const BYTE *buffer,
-		SIZE size,
-		ErrorHandler &error_handler);
 	bool  SaveMemToFile(LPCTSTR path, const BYTE *buffer, DWORD size, ErrorHandler &error_handler);
 	void  SavePalette(Texture &texture, LPCTSTR path, ErrorHandler &error_handler);
 	void  SaveSPG(
@@ -79,12 +69,6 @@ namespace TaskCommon
 		LPCTSTR folder_name,
 		const bool survival,
 		ErrorHandler &error_handler);
-	void  SaveTexture(
-		LPCTSTR path,
-		const BYTE *buffer,
-		const COLORREF palette[256],
-		SIZE size,
-		ErrorHandler &error_handler);
 	bool  SaveThumb(
 		const Heightmap &heightmap,
 		const Lightmap  &lightmap,
@@ -98,29 +82,29 @@ namespace TaskCommon
 		const ZeroLayer *zero_layer,
 		LPCTSTR          path,
 		ErrorHandler    &error_handler);
-	void  SaveVMP(
-		const Heightmap8 &heightmap,
-		const Texture    &texture,
-		const ZeroLayer  *zero_layer,
-		LPCTSTR           path,
-		ErrorHandler     &error_handler);
-	void  SaveVMP(
-		const Heightmap16 &heightmap,
-		const Texture     &texture,
-		const ZeroLayer   *zero_layer,
-		LPCTSTR            path,
-		ErrorHandler      &error_handler);
+	void  SaveVMP8(
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		const ZeroLayer *zero_layer,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler);
+	void  SaveVMP16(
+		const Heightmap &heightmap,
+		const Texture   &texture,
+		const ZeroLayer *zero_layer,
+		LPCTSTR          path,
+		ErrorHandler    &error_handler);
 
 	//-----------------------------------
 	// "incredible math" (Lithium Flower)
 	//-----------------------------------
 
-	COLORREF AverageColour  (const Texture &texture, const Heightmap   &heightmap);
-	COLORREF AverageColour8 (const Texture &texture, const Heightmap8  &heightmap);
-	COLORREF AverageColour16(const Texture &texture, const Heightmap16 &heightmap);
-	float    AverageHeight  (const Heightmap   &heightmap);
-	float    AverageHeight8 (const Heightmap8  &heightmap);
-	float    AverageHeight16(const Heightmap16 &heightmap);
+	COLORREF AverageColour  (const Texture &texture, const Heightmap &heightmap);
+	COLORREF AverageColour8 (const Texture &texture, const Heightmap &heightmap);
+	COLORREF AverageColour16(const Texture &texture, const Heightmap &heightmap);
+	float    AverageHeight  (const Heightmap &heightmap);
+	float    AverageHeight8 (const Heightmap &heightmap);
+	float    AverageHeight16(const Heightmap &heightmap);
 	DWORD    CalculateChecksum(BYTE *data, size_t size, DWORD seed);
 	void     CreateTextures(
 		const Texture     &texture,
@@ -144,7 +128,7 @@ namespace TaskCommon
 		const vector<std::pair<tstring, tstring> > &seq,
 		tstring                                    &result);
 	void     Triangulate(
-		const Heightmap8 &heightmap,
+		const Heightmap &heightmap,
 		vector<SimpleVertex> &vertices,
 		float mesh_threshold);
 	

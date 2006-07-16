@@ -95,7 +95,7 @@
 				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="0"
 				RuntimeTypeInfo="FALSE"
-				UsePrecompiledHeader="1"
+				UsePrecompiledHeader="3"
 				PrecompiledHeaderThrough="stdafx.h"
 				BrowseInformation="0"
 				WarningLevel="3"
@@ -306,6 +306,9 @@
 			</File>
 			<File
 				RelativePath=".\src\error handler.h">
+			</File>
+			<File
+				RelativePath=".\event.h">
 			</File>
 			<File
 				RelativePath=".\src\file tracker.h">
