@@ -67,13 +67,14 @@
 
 InfoWnd::InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed)
 	:preview_wnd_               (preview_wnd)
+	,layout_                    (NULL)
 	,zero_level_changed_        (zero_layer_changed)
 	,zero_level_changes_ignored_(0)
 {}
 
 bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 {
-	// create the window
+	// create the main window
 	hwnd_ = CreateDialogParam(
 		GetModuleHandle(NULL),
 		MAKEINTRESOURCE(IDD_INFO_DLG),
@@ -82,10 +83,34 @@ bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 		ri_cast<LPARAM>(this));
 	if (NULL == hwnd_)
 	{
-		MacroDisplayError(_T("The preview window could not be created."));
+		MacroDisplayError(_T("The Details window could not be created."));
 		return false;
 	}
-	SetRect(window_rect);
+	// create the layout window
+	layout_ = CreateWindow(
+		HTMLayoutClassNameT(),
+		_T(""),
+		WS_CHILD|WS_VISIBLE,
+		0,
+		0,
+		0,
+		0,
+		hwnd_,
+		NULL,
+		GetModuleHandle(NULL),
+		NULL);
+
+	if (NULL == layout_)
+	{
+		MacroDisplayError(_T("The Details window layout could not be created."));
+		return false;
+	}
+	if (FALSE == HTMLayoutLoadFile(layout_, L"skin\\info_wnd.html"))
+	{
+		MacroDisplayError(_T("The Details window layout could not be loaded."));
+		return false;
+	}
+	// position the main window
 	SetWindowPos(
 		hwnd_,
 		NULL,
@@ -93,7 +118,7 @@ bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 		window_rect.top,
 		0,
 		0,
-		SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE);
+		SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE | SWP_SHOWWINDOW);
 	EnableWindow(hwnd_, TRUE);
 	return true;
 }
@@ -323,10 +348,25 @@ void InfoWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	msg.handled_ = true;
 }
 
+void InfoWnd::OnSize(Msg<WM_SIZE> &msg)
+{
+	PositionChildren();
+}
+
 void InfoWnd::OnTimer(Msg<WM_TIMER> &msg)
 {
 	KillTimer(hwnd_, 0);
 	(*zero_level_changed_)();
+	msg.handled_ = true;
+}
+
+void InfoWnd::OnWindowPosChanging(Msg<WM_WINDOWPOSCHANGING> &msg)
+{
+	SIZE size(CalculateWindowSize());
+	WINDOWPOS * wp(msg.WindowPos());
+	wp->cx = size.cx;
+	wp->cy = size.cy;
+	wp->flags &= ~SWP_NOSIZE;
 	msg.handled_ = true;
 }
 
@@ -337,10 +377,18 @@ void InfoWnd::ProcessMessage(WndMsg &msg)
 		&InfoWnd::OnColorStatic,
 		&InfoWnd::OnCommand,
 		&InfoWnd::OnInitDialog,
-		&InfoWnd::OnTimer
+		&InfoWnd::OnSize,
+		&InfoWnd::OnTimer,
+		&InfoWnd::OnWindowPosChanging,
 	};
 	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
+}
+
+BOOL CALLBACK InfoWnd::EnumChildrenProc(HWND hwnd, LPARAM lprm)
+{
+	ri_cast<vector<HWND>*>(lprm)->push_back(hwnd);
+	return TRUE;
 }
 
 void InfoWnd::AddLocation(tstring name, uint x, uint y)
@@ -350,10 +398,18 @@ void InfoWnd::AddLocation(tstring name, uint x, uint y)
 	locations_.push_back(point);
 }
 
-BOOL CALLBACK InfoWnd::EnumChildrenProc(HWND hwnd, LPARAM lprm)
+SIZE InfoWnd::CalculateWindowSize() const
 {
-	ri_cast<vector<HWND>*>(lprm)->push_back(hwnd);
-	return TRUE;
+	RECT client;
+	GetClientRect(hwnd_, &client);
+	RECT window;
+	GetWindowRect(hwnd_, &window);
+	LONG dx(window.right  - window.left - client.right );
+	LONG dy(window.bottom - window.top  - client.bottom);
+	UINT min_w(::HTMLayoutGetMinWidth( layout_));
+	UINT min_h(::HTMLayoutGetMinHeight(layout_, min_w));
+	SIZE size = { dx + min_w, dy + min_h };
+	return size;
 }
 
 void InfoWnd::EnableControls(bool on)
@@ -362,4 +418,14 @@ void InfoWnd::EnableControls(bool on)
 	EnumChildWindows(hwnd_, EnumChildrenProc, ri_cast<LPARAM>(&children));
 	foreach(HWND &hwnd, children)
 		EnableWindow(hwnd, on ? TRUE : FALSE);
+}
+
+void InfoWnd::PositionChildren()
+{
+	if (NULL != layout_)
+	{
+		RECT client_rect;
+		GetClientRect(hwnd_, &client_rect);
+		SetWindowPos(layout_, NULL, 0, 0, client_rect.right, client_rect.bottom, SWP_NOZORDER);
+	}
 }

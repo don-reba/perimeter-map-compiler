@@ -122,6 +122,7 @@
 #define IDC_CHOICE_LIST                 1052
 #define IDC_NEW_LOCATION                1054
 #define IDC_RENAME_LOCATION             1055
+#define IDC_EDIT3                       1056
 #define ID_FILE_OPENPROJECT             32772
 #define ID_FILE_SAVEPROJECT             32773
 #define ID_FILE_PACKSHRUB               32774
@@ -136,14 +137,14 @@
 #define ID_PANEL_WND_0                  32801
 #define ID_PANEL_WND_1                  32802
 #define ID_PANEL_WND_2                  32803
-#define ID_TOOLS_IMPORTSCRIPT           32803
-#define ID_PANEL_WND_3                  32804
-#define ID_PANEL_WND_4                  32805
-#define ID_HELP_D                       32806
-#define ID_HELP_                        32807
-#define ID_HELP_RU                      32808
-#define ID_HELP_EN                      32809
-#define IDC_SHOW_ALL                    32810
+#define ID_TOOLS_IMPORTSCRIPT           32804
+#define ID_PANEL_WND_3                  32805
+#define ID_PANEL_WND_4                  32806
+#define ID_HELP_D                       32807
+#define ID_HELP_                        32808
+#define ID_HELP_RU                      32809
+#define ID_HELP_EN                      32810
+#define IDC_SHOW_ALL                    32811
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -153,7 +154,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        205
 #define _APS_NEXT_COMMAND_VALUE         32810
-#define _APS_NEXT_CONTROL_VALUE         1056
+#define _APS_NEXT_CONTROL_VALUE         1065
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

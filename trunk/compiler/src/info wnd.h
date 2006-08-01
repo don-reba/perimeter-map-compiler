@@ -33,6 +33,10 @@
 
 #include "panel wnd.h"
 
+#pragma warning(push, 1)
+#include <HTMLLayout/htmlayout.h>
+#pragma warning(pop)
+
 class PreviewWnd;
 
 //---------------------------------
@@ -54,19 +58,24 @@ public:
 public:
 	bool Create(HWND parent_wnd, const RECT &window_rect);
 	void Update(bool read_only = false);
-// message handlers
+// message processing
 private:
-	void OnColorStatic(Msg<WM_CTLCOLORSTATIC> &msg);
-	void OnCommand    (Msg<WM_COMMAND>        &msg);
-	void OnInitDialog (Msg<WM_INITDIALOG>     &msg);
-	void OnTimer      (Msg<WM_TIMER>          &msg);
-// internal function
+	void OnColorStatic      (Msg<WM_CTLCOLORSTATIC>    &msg);
+	void OnCommand          (Msg<WM_COMMAND>           &msg);
+	void OnInitDialog       (Msg<WM_INITDIALOG>        &msg);
+	void OnSize             (Msg<WM_SIZE>              &msg);
+	void OnTimer            (Msg<WM_TIMER>             &msg);
+	void OnWindowPosChanging(Msg<WM_WINDOWPOSCHANGING> &msg);
 protected:
 	void ProcessMessage(WndMsg &msg);
+// internal function
+private:
+	static BOOL CALLBACK EnumChildrenProc(HWND hwnd, LPARAM lprm);
 private:
 	void AddLocation(tstring name, uint x, uint y);
-	static BOOL CALLBACK EnumChildrenProc(HWND hwnd, LPARAM lprm);
+	SIZE CalculateWindowSize() const;
 	void EnableControls(bool on);
+	void PositionChildren();
 // data
 private:
 	HBRUSH            fog_colour_;
@@ -75,4 +84,6 @@ private:
 	PreviewWnd       &preview_wnd_;
 	uint              zero_level_changes_ignored_;
 	ZeroLevelChanged *zero_level_changed_;
+	// layout
+	HWND layout_;
 };

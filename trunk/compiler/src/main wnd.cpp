@@ -456,7 +456,7 @@ void MainWnd::ProcessMessage(WndMsg &msg)
 		&MainWnd::OnSysColorChange,
 		&MainWnd::OnToggleBusy
 	};
-		if (!Handler::Call(mmp, this, msg))
+	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
 }
 
