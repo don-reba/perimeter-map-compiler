@@ -121,16 +121,6 @@ namespace TaskCommon
 		data_ = NULL;
 	}
 
-	void Hardness::SetPath(LPCTSTR path)
-	{
-		info_.path_ = path;
-	}
-
-	void Hardness::SetSize(SIZE size)
-	{
-		info_.size_ = size;
-	}
-
 	int Hardness::Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask)
 	{
 		// pack hardness map
@@ -1361,10 +1351,6 @@ namespace TaskCommon
 	//----------------------
 	// Script implementation
 	//----------------------
-
-	Script::info_t::info_t()
-		:path_()
-	{}
 
 	Script::Script(const HWND &error_hwnd)
 		:ErrorHandler(error_hwnd)

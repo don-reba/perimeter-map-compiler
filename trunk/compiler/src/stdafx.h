@@ -80,3 +80,5 @@ typedef unsigned short ushort;
 // extremely annoying definitions
 #undef min
 #undef max
+// project-wide constants
+const uint prm_player_count = 4;

@@ -33,27 +33,8 @@
 
 #include "error handler.h"
 
-#include <bitset>
-
-
-//--------------------------------------
-// resouce types that can be manipulated
-//--------------------------------------
-
-enum Resource
-{
-	RS_HARDNESS = 0,
-	RS_HEIGHTMAP,
-	RS_SCRIPT,
-	RS_SKY,
-	RS_SURFACE,
-	RS_TEXTURE,
-	RS_ZERO_LAYER,
-	resource_count
-};
-
-typedef std::bitset<resource_count> IdsType;
-
+#include "resources/resource ids.h"
+#include "resources/save callback.h"
 
 namespace TaskCommon
 {
@@ -66,40 +47,6 @@ namespace TaskCommon
 	struct Lightmap;
 	struct MapInfo;
 	struct ZeroLayer;
-
-	//----------------------------------------
-	// saving callback base class
-	// inherited by all the resource that save
-	//----------------------------------------
-
-	class SaveCallback
-	{
-	public:
-		struct SaveHandler {
-			virtual void OnSaveBegin(Resource id) = 0;
-			virtual void OnSaveEnd  (Resource id) = 0;
-		};
-	public:
-		SaveCallback(Resource id) : save_handler_(NULL), id_(id) {}
-		void SetOnSave(SaveHandler *handler)
-		{
-			save_handler_ = handler;
-		}
-	protected:
-		void SaveBegin() const
-		{
-			if (NULL != save_handler_)
-				save_handler_->OnSaveBegin(id_);
-		}
-		void SaveEnd() const
-		{
-			if (NULL != save_handler_)
-				save_handler_->OnSaveEnd(id_);
-		}
-	private:
-		const Resource id_;
-		SaveHandler *save_handler_;
-	};
 
 	//--------------------------------------------------------------------------
 	// 1-bit bitmap specifying the areas that are not accessible to terraforming
@@ -121,9 +68,6 @@ namespace TaskCommon
 		// TaskResource support
 		bool Load();
 		void Unload();
-		// state
-		void SetPath(LPCTSTR path);
-		void SetSize(SIZE size);
 		// packing
 		int  Pack(TiXmlNode &node, BYTE *buffer, const BYTE *initial_offset, const vector<bool> &mask);
 		void Unpack(TiXmlNode *node, BYTE *buffer, const vector<bool> &mask);
@@ -243,7 +187,6 @@ namespace TaskCommon
 	public:
 		struct info_t
 		{
-			info_t();
 			tstring path_;
 		};
 	public:

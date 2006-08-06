@@ -36,6 +36,9 @@
 #include <bitset>
 #include <boost/array.hpp>
 
+#include <Loki/Typelist.h>
+#include <Loki/Visitor.h>
+
 
 namespace interop
 {
@@ -347,15 +350,6 @@ struct Position;
 
 typedef std::vector<Position> PositionList;
 
-//----------------------------------------
-// abstract class for interfacing with PMC
-//----------------------------------------
-
-struct PlacedUnit
-{
-	//virtual 
-};
-
 struct DamageMolecula 
 {
 	bool  isAlive;
@@ -397,8 +391,9 @@ struct Attackpoint
 	bool       positionTarget;
 };
 
-struct SaveUnitData 
+struct SaveUnitData : public Loki::BaseVisitable<>
 {
+	LOKI_DEFINE_VISITABLE();
 	int            unitID;
 	AttributeID    attributeID;
 	Position       position;
@@ -410,6 +405,7 @@ struct SaveUnitData
 
 struct SaveGeo : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool           sleep;
 	float          firstSleepTime;
 	float          sleepPeriod;
@@ -423,23 +419,27 @@ struct SaveGeo : public SaveUnitData
 // AttributeID in { UNIT_ATTRIBUTE_GEO_BREAK, UNIT_ATTRIBUTE_GEO_HEAD }
 struct SaveGeoBreak : public SaveGeo
 {
+	LOKI_DEFINE_VISITABLE();
 	float geoRadius;
 	int   num_break;
 };
 
 struct SaveGeoFault : public SaveGeo
 {
+	LOKI_DEFINE_VISITABLE();
 	float length;
 	float angle;
 };
 
 struct SaveGeoInfluence : public SaveGeo
 {
-	float geoReadius;
+	LOKI_DEFINE_VISITABLE();
+	float geoRadius;
 };
 
 struct SaveUnitLegionaryData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool          basementInstalled;
 	float         accumulatedEnergy;
 	int           zeroLayerCounter;
@@ -458,6 +458,7 @@ struct SaveUnitLegionaryData : public SaveUnitData
 
 struct SaveUnitSquadData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	Position              stablePosition;
 	AttributeID           currentMutation;
 	float                 curvatureRadius;
@@ -475,6 +476,7 @@ struct SaveUnitSquadData : public SaveUnitData
 
 struct SaveUnitBuildingData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool              basementInstalled;
 	float             accumulatedEnergy;
 	int               zeroLayerCounter;
@@ -488,6 +490,7 @@ struct SaveUnitBuildingData : public SaveUnitData
 
 struct SaveUnitCommandCenterData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool               basementInstalled;
 	float              accumulatedEnergy;
 	int                zeroLayerCounter;
@@ -500,6 +503,7 @@ struct SaveUnitCommandCenterData : public SaveUnitData
 
 struct SaveUnitFrameData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool              basementInstalled;
 	float             accumulatedEnergy;
 	int               zeroLayerCounter;
@@ -515,6 +519,7 @@ struct SaveUnitFrameData : public SaveUnitData
 
 struct SaveUnitFilthData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	FilthType       filthType;
 	float           attackDirection;
 	bool            sleep;
@@ -539,6 +544,7 @@ struct SaveUnitFilthData : public SaveUnitData
 
 struct SaveUnitNatureData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	string        modelName;
 	bool          visible;
 	NatureFlagSet natureFlag;
@@ -547,9 +553,10 @@ struct SaveUnitNatureData : public SaveUnitData
 	float         chainPeriod;
 };
 
-// AttributeID in { UNIT_ATTRIBUTE_BUILD_MASTER, UNIT_ATTRIBUTE_BR
+// AttributeID in { UNIT_ATTRIBUTE_BUILD_MASTER, UNIT_ATTRIBUTE_TERRAIN_MASTER }
 struct SaveUnitFrameChildData : public SaveUnitData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool         basementInstalled;
 	float        accumulatedEnergy;
 	int          zeroLayerCounter;
@@ -562,6 +569,7 @@ struct SaveUnitFrameChildData : public SaveUnitData
 
 struct SaveUnitBuildingMilitaryData : public SaveUnitBuildingData
 {
+	LOKI_DEFINE_VISITABLE();
 	TargetUnit attackTarget;
 	TargetUnit lastAttackTarget;
 	bool       manualAttackTarget;
@@ -569,23 +577,74 @@ struct SaveUnitBuildingMilitaryData : public SaveUnitBuildingData
 
 struct SaveUnitCorridorAlphaData : public SaveUnitBuildingData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool free;
 	int  passTime;
 	int  timeOffset;
 };
 
-
 struct SaveUnitCorridorOmegaData : public SaveUnitBuildingData
 {
+	LOKI_DEFINE_VISITABLE();
 	bool upgraded;
 };
+
 struct SaveUnitProtectorData : public SaveUnitBuildingData
 {
+	LOKI_DEFINE_VISITABLE();
 	int  monksNumber;
 	int  fieldState;
 	bool enableScharge;
 	bool startWhenCharged;
 };
+
+//---------------------
+// visitable type lists
+//---------------------
+
+typedef LOKI_TYPELIST_16
+	(
+		SaveUnitData,
+		SaveGeo,
+		SaveGeoBreak,
+		SaveGeoFault,
+		SaveUnitLegionaryData,
+		SaveUnitSquadData,
+		SaveUnitBuildingData,
+		SaveUnitCommandCenterData,
+		SaveUnitFrameData,
+		SaveUnitFilthData,
+		SaveUnitNatureData,
+		SaveUnitFrameChildData,
+		SaveUnitBuildingMilitaryData,
+		SaveUnitCorridorAlphaData,
+		SaveUnitCorridorOmegaData,
+		SaveUnitProtectorData
+	)
+	UnitTypeList;
+
+#define INTEROP_UNIT_TYPE_LIST      \
+   (16, (                           \
+      SaveUnitData,                 \
+      SaveGeo,                      \
+      SaveGeoBreak,                 \
+      SaveGeoFault,                 \
+      SaveUnitLegionaryData,        \
+      SaveUnitSquadData,            \
+      SaveUnitBuildingData,         \
+      SaveUnitCommandCenterData,    \
+      SaveUnitFrameData,            \
+      SaveUnitFilthData,            \
+      SaveUnitNatureData,           \
+      SaveUnitFrameChildData,       \
+      SaveUnitBuildingMilitaryData, \
+      SaveUnitCorridorAlphaData,    \
+      SaveUnitCorridorOmegaData,    \
+      SaveUnitProtectorData         \
+   ))
+
+
+
 
 } // namespace interop
 

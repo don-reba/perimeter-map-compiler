@@ -2,15 +2,77 @@
 #define SPG_H
 
 #include "../interop.h"
+#include "../error handler.h"
+#include "../unit manager.h"
+#include "save callback.h"
+
+#include <loki/Typelist.h>
+#include <loki/Visitor.h>
+
+#include <boost/preprocessor/repetition/repeat.hpp>
+#include <boost/preprocessor/array/size.hpp>
+#include <boost/preprocessor/array/elem.hpp>
 
 namespace TaskCommon
 {
 
-class Spg
+class Spg : public ErrorHandler, public SaveCallback
 {
+// nested types
+public:
+	struct info_t
+	{
+		tstring   path_;
+	};
 private:
-	// xml output
-	TiXmlElement CreateNamedElement(const char *value, const char *name) const;
+	class UnitToXmlVisitor
+		:public Loki::BaseVisitor
+		,public Loki::Visitor<interop::UnitTypeList>
+	{
+	public:
+		UnitToXmlVisitor(const Spg & parent) : parent_(parent), element_("empty") {}
+		TiXmlElement &GetElement() { return element_; }
+	public:
+		// generate Visitor implementations for each member of the type list
+		// delegate to parent
+		#define MacroCreateVisit(z, n, data)  \
+		   void Visit(interop::BOOST_PP_ARRAY_ELEM(n, INTEROP_UNIT_TYPE_LIST) & unit) \
+		   {                                  \
+		      element_ = parent_.ToXml(unit); \
+		   }
+		BOOST_PP_REPEAT(BOOST_PP_ARRAY_SIZE(INTEROP_UNIT_TYPE_LIST), MacroCreateVisit, ~);
+		#undef MacroCreateVisit
+	// data
+	private:
+		const Spg & parent_;
+		TiXmlElement element_;
+	};
+// interface
+public:
+	// construction
+	Spg(const HWND &error_hwnd);
+	// TaskResource support
+	bool Load();
+	void Unload();
+	// packing
+	void Pack(TiXmlNode &node) const;
+	bool Unpack(TiXmlNode &node);
+	// miscellaneous
+	void Save() const;
+	void SaveAs(LPCTSTR path) const;
+	// unit manager support
+	void SetUnits(UnitManager &unit_manager);
+	void GetUnits(UnitManager &unit_manager);
+// implementation
+private:
+	// XML parsing
+	bool GetPlayers(boost::array<TiXmlElement*, prm_player_count> &players);
+	TiXmlElement *GetNeutral();
+	TiXmlElement *GetEnvironment();
+	TiXmlElement *GetFilth();
+	// XML output
+	void SetElementCode(TiXmlElement &element, const char *code) const;
+	void SetElementName(TiXmlElement &element, const char *name) const;
 	TiXmlElement ToXml(const char                                  *contents, const char *name = NULL) const;
 	TiXmlElement ToXml(int                                          contents, const char *name = NULL) const;
 	TiXmlElement ToXml(bool                                         contents, const char *name = NULL) const;
@@ -44,7 +106,7 @@ private:
 	TiXmlElement ToXml(const interop::SaveUnitCorridorAlphaData    &contents, const char *name = NULL) const;
 	TiXmlElement ToXml(const interop::SaveUnitCorridorOmegaData    &contents, const char *name = NULL) const;
 	TiXmlElement ToXml(const interop::SaveUnitProtectorData        &contents, const char *name = NULL) const;
-	// xml input
+	// XML input
 	void FromXml(const TiXmlElement &element, string                                &target) const;
 	void FromXml(const TiXmlElement &element, int                                   &target) const;
 	void FromXml(const TiXmlElement &element, bool                                  &target) const;
@@ -79,14 +141,15 @@ private:
 	void FromXml(const TiXmlElement &element, interop::SaveUnitCorridorOmegaData    &target) const;
 	void FromXml(const TiXmlElement &element, interop::SaveUnitProtectorData        &target) const;
 private:
-	// converts bitset to XML
+	// converts a bitset into XML
 	template <int N>
 	TiXmlElement ToXml(
 		const std::bitset<N> &contents,
 		const char * const (&value_names)[N],
 		const char *name = NULL) const
 	{
-		TiXmlElement root(CreateNamedElement("disjunction", name));
+		TiXmlElement root("disjunction");
+		SetElementName(root, name);
 		for (size_t i(0); i != contents.size(); ++i)
 			if (contents[i])
 			{
@@ -120,13 +183,26 @@ private:
 			_RPT1(_CRT_ERROR, "Invalid disjunction type: %s", value);
 	}
 private:
-	static const char * const * binary_search(const char * const * begin, const char * const * end, const char * val);
-	static size_t string_index(const char * const name_array[], size_t array_size, const char * name);
+	// binary search on cstrings
+	static const char * const * binary_search(
+		const char * const * begin,
+		const char * const * end,
+		const char *         val);
+	// find the index of a cstring in a sorted array
+	static size_t string_index(
+		const char * const name_array[],
+		size_t             array_size,
+		const char *       name);
+	// get the size of an array
 	template <typename T, size_t N>
 	static size_t array_size(T (&)[N])
 	{
 		return N;
 	}
+// data
+public:
+	TiXmlDocument doc_;
+	info_t        info_;
 };
 
 }
