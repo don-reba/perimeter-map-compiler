@@ -21,6 +21,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				InlineFunctionExpansion="0"
+				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;TIXML_USE_STL;FREEIMAGE_LIB"
 				GeneratePreprocessedFile="0"
 				StringPooling="TRUE"
@@ -214,6 +215,12 @@
 			</File>
 			<File
 				RelativePath=".\src\app.cpp">
+			</File>
+			<File
+				RelativePath=".\src\htmlayout\behaviors\behavior_color_box.cpp">
+			</File>
+			<File
+				RelativePath=".\src\htmlayout\behaviors\behavior_expandable_list.cpp">
 			</File>
 			<File
 				RelativePath=".\src\btdb.cpp">

@@ -52,11 +52,9 @@ public:
 		interop::SaveUnitData * data_;
 		Category                category_;
 	};
-	typedef fd::FastDelegate<void(bool)> on_enabled_change_t;
-	typedef std::vector<Unit>            units_t;
+	typedef std::vector<Unit> units_t;
 private:
 	typedef Loki::Factory<interop::SaveUnitData, std::string> factory_t;
-	typedef std::list<on_enabled_change_t>                    listeners_t;
 // creation
 public:
 	UnitManager();
@@ -66,10 +64,6 @@ public:
 	void CreateUnit(const char * name, Category category);
 	void DestroyUnit(units_t::iterator unit);
 	void Clear();
-	// state management
-	void AddEnabledChangeListener(on_enabled_change_t listener);
-	void SetEnabled(bool enabled);
-	bool IsEnabled() const;
 	// container operations
 	units_t::iterator begin();
 	units_t::iterator end();
@@ -77,14 +71,8 @@ public:
 	Unit &at(int i);
 	// data access
 	units_t &GetUnits();
-// implementation
-private:
-	void NotifyListeners(bool enabled);
 // data
 private:
-	int         is_enabled_;
-	listeners_t listeners_;
 	units_t     units_;
 	factory_t   unit_factory_;
 };
-

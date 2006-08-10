@@ -485,7 +485,7 @@ void Spg::FromXml(const TiXmlElement &element, AttributeID &target) const
 {
 	target = static_cast<AttributeID>(string_index(
 		AttributeIDNames,
-		array_size(AttributeIDNames),
+		MacroArraySize(AttributeIDNames),
 		element.GetText()));
 }
 
@@ -493,7 +493,7 @@ void Spg::FromXml(const TiXmlElement &element, BuildingStatus &target) const
 {
 	target = static_cast<BuildingStatus>(string_index(
 		BuildingStatusNames,
-		array_size(BuildingStatusNames),
+		MacroArraySize(BuildingStatusNames),
 		element.GetText()));
 }
 
@@ -501,7 +501,7 @@ void Spg::FromXml(const TiXmlElement &element, FilthAttackType &target) const
 {
 	target = static_cast<FilthAttackType>(string_index(
 		FilthAttackTypeNames,
-		array_size(FilthAttackTypeNames),
+		MacroArraySize(FilthAttackTypeNames),
 		element.GetText()));
 }
 
@@ -509,7 +509,7 @@ void Spg::FromXml(const TiXmlElement &element, FilthType &target) const
 {
 	target = static_cast<FilthType>(string_index(
 		FilthTypeNames,
-		array_size(FilthTypeNames),
+		MacroArraySize(FilthTypeNames),
 		element.GetText()));
 }
 
@@ -517,7 +517,7 @@ void Spg::FromXml(const TiXmlElement &element, NatureFlag &target) const
 {
 	target = static_cast<NatureFlag>(string_index(
 		NatureFlagNames,
-		array_size(NatureFlagNames),
+		MacroArraySize(NatureFlagNames),
 		element.GetText()));
 }
 
@@ -532,35 +532,6 @@ void Spg::FromXml(const TiXmlElement &element, PositionList &target) const
 		target.push_back(position);
 		child = child->NextSiblingElement("set");
 	}
-}
-
-const char * const * Spg::binary_search(const char * const * begin, const char * const * end, const char * val)
-{
-	const char * const *l = begin;
-	const char * const *r = end;
-	while (l <= r)
-	{
-		const char * const * m = l + (r - l) / 2;
-		int result(strcmp(*m, val));
-		if (result < 0)
-			l = m + 1;
-		else if (result > 0)
-			r = m - 1;
-		else
-			return m;
-	}
-	return end;
-}
-
-size_t Spg::string_index(const char * const name_array[], size_t array_size, const char * name)
-{
-	const char * const * const begin  = name_array;
-	const char * const * const end    = name_array + array_size;
-	const char * const * const result = Spg::binary_search(begin, end, name);
-	if (result != end)
-		return static_cast<size_t>(end - result);
-	_RPT1(_CRT_ERROR, "Unknown enumeration value: %s.", name);
-	return static_cast<size_t>(-1);
 }
 
 TiXmlElement Spg::ToXml(const DamageMolecula &contents, const char *name) const

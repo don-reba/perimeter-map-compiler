@@ -40,7 +40,9 @@
 #include <process.h>
 
 #include <stdexcept>
+
 #include <loki/ScopeGuard.h>
+#include <loki/static_check.h>
 
 using namespace Loki;
 
@@ -56,6 +58,7 @@ ProjectManager::ProjectManager(
 	:ErrorHandler       (main_wnd.hwnd_)
 	,processor_thread_  (NULL)
 	,info_wnd_          (info_wnd)
+	,opening_count_     (0)
 	,preview_wnd_       (preview_wnd)
 	,project_state_     (PS_INACTIVE)
 	,stat_wnd_          (stat_wnd)
@@ -223,7 +226,7 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 	if (new_project)
 		AddTask(new CreateDefaultFilesTask(error_hwnd_));
 	// update panels
-	AddTask(new ChangeProjectTask(info_wnd_, preview_wnd_));
+	AddTask(new ChangeProjectTask(preview_wnd_));
 	// initialize the tracker, setting the last write time
 	//  in a way that would schedule the files for immediate update
 	FILETIME null_last_write;
@@ -237,6 +240,7 @@ void ProjectManager::OpenProject(LPCTSTR project_path, HWND main_hwnd, bool new_
 //		tracker_.SetDatum(RS_SURFACE, file_names_[RS_SURFACE].c_str(), null_last_write);
 //	if (MacroProjectData(ID_CUSTOM_SKY))
 //		tracker_.SetDatum(RS_SKY, file_names_[RS_SKY].c_str(), null_last_write);
+	ChangeOpeningCount(+1);
 	AddTask(new NotifyProjectOpenTask(main_hwnd));
 }
 
@@ -442,7 +446,7 @@ bool ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 	MacroXmlToPos(3);
 	MacroXmlToPos(4);
 	// update panels
-	AddTask(new ChangeProjectTask(info_wnd_, preview_wnd_, true));
+	AddTask(new ChangeProjectTask(preview_wnd_));
 	// enqueue the task of updating project data
 	{
 		LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
@@ -480,7 +484,7 @@ bool ProjectManager::UnpackShrub(LPCTSTR shrub_path, HWND main_hwnd)
 void ProjectManager::OnProjectOpen(HWND main_hwnd)
 {
 	SetWindowText(main_hwnd, MacroProjectData(ID_MAP_NAME).c_str());
-	tracker_.Start(folder_path_.c_str(), &file_updated_);
+	ChangeOpeningCount(-1);
 }
 
 void ProjectManager::OnProjectUnpacked(HWND main_hwnd)
@@ -537,37 +541,6 @@ void ProjectManager::SaveThumbnail()
 	ids[RS_TEXTURE]   = true;
 	AddTask(new SaveThumbTask(error_hwnd_));
 }
-
-//void ProjectManager::ReloadFiles(const IdsType &ids)
-//{
-//	if (ids.none() || PS_INACTIVE == project_state_)
-//		return;
-//	LPCTSTR map_name(MacroProjectData(ID_MAP_NAME).c_str());
-//	SIZE map_size = {
-//		exp2(MacroProjectData(ID_POWER_X)),
-//		exp2(MacroProjectData(ID_POWER_Y))
-//	};
-//	AddTask(new UpdateDataTask(
-//		map_name,
-//		folder_path_.c_str(),
-//		map_size,
-//		project_state_,
-//		MacroAppData(ID_FAST_TEXTURE_QUANTIZATION),
-//		MacroAppData(ID_ENABLE_LIGHTING),
-//		MacroAppData(ID_THRESHOLD),
-//		MacroAppData(ID_DISPLAY_HARDNESS),
-//		MacroAppData(ID_DISPLAY_TEXTURE),
-//		MacroAppData(ID_DISPLAY_ZERO_LAYER),
-//		file_names_,
-//		TaskCommon::MapInfo::LoadFromGlobal()));
-//	AddTask(new UpdatePanelsTask(
-//		ids,
-//		info_wnd_,
-//		preview_wnd_,
-//		stat_wnd_,
-//		*this,
-//		error_hwnd_));
-//}
 
 void ProjectManager::CreateResource(Resource id, HWND main_hwnd)
 {
@@ -716,6 +689,27 @@ void ProjectManager::ProcessorThread()
 	}
 }
 
+void ProjectManager::ChangeOpeningCount(int delta)
+{
+	// precondition
+	if (0 == delta)
+		return;
+	// opening count about to increase from 0
+	if (0 == opening_count_)
+	{
+		info_wnd_.SetReadOnly(true);
+	}
+	opening_count_ += delta;
+	_ASSERTE(opening_count_ >= 0);
+	// opening count back to 0
+	if (0 == opening_count_)
+	{
+		info_wnd_.Update();
+		info_wnd_.SetReadOnly(false);
+		tracker_.Start(folder_path_.c_str(), &file_updated_);
+	}
+}
+
 void ProjectManager::AddTask(Task *task)
 {
 	_RPT1(_CRT_WARN, "AddTask(%s)\n", typeid(*task).name());
@@ -730,8 +724,9 @@ void ProjectManager::AddTask(Task *task)
 
 void ProjectManager::FindFileNames()
 {
-	// create a name for the script file
+	// create a name for the XML files
 	file_names_[RS_SCRIPT] = _T("script.xml");
+	file_names_[RS_SPG]    = _T("mission.xml");
 	// find correct extensions for the bitmap resources
 	{
 		// allocate a buffer for path operations

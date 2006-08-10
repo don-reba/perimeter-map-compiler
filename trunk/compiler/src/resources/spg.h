@@ -182,23 +182,6 @@ private:
 		else
 			_RPT1(_CRT_ERROR, "Invalid disjunction type: %s", value);
 	}
-private:
-	// binary search on cstrings
-	static const char * const * binary_search(
-		const char * const * begin,
-		const char * const * end,
-		const char *         val);
-	// find the index of a cstring in a sorted array
-	static size_t string_index(
-		const char * const name_array[],
-		size_t             array_size,
-		const char *       name);
-	// get the size of an array
-	template <typename T, size_t N>
-	static size_t array_size(T (&)[N])
-	{
-		return N;
-	}
 // data
 public:
 	TiXmlDocument doc_;

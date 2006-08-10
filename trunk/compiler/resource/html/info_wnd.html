@@ -85,12 +85,13 @@
 			{
 				white-space: nowrap;
 			}
-			.color_box
+			.color-box
 			{
+				behavior:    color-box;
 				white-space: nowrap;
-				flow: horizontal;
+				flow:        horizontal;
 			}
-			.color_box .box
+			.color-box .box
 			{
 				height:           1em;
 				width:            1.618em;
@@ -102,7 +103,7 @@
 				margin:           0 2px 0 0;
 				padding:          0;
 			}
-			.color_box .button
+			.color-box .button
 			{
 				background-color:    threedface;
 				behavior:            button;
@@ -115,29 +116,10 @@
 				padding:             0;
 				width:               11px;
 			}
-			.color_box .button:active
+			.color-box .button:active
 			{
 				background-color: threedhighlight;
 			}
-			/*
-			.color_box .button:checked
-			{
-				padding-top: 2px;
-			}
-			.color_box button
-			{
-				height: 1em;
-				width: 1.618em;
-				display: inline-block;
-				background-color: red;
-				color: blue;
-				foreground-image: url(img/triangle.gif);
-				foreground-position: center center;
-				foreground-repeat: no-repeat;
-				margin: 0;
-				padding: 1px;
-			}
-			*/
 			.v_space
 			{
 				height: 4px;
@@ -166,7 +148,7 @@
 					<tr>
 						<td class="label">Fog Color</td>
 						<td class="input">
-							<div id="map_color" class="color_box">
+							<div id="map_color" class="color-box">
 								<div class="box">&nbsp;</div><div class="button">&nbsp;</div>
 							</div>
 						</td>

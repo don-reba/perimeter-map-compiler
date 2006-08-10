@@ -40,6 +40,7 @@
 #include "task resources.h"
 
 #include <queue>
+#include <boost/array.hpp>
 
 class MainWnd;
 
@@ -116,6 +117,7 @@ private:
 	void AddTask(Task *task);
 	void FindFileNames();
 	void ProcessorThread();
+	void ChangeOpeningCount(int delta);
 	// SaveHandler
 	void OnSaveBegin(Resource id);
 	void OnSaveEnd  (Resource id);
@@ -134,6 +136,7 @@ private:
 	tstring      folder_path_;
 	FileTracker  tracker_;
 	ProjectState project_state_;
+	int          opening_count_;
 	tstring file_names_[resource_count];
 // callback implementation instances
 private:

@@ -142,15 +142,12 @@ void CreateDefaultFilesTask::operator() (TaskData &data)
 // ChangeProjectTask implemenatation
 //----------------------------------
 
-ChangeProjectTask::ChangeProjectTask(InfoWnd &info_wnd, PreviewWnd &preview_wnd, bool read_only)
-	:info_wnd_   (info_wnd)
-	,preview_wnd_(preview_wnd)
-	,read_only_  (read_only)
+ChangeProjectTask::ChangeProjectTask(PreviewWnd &preview_wnd)
+:preview_wnd_(preview_wnd)
 {}
 
 void ChangeProjectTask::operator() (TaskData &data)
 {
-	info_wnd_.Update(read_only_);
 	preview_wnd_.ProjectChanged();
 }
 

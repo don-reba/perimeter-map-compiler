@@ -42,7 +42,6 @@
 //-------------------------
 
 UnitManager::UnitManager()
-	:is_enabled_(true)
 {
 	// register the unit classes in the factory
 	#define MacroRegisterClass(z, n, data)                                            \
@@ -87,30 +86,6 @@ void UnitManager::Clear()
 
 //----------------------
 // UnitManager interface
-// state management
-//----------------------
-
-void UnitManager::AddEnabledChangeListener(on_enabled_change_t listener)
-{
-	listeners_.push_back(listener);
-}
-
-void UnitManager::SetEnabled(bool enabled)
-{
-	is_enabled_ += enabled ? 1 : -1;
-	if (0 == is_enabled_)
-		NotifyListeners(true);
-	else if (-1 == is_enabled_)
-		NotifyListeners(false);
-}
-
-bool UnitManager::IsEnabled() const
-{
-	return is_enabled_ >= 0;
-}
-
-//----------------------
-// UnitManager interface
 // container operations
 //----------------------
 UnitManager::units_t::iterator UnitManager::begin()
@@ -141,14 +116,4 @@ UnitManager::Unit &UnitManager::at(int i)
 UnitManager::units_t &UnitManager::GetUnits()
 {
 	return units_;
-}
-
-//---------------------------
-// UnitManager implementation
-//---------------------------
-
-void UnitManager::NotifyListeners(bool enabled)
-{
-	foreach (const on_enabled_change_t &delegate, listeners_)
-		on_enabled_change_t(enabled);
 }

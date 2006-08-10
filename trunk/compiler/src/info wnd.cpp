@@ -42,15 +42,11 @@
 // some macros
 //------------
 
-#ifdef MacroSafeWndCall
-#error MacroSafeWndCall is already defined
-#else
 #define MacroSafeWndCall(wnd, call) \
 	if (0 != wnd.hwnd_)              \
 	{                                \
 		wnd.call;                     \
 	}
-#endif
 
 //----------------------------
 // additional message crackers
@@ -63,6 +59,7 @@
 
 //-----------------------
 // InfoWnd implementation
+// construction
 //-----------------------
 
 InfoWnd::InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed)
@@ -70,7 +67,14 @@ InfoWnd::InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed)
 	,layout_                    (NULL)
 	,zero_level_changed_        (zero_layer_changed)
 	,zero_level_changes_ignored_(0)
-{}
+{
+	SetReadOnly(true);
+}
+
+//-----------------------
+// InfoWnd implementation
+// interface
+//-----------------------
 
 bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 {
@@ -99,66 +103,61 @@ bool InfoWnd::Create(HWND parent_wnd, const RECT &window_rect)
 		NULL,
 		GetModuleHandle(NULL),
 		NULL);
-
 	if (NULL == layout_)
 	{
 		MacroDisplayError(_T("The Details window layout could not be created."));
 		return false;
 	}
-	if (FALSE == HTMLayoutLoadFile(layout_, L"skin\\info_wnd.html"))
+	// load HTML
 	{
-		MacroDisplayError(_T("The Details window layout could not be loaded."));
-		return false;
+		std::vector<wchar_t> path_v(MAX_PATH);
+		wchar_t * path(&path_v[0]);
+		GetCurrentDirectoryW(path_v.size(), path);
+		PathCombineW(path, path, L"skin\\info_wnd.html");
+		if (FALSE == HTMLayoutLoadFile(layout_, path))
+		{
+			MacroDisplayError(_T("The Details window layout could not be loaded."));
+			return false;
+		}
 	}
-	// position the main window
-	SetWindowPos(
-		hwnd_,
-		NULL,
-		window_rect.left,
-		window_rect.top,
-		0,
-		0,
-		SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSIZE | SWP_SHOWWINDOW);
+	// position and resize the main window
+	{
+		SIZE size(CalculateWindowSize());
+		SetWindowPos(
+			hwnd_,
+			NULL,
+			window_rect.left,
+			window_rect.top,
+			size.cx,
+			size.cy,
+			SWP_NOACTIVATE | SWP_NOZORDER);
+	}
+
 	EnableWindow(hwnd_, TRUE);
 	return true;
 }
 
-void InfoWnd::Update(bool read_only)
+void InfoWnd::Update()
 {
-	zero_level_changes_ignored_ = 0;
-	if (read_only)
-		EnableControls(false);
-	// fog colour
+	using htmlayout::dom::element;
+	element root(element::root_element(layout_));
 	DeleteObject(fog_colour_);
 	fog_colour_ = CreateSolidBrush(MacroProjectData(ID_FOG_COLOUR));
-	// fog distance
-	SetDlgItemInt(hwnd_, IDC_FOG_START, MacroProjectData(ID_FOG_START), FALSE);
-	SetDlgItemInt(hwnd_, IDC_FOG_END,   MacroProjectData(ID_FOG_END),   FALSE);
-	// zero plast
-	UD_SetRange(GetDlgItem(hwnd_, IDC_ZERO_PLAST_SPIN), 255, 0);
-	UD_SetPos(GetDlgItem(hwnd_, IDC_ZERO_PLAST_SPIN), MacroProjectData(ID_ZERO_LEVEL));
-	// locations
-	UD_SetRange(GetDlgItem(hwnd_, IDC_LOCATION_X_SPIN), exp2(MacroProjectData(ID_POWER_X)) - 1, 0);
-	UD_SetRange(GetDlgItem(hwnd_, IDC_LOCATION_Y_SPIN), exp2(MacroProjectData(ID_POWER_Y)) - 1, 0);
-	locations_.at(0).x = MacroProjectData(ID_SP_1).x;
-	locations_.at(0).y = MacroProjectData(ID_SP_1).y;
-	locations_.at(1).x = MacroProjectData(ID_SP_2).x;
-	locations_.at(1).y = MacroProjectData(ID_SP_2).y;
-	locations_.at(2).x = MacroProjectData(ID_SP_3).x;
-	locations_.at(2).y = MacroProjectData(ID_SP_3).y;
-	locations_.at(3).x = MacroProjectData(ID_SP_4).x;
-	locations_.at(3).y = MacroProjectData(ID_SP_4).y;
-	locations_.at(4).x = MacroProjectData(ID_SP_0).x;
-	locations_.at(4).y = MacroProjectData(ID_SP_0).y;
-	ComboBox_SetCurSel(GetDlgItem(hwnd_, IDC_LOCATION_LIST), 0);
-	SendMessage(
-		hwnd_,
-		WM_COMMAND,
-		MAKEWPARAM(IDC_LOCATION_LIST, CBN_SELCHANGE),
-		ri_cast<LPARAM>(GetDlgItem(hwnd_, IDC_LOCATION_LIST)));
-	if (!read_only)
-		EnableControls(true);
+	SetHtmlText("map_fog_start", MacroProjectData(ID_FOG_START), root);
+	SetHtmlText("map_fog_end", MacroProjectData(ID_FOG_END), root);
+	SetHtmlText("map_zero_layer", MacroProjectData(ID_ZERO_LEVEL), root);
+	root.update(true);
 }
+
+void InfoWnd::SetReadOnly(bool read_only)
+{
+	read_only = true;
+}
+
+//-----------------------
+// InfoWnd implementation
+// message processing
+//-----------------------
 
 void InfoWnd::OnColorStatic(Msg<WM_CTLCOLORSTATIC> &msg)
 {
@@ -341,11 +340,24 @@ void InfoWnd::OnInitDialog(Msg<WM_INITDIALOG> &msg)
 	SetDlgItemInt(hwnd_, IDC_FOG_END,   0u, FALSE);
 	// set colour button icon
 	Button_SetIcon(GetDlgItem(hwnd_, IDC_FOG_COLOUR_BTN), IDI_TRIANGLE);
-	// disable all controls
-	EnableControls(false);
 	// wrap up
 	msg.result_ = TRUE;
 	msg.handled_ = true;
+}
+
+void InfoWnd::OnNotify(Msg<WM_NOTIFY> &msg)
+{
+	if (msg.nmhdr().code == HLN_ATTACH_BEHAVIOR)
+	{
+		LPNMHL_ATTACH_BEHAVIOR lpab(ri_cast<LPNMHL_ATTACH_BEHAVIOR>(msg.lprm_));
+		htmlayout::event_handler *pb = htmlayout::behavior::find(lpab->behaviorName, lpab->element);
+		if(pb) 
+		{
+			lpab->elementTag  = pb;
+			lpab->elementProc = htmlayout::behavior::element_proc;
+			lpab->elementEvents = pb->subscribed_to;
+		}
+	}
 }
 
 void InfoWnd::OnSize(Msg<WM_SIZE> &msg)
@@ -360,16 +372,6 @@ void InfoWnd::OnTimer(Msg<WM_TIMER> &msg)
 	msg.handled_ = true;
 }
 
-void InfoWnd::OnWindowPosChanging(Msg<WM_WINDOWPOSCHANGING> &msg)
-{
-	SIZE size(CalculateWindowSize());
-	WINDOWPOS * wp(msg.WindowPos());
-	wp->cx = size.cx;
-	wp->cy = size.cy;
-	wp->flags &= ~SWP_NOSIZE;
-	msg.handled_ = true;
-}
-
 void InfoWnd::ProcessMessage(WndMsg &msg)
 {
 	static Handler mmp[] =
@@ -377,19 +379,18 @@ void InfoWnd::ProcessMessage(WndMsg &msg)
 		&InfoWnd::OnColorStatic,
 		&InfoWnd::OnCommand,
 		&InfoWnd::OnInitDialog,
+		&InfoWnd::OnNotify,
 		&InfoWnd::OnSize,
 		&InfoWnd::OnTimer,
-		&InfoWnd::OnWindowPosChanging,
 	};
 	if (!Handler::Call(mmp, this, msg))
 		__super::ProcessMessage(msg);
 }
 
-BOOL CALLBACK InfoWnd::EnumChildrenProc(HWND hwnd, LPARAM lprm)
-{
-	ri_cast<vector<HWND>*>(lprm)->push_back(hwnd);
-	return TRUE;
-}
+//-----------------------
+// InfoWnd implementation
+// internal function
+//-----------------------
 
 void InfoWnd::AddLocation(tstring name, uint x, uint y)
 {
@@ -398,7 +399,7 @@ void InfoWnd::AddLocation(tstring name, uint x, uint y)
 	locations_.push_back(point);
 }
 
-SIZE InfoWnd::CalculateWindowSize() const
+SIZE InfoWnd::CalculateMinWindowSize() const
 {
 	RECT client;
 	GetClientRect(hwnd_, &client);
@@ -412,12 +413,45 @@ SIZE InfoWnd::CalculateWindowSize() const
 	return size;
 }
 
-void InfoWnd::EnableControls(bool on)
+SIZE InfoWnd::CalculateWindowSize() const
 {
-	vector<HWND> children;
-	EnumChildWindows(hwnd_, EnumChildrenProc, ri_cast<LPARAM>(&children));
-	foreach(HWND &hwnd, children)
-		EnableWindow(hwnd, on ? TRUE : FALSE);
+	using htmlayout::dom::element;
+	SIZE size = { 0 };
+	// get the expandable list
+	element root(htmlayout::dom::element::root_element(layout_));
+	element bar(root.get_element_by_id(L"thebar"));
+	if (bar.is_valid())
+	{
+		uint bar_child_count(bar.children_count());
+		// get the content elements
+		vector<element> elements;
+		elements.reserve(bar_child_count);
+		for (uint i(0); i != bar_child_count; ++i)
+		{
+			htmlayout::dom::element child(bar.child(i));
+			htmlayout::dom::element content(child.find_first(".content"));
+			if (content.is_valid())
+				elements.push_back(content);
+		}
+		// show each content element, and measure the size
+		// keep the maximum
+		foreach (element &content, elements)
+		{
+			content.set_attribute("class", L"no_content");
+			root.update(true);
+			SIZE content_size(CalculateMinWindowSize());
+			if (content_size.cx > size.cx)
+				size.cx = content_size.cx;
+			if (content_size.cy > size.cy)
+				size.cy = content_size.cy;
+			content.set_attribute("class", L"content");
+		}
+	}
+	else
+	{
+		size = CalculateMinWindowSize();
+	}
+	return size;
 }
 
 void InfoWnd::PositionChildren()
@@ -428,4 +462,24 @@ void InfoWnd::PositionChildren()
 		GetClientRect(hwnd_, &client_rect);
 		SetWindowPos(layout_, NULL, 0, 0, client_rect.right, client_rect.bottom, SWP_NOZORDER);
 	}
+}
+
+//-----------------------
+// InfoWnd implementation
+// html manipulation
+//-----------------------
+
+bool InfoWnd::SetHtmlText(const char * id, int value, htmlayout::dom::element root)
+{
+	using htmlayout::dom::element;
+	// buffer for integer conversion
+	wchar_t w_int_str[34];
+	// find the element
+	element e(root.get_element_by_id(L"map_zero_layer"));
+	if (!e.is_valid())
+		return false;
+	// convert the value to string, and set it
+	_itow(MacroProjectData(ID_ZERO_LEVEL), w_int_str, 10);
+	e.set_text(w_int_str);
+	return true;
 }

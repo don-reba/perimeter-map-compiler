@@ -51,37 +51,39 @@ public:
 		virtual void operator() () = 0;
 	};
 	typedef vector<POINT> Locations;
-// construction/destruction
+// construction
 public:
 	InfoWnd(PreviewWnd &preview_wnd, ZeroLevelChanged *zero_layer_changed);
 // interface
 public:
 	bool Create(HWND parent_wnd, const RECT &window_rect);
-	void Update(bool read_only = false);
+	void Update();
+	void SetReadOnly(bool read_only);
 // message processing
 private:
-	void OnColorStatic      (Msg<WM_CTLCOLORSTATIC>    &msg);
-	void OnCommand          (Msg<WM_COMMAND>           &msg);
-	void OnInitDialog       (Msg<WM_INITDIALOG>        &msg);
-	void OnSize             (Msg<WM_SIZE>              &msg);
-	void OnTimer            (Msg<WM_TIMER>             &msg);
-	void OnWindowPosChanging(Msg<WM_WINDOWPOSCHANGING> &msg);
+	void OnColorStatic      (Msg<WM_CTLCOLORSTATIC> &msg);
+	void OnCommand          (Msg<WM_COMMAND>        &msg);
+	void OnInitDialog       (Msg<WM_INITDIALOG>     &msg);
+	void OnNotify           (Msg<WM_NOTIFY>         &msg);
+	void OnSize             (Msg<WM_SIZE>           &msg);
+	void OnTimer            (Msg<WM_TIMER>          &msg);
 protected:
 	void ProcessMessage(WndMsg &msg);
 // internal function
 private:
-	static BOOL CALLBACK EnumChildrenProc(HWND hwnd, LPARAM lprm);
-private:
 	void AddLocation(tstring name, uint x, uint y);
+	SIZE CalculateMinWindowSize() const;
 	SIZE CalculateWindowSize() const;
-	void EnableControls(bool on);
 	void PositionChildren();
+	// html manipulation
+	bool SetHtmlText(const char * id, int value, htmlayout::dom::element root);
 // data
 private:
 	HBRUSH            fog_colour_;
 	COLORREF          custom_colours_[16];
 	Locations         locations_;
 	PreviewWnd       &preview_wnd_;
+	bool              read_only_;
 	uint              zero_level_changes_ignored_;
 	ZeroLevelChanged *zero_level_changed_;
 	// layout

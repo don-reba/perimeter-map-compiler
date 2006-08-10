@@ -164,12 +164,10 @@ public:
 class ChangeProjectTask : public Task
 {
 public:
-	ChangeProjectTask(InfoWnd &info_wnd, PreviewWnd &preview_wnd, bool read_only = false);
+	ChangeProjectTask(PreviewWnd &preview_wnd);
 	void operator() (TaskData &data);
 private:
-	InfoWnd    &info_wnd_;
 	PreviewWnd &preview_wnd_;
-	bool        read_only_;
 };
 
 //----------------------------------
