@@ -8,10 +8,78 @@
 				font-family: system;
 				padding: 12px;
 			}
+			td
+			{
+				text-align: left;
+			}
+			fieldset
+			{
+				margin: 4px 0;
+			}
+			fieldset > .content
+			{
+				padding: 4px 12px;
+			}
+			fieldset > legend
+			{
+				color: black;
+			}
+			#unit_selection
+			{
+				width: 100%%;
+				height: 5em;
+			}
+			#thebar 
+			{
+				behavior:   expandable-list;
+				height:     100%%;
+				width:      100%%;
+				margin:     0;
+			}
+			#thebar > li 
+			{
+				transition: slide; /* sliding! */
+				margin:     0;
+				padding:    0;
+				list-style-type: none;
+			} 
+			#thebar > li > .caption
+			{
+				background-color: inactivecaption;
+				color:            windowtext;
+				margin:           0;
+				padding:          2px;
+				text-align:       center;
+				white-space:      nowrap;
+			} 
+			#thebar > li > .caption:hover
+			{
+				background-color: activecaption;
+				color:            highlighttext;
+			} 
+			#thebar > li:current
+			{
+				height: 100%%; /* whole idea - it takes all available space */ 	  
+			}
+			#thebar > li > .content 
+			{
+				overflow-x: visible;
+				overflow-y: hidden;
+				display:    none; /* hidden by default */
+				padding:    0;
+				margin:     0;
+				height:     100%%;
+				width:      100%%;
+			}
+			#thebar > li:expanded > .content 
+			{
+				overflow-x: visible;
+				display:    block;
+			}
 			.label
 			{
-				white-space: nowrap;
-				padding-right: 4px;
+				white-space:   nowrap;
+				padding-right: 8px;
 			}
 			.input
 			{
@@ -19,192 +87,323 @@
 			}
 			.color_box
 			{
+				white-space: nowrap;
+				flow: horizontal;
+			}
+			.color_box .box
+			{
+				height:           1em;
+				width:            1.618em;
+				background-color: orange;
+				border:           1px solid black;
+				display:          inline-block;
+				color:            blue;
+				float:            left;
+				margin:           0 2px 0 0;
+				padding:          0;
+			}
+			.color_box .button
+			{
+				background-color:    threedface;
+				behavior:            button;
+				border:              1px solid black;
+				foreground-image:    url(img/triangle.gif);
+				foreground-position: center center;
+				foreground-repeat:   no-repeat;
+				height:              1em;
+				margin:              0;
+				padding:             0;
+				width:               11px;
+			}
+			.color_box .button:active
+			{
+				background-color: threedhighlight;
+			}
+			/*
+			.color_box .button:checked
+			{
+				padding-top: 2px;
+			}
+			.color_box button
+			{
 				height: 1em;
 				width: 1.618em;
-				background-color: orange;
-				border: 1 solid black;
-				display: block;
+				display: inline-block;
+				background-color: red;
 				color: blue;
-				float: left;
+				foreground-image: url(img/triangle.gif);
+				foreground-position: center center;
+				foreground-repeat: no-repeat;
+				margin: 0;
+				padding: 1px;
+			}
+			*/
+			.v_space
+			{
+				height: 4px;
 			}
 		</style>
 	</head>
 	<body>
-		<table cellspacing="4" cellpadding="0" border="0" align="center">
-			<tr>
-				<th colspan="2">Map Properties</th>
-			</tr>
-			<tr>
-				<td class="label">Zero-level</td>
-				<td class="input"><input id="zero_level" type="number" size="3" minvalue="0" maxvalue="255" step="1" /></td>
-			</tr>
-			<tr>
-				<td class="label">Fog Start</td>
-				<td class="input"><input id="fog_start" type="number" size="4" /></td>
-			</tr>
-			<tr>
-				<td class="label">Fog End</td>
-				<td class="input"><input id="fog_end" type="number" size="4" /></td>
-			</tr>
-			<tr>
-				<td class="label">Fog Color</td>
-				<td class="input"><div class="color_box">&nbsp;</div></td>
-			</tr>
-			<tr>
-				<td class="label">Players</td>
-				<td class="input"><input id="player_count" type="number" size="1" minvalue="1" maxvalue="4" step="1" /></td>
-			</tr>
-			<tr>
-				<th colspan="2">Unit Selection</th>
-			</tr>
-			<tr>
-				<td colspan="2">
-					<select id="unit_choice" type="select-dropdown">
-						<option value="0"  selected>Player 1</option>
-						<option value="0">Player 2</option>
-						<option value="0">Player 3</option>
-						<option value="0">Player 4</option>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td class="label">Name</td>
-				<td class="input"><input id="unit_selection_name" type="text" size="16" /></td>
-			</tr>
-			<tr>
-				<td class="label">x</td>
-				<td class="input"><input id="unit_selection_x" type="number" size="4" /></td>
-			</tr>
-			<tr>
-				<td class="label">y</td>
-				<td class="input"><input id="unit_selection_y" type="number" size="4" /></td>
-			</tr>
-			<tr>
-				<td class="label">z</td>
-				<td class="input"><input id="unit_selection_z" type="number" size="4" /></td>
-			</tr>
-			<tr>
-				<td colspan="2"><input id="unit_selection_delete" type="button" value="Delete" /></td>
-			</tr>
-			<tr>
-				<th colspan="2">New Unit</th>
-			</tr>
-			<tr>
-				<td colspan="2" class="input">
-					<select id="unit_new_type" type="select-dropdown">
-						<optgroup label="Player Unit">
-							<option struct="UNIT_ATTRIBUTE_FRAME">Фрейм</option>
-							<option struct="UNIT_ATTRIBUTE_CORE">Ядро</option>
-							<option struct="UNIT_ATTRIBUTE_RELAY">Трансмиттер</option>
-							<option struct="UNIT_ATTRIBUTE_COLLECTOR">Коллектор</option>
-							<option struct="UNIT_ATTRIBUTE_SOLDIER_PLANT">Завод нано-солдат</option>
-							<option struct="UNIT_ATTRIBUTE_OFFICER_PLANT">Завод нано-офицеров</option>
-							<option struct="UNIT_ATTRIBUTE_TECHNIC_PLANT">Завод нано-техников</option>
-							<option struct="UNIT_ATTRIBUTE_COMMANDER">Командный центр</option>
-							<option struct="UNIT_ATTRIBUTE_LASER_STATION1">Лазерная лаборатория 1</option>
-							<option struct="UNIT_ATTRIBUTE_LASER_STATION2">Лазерная лаборатория 2</option>
-							<option struct="UNIT_ATTRIBUTE_LASER_STATION3">Лазерная лаборатория 3</option>
-							<option struct="UNIT_ATTRIBUTE_ROCKET_STATION1">Ракетная лаборатория 1</option>
-							<option struct="UNIT_ATTRIBUTE_ROCKET_STATION2">Ракетная лаборатория 2</option>
-							<option struct="UNIT_ATTRIBUTE_ROCKET_STATION3">Ракетная лаборатория 3</option>
-							<option struct="UNIT_ATTRIBUTE_BOMB_STATION1">Бомбовая лаборатория 1</option>
-							<option struct="UNIT_ATTRIBUTE_BOMB_STATION2">Бомбовая лаборатория 2</option>
-							<option struct="UNIT_ATTRIBUTE_BOMB_STATION3">Бомбовая лаборатория 3</option>
-							<option struct="UNIT_ATTRIBUTE_FLY_STATION1">Лётная лаборатория 1</option>
-							<option struct="UNIT_ATTRIBUTE_FLY_STATION2">Лётная лаборатория 2</option>
-							<option struct="UNIT_ATTRIBUTE_SUBTERRA_STATION1">Подземная лаборатория 1</option>
-							<option struct="UNIT_ATTRIBUTE_SUBTERRA_STATION2">Подземная лаборатория 2</option>
-							<option struct="UNIT_ATTRIBUTE_EXODUS_STATION1">Лаборатория Исхода 1</option>
-							<option struct="UNIT_ATTRIBUTE_EXODUS_STATION2">Лаборатория Исхода 2</option>
-							<option struct="UNIT_ATTRIBUTE_EXODUS_STATION3">Лаборатория Исхода 3</option>
-							<option struct="UNIT_ATTRIBUTE_EMPIRE_STATION1">Лаборатория Империи 1</option>
-							<option struct="UNIT_ATTRIBUTE_EMPIRE_STATION2">Лаборатория Империи 2</option>
-							<option struct="UNIT_ATTRIBUTE_EMPIRE_STATION3">Лаборатория Империи 3</option>
-							<option struct="UNIT_ATTRIBUTE_HARKBACK_STATION1">Лаборатория Возврата 1</option>
-							<option struct="UNIT_ATTRIBUTE_HARKBACK_STATION2">Лаборатория Возврата 2</option>
-							<option struct="UNIT_ATTRIBUTE_HARKBACK_STATION3">Лаборатория Возврата 3</option>
-							<option struct="UNIT_ATTRIBUTE_CORRIDOR_ALPHA">Альфа-портал</option>
-							<option struct="UNIT_ATTRIBUTE_CORRIDOR_OMEGA">Омега-портал</option>
-							<option struct="UNIT_ATTRIBUTE_STATIC_BOMB">Строение-бомба</option>
-							<option struct="UNIT_ATTRIBUTE_LASER_CANNON">Лазерная пушка</option>
-							<option struct="UNIT_ATTRIBUTE_ROCKET_LAUNCHER">Ракетница</option>
-							<option struct="UNIT_ATTRIBUTE_GUN_HOWITZER">Гаубица</option>
-							<option struct="UNIT_ATTRIBUTE_GUN_SUBCHASER">Подземная пушка</option>
-							<option struct="UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR">Скаморазрушитель</option>
-							<option struct="UNIT_ATTRIBUTE_GUN_BALLISTIC">Баллистическая установка</option>
-							<option struct="UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR">Навигатор скверны</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT0">Скам спот</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT1">Скам спот 2</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT2">Скам спот 3</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT3">Скам спот 4</option>
-							<option struct="UNIT_ATTRIBUTE_BLACK_HOLE">Черная дыра</option>
-							<option struct="UNIT_ATTRIBUTE_SOLDIER">Нано-солдат</option>
-							<option struct="UNIT_ATTRIBUTE_OFFICER">Нано-офицер</option>
-							<option struct="UNIT_ATTRIBUTE_TECHNIC">Нано-техник</option>
-							<option struct="UNIT_ATTRIBUTE_SNIPER">Снайпер</option>
-							<option struct="UNIT_ATTRIBUTE_ROCKER">Рокер</option>
-							<option struct="UNIT_ATTRIBUTE_MORTAR">Бомбомёт</option>
-							<option struct="UNIT_ATTRIBUTE_CEPTOR">Фаэтон</option>
-							<option struct="UNIT_ATTRIBUTE_GYROID">Егерь</option>
-							<option struct="UNIT_ATTRIBUTE_WARGON">Варгон</option>
-							<option struct="UNIT_ATTRIBUTE_BOMBER">Шершень</option>
-							<option struct="UNIT_ATTRIBUTE_R_PROJECTOR">Р-Проектор</option>
-							<option struct="UNIT_ATTRIBUTE_UNSEEN">Призрак</option>
-							<option struct="UNIT_ATTRIBUTE_STRAFER">Штурман</option>
-							<option struct="UNIT_ATTRIBUTE_DISINTEGRATOR">Дизинтегратор</option>
-							<option struct="UNIT_ATTRIBUTE_SCUM_SPLITTER">Скам-молот</option>
-							<option struct="UNIT_ATTRIBUTE_SCUM_TWISTER">Скам-Смерч</option>
-							<option struct="UNIT_ATTRIBUTE_SCUM_HEATER">Скам-Жгут</option>
-							<option struct="UNIT_ATTRIBUTE_SCUM_THROWER">Скам-Баллиста</option>
-							<option struct="UNIT_ATTRIBUTE_EXTIRPATOR">Искоренитель</option>
-							<option struct="UNIT_ATTRIBUTE_LEECH">Клещ</option>
-							<option struct="UNIT_ATTRIBUTE_LEAMO">Лимо</option>
-							<option struct="UNIT_ATTRIBUTE_SCUMER">Скаммер</option>
-							<option struct="UNIT_ATTRIBUTE_DIGGER">Диггер</option>
-							<option struct="UNIT_ATTRIBUTE_PIERCER">Пирсер</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT">Скверна-паук</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT2">Скверна-акула</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT3">Скверна-демон</option>
-							<option struct="UNIT_ATTRIBUTE_FILTH_SPOT4">Скверна-дракон</option>
-						</optgroup>
-						<optgroup label="Scourge">
-							<option struct="FILTH_SPOT_ID_DRAGON">Дракон</option>
-							<option struct="FILTH_SPOT_ID_ANTS">Муравей</option>
-							<option struct="FILTH_SPOT_ID_WASP">Пчела</option>
-							<option struct="FILTH_SPOT_ID_GHOST">Приведение</option>
-							<option struct="FILTH_SPOT_ID_EYE">Глаз</option>
-							<option struct="FILTH_SPOT_ID_CROW">Ворона</option>
-							<option struct="FILTH_SPOT_ID_DAEMON">Демон</option>
-							<option struct="FILTH_SPOT_ID_RAT">Крыса</option>
-							<option struct="FILTH_SPOT_ID_WORM">Червь</option>
-							<option struct="FILTH_SPOT_ID_SHARK">Рбыа</option>
-							<option struct="FILTH_SPOT_ID_VOLCANO">Вулкан</option>
-							<option struct="FILTH_SPOT_ID_ANTS2">Муравей2</option>
-							<option struct="FILTH_SPOT_ID_SNAKE">Змеи</option>
-							<option struct="FILTH_SPOT_ID_DRAGON2">Дракон2</option>
-							<option struct="FILTH_SPOT_ID_VOLCANO_SCUM_DISRUPTOR">Вулкан скаморазрушителя</option>
-							<option struct="FILTH_SPOT_ID_A_ANTS">Новые муравьи</option>
-							<option struct="FILTH_SPOT_ID_A_CROW">Новые вороны</option>
-							<option struct="FILTH_SPOT_ID_A_DAEMON">Новые демоны</option>
-							<option struct="FILTH_SPOT_ID_A_DRAGON">Новый дракон</option>
-							<option struct="FILTH_SPOT_ID_A_EYE">Новые глаза</option>
-							<option struct="FILTH_SPOT_ID_A_RAT">Новые крысы</option>
-							<option struct="FILTH_SPOT_ID_A_SPIDER">Новые пауки</option>
-							<option struct="FILTH_SPOT_ID_A_WASP">Новые осы</option>
-							<option struct="FILTH_SPOT_ID_A_WORM">Новый червь</option>
-						</optgroup>
-						<optgroup label="Geoprocess">
-							<option struct="UNIT_ATTRIBUTE_GEO_INFLUENCE">Гора</option>
-							<option struct="UNIT_ATTRIBUTE_GEO_BREAK">Разлом</option>
-							<option struct="UNIT_ATTRIBUTE_GEO_FAULT">Дефект</option>
-							<option struct="UNIT_ATTRIBUTE_GEO_HEAD">Лицо</option>
-						</optgroup>
-					</select>
-				</td>
-			</tr>
-			<tr>
-				<td colspan="2"><input id="unit_create" type="button" value="Create" /></td>
-			</tr>
-		</table>
+		<ul id="thebar">
+			<li default>
+			<p class="caption">Map Properties</p>
+			<div class="content">
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+				<table cellspacing="4" cellpadding="0" border="0" align="center">
+					<tr>
+						<td class="label">Zero-level</td>
+						<td class="input"><input id="map_zero_layer" type="number" size="3" minvalue="0" maxvalue="255" step="1" /></td>
+					</tr>
+					<tr>
+						<td class="label">Fog Start</td>
+						<td class="input"><input id="map_fog_start" type="number" size="4" /></td>
+					</tr>
+					<tr>
+						<td class="label">Fog End</td>
+						<td class="input"><input id="map_fog_end" type="number" size="4" /></td>
+					</tr>
+					<tr>
+						<td class="label">Fog Color</td>
+						<td class="input">
+							<div id="map_color" class="color_box">
+								<div class="box">&nbsp;</div><div class="button">&nbsp;</div>
+							</div>
+						</td>
+					</tr>
+					<tr>
+						<td class="label">Players</td>
+						<td class="input"><input id="player_count" type="number" size="1" minvalue="1" maxvalue="4" step="1" /></td>
+					</tr>
+				</table>
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+			</div>
+			</li>
+			<li>
+			<p class="caption">Players</p>
+			<div class="content">
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+				<select id="unit_choice" type="select-dropdown">
+					<option value="0"  selected>Player 1</option>
+					<option value="0">Player 2</option>
+					<option value="0">Player 3</option>
+					<option value="0">Player 4</option>
+				</select>
+				<fieldset>
+					<legend>Frame</legend>
+					<div class="content">
+						<table cellspacing="4" cellpadding="0" border="0" align="center">
+							<tr>
+								<td class="label">x</td>
+								<td class="input"><input id="frame_x" type="number" size="4" /></td>
+							</tr>
+							<tr>
+								<td class="label">y</td>
+								<td class="input"><input id="frame_y" type="number" size="4" /></td>
+							</tr>
+						</table>
+					<div class="content">
+				</fieldset>
+				<fieldset>
+					<legend>Squads</legend>
+					<div class="content">
+						<select id="unit_choice" type="select-dropdown">
+							<option value="0"  selected>Squad 1</option>
+							<option value="0">Squad 2</option>
+							<option value="0">Squad 3</option>
+							<option value="0">Squad 4</option>
+							<option value="0">Squad 5</option>
+						</select>
+						<table cellspacing="4" cellpadding="0" border="0" align="center">
+							<tr>
+								<td class="label">Type</td>
+								<td class="input">
+									<select id="unit_new_type" type="select-dropdown">
+										<option prm_type="UNIT_ATTRIBUTE_SOLDIER">Нано-солдат</option>
+										<option prm_type="UNIT_ATTRIBUTE_OFFICER">Нано-офицер</option>
+										<option prm_type="UNIT_ATTRIBUTE_TECHNIC">Нано-техник</option>
+										<option prm_type="UNIT_ATTRIBUTE_SNIPER">Снайпер</option>
+										<option prm_type="UNIT_ATTRIBUTE_ROCKER">Рокер</option>
+										<option prm_type="UNIT_ATTRIBUTE_MORTAR">Бомбомёт</option>
+										<option prm_type="UNIT_ATTRIBUTE_CEPTOR">Фаэтон</option>
+										<option prm_type="UNIT_ATTRIBUTE_GYROID">Егерь</option>
+										<option prm_type="UNIT_ATTRIBUTE_WARGON">Варгон</option>
+										<option prm_type="UNIT_ATTRIBUTE_BOMBER">Шершень</option>
+										<option prm_type="UNIT_ATTRIBUTE_R_PROJECTOR">Р-Проектор</option>
+										<option prm_type="UNIT_ATTRIBUTE_STRAFER">Штурман</option>
+										<option prm_type="UNIT_ATTRIBUTE_EXTIRPATOR">Искоренитель</option>
+										<option prm_type="UNIT_ATTRIBUTE_LEAMO">Лимо</option>
+										<option prm_type="UNIT_ATTRIBUTE_SCUMER">Скаммер</option>
+										<option prm_type="UNIT_ATTRIBUTE_DIGGER">Диггер</option>
+										<option prm_type="UNIT_ATTRIBUTE_SCUM_SPLITTER">Скам-молот</option>
+										<option prm_type="UNIT_ATTRIBUTE_SCUM_TWISTER">Скам-Смерч</option>
+										<option prm_type="UNIT_ATTRIBUTE_SCUM_HEATER">Скам-Жгут</option>
+										<option prm_type="UNIT_ATTRIBUTE_SCUM_THROWER">Скам-Баллиста</option>
+										<option prm_type="UNIT_ATTRIBUTE_LEECH">Клещ</option>
+										<option prm_type="UNIT_ATTRIBUTE_DISINTEGRATOR">Дизинтегратор</option>
+										<option prm_type="UNIT_ATTRIBUTE_UNSEEN">Призрак</option>
+										<option prm_type="UNIT_ATTRIBUTE_PIERCER">Буравчик</option>
+										<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT">Скверна-паук</option>
+										<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT2">Скверна-акула</option>
+										<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT3">Скверна-демон</option>
+										<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT4">Скверна-дракон</option>
+									</select>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</fieldset>
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+			</div>
+			</li>
+			<li>
+			<p class="caption">Structures</p>
+			<div class="content">
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+				<widget type="select" id="unit_selection" />
+				<table cellspacing="4" cellpadding="0" border="0" align="center">
+					<tr>
+						<td class="label">Name</td>
+						<td class="input"><input id="unit_name" type="text" width="100%%" /></td>
+					</tr>
+					<tr>
+						<td class="label">Category</td>
+						<td>
+							<select id="unit_category" type="select-dropdown">
+								<option>Player 1 Unit</option>
+								<option>Player 2 Unit</option>
+								<option>Player 3 Unit</option>
+								<option>Player 4 Unit</option>
+								<option>Neutral Unit</option>
+								<option>Environment</option>
+								<option>Decoration</option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<td class="label">x</td>
+						<td class="input"><input id="unit_position_x" type="number" size="4" /></td>
+					</tr>
+					<tr>
+						<td class="label">y</td>
+						<td class="input"><input id="unit_position_y" type="number" size="4" /></td>
+					</tr>
+				</table>
+				<input id="unit_delete" type="button" value="Delete" />
+				<hr>
+				<select id="unit_new_type" type="select-dropdown">
+					<optgroup label="Player Unit">
+						<option prm_type="UNIT_ATTRIBUTE_FRAME">Фрейм</option>
+						<option prm_type="UNIT_ATTRIBUTE_CORE">Ядро</option>
+						<option prm_type="UNIT_ATTRIBUTE_RELAY">Трансмиттер</option>
+						<option prm_type="UNIT_ATTRIBUTE_COLLECTOR">Коллектор</option>
+						<option prm_type="UNIT_ATTRIBUTE_SOLDIER_PLANT">Завод нано-солдат</option>
+						<option prm_type="UNIT_ATTRIBUTE_OFFICER_PLANT">Завод нано-офицеров</option>
+						<option prm_type="UNIT_ATTRIBUTE_TECHNIC_PLANT">Завод нано-техников</option>
+						<option prm_type="UNIT_ATTRIBUTE_COMMANDER">Командный центр</option>
+						<option prm_type="UNIT_ATTRIBUTE_LASER_STATION1">Лазерная лаборатория 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_LASER_STATION2">Лазерная лаборатория 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_LASER_STATION3">Лазерная лаборатория 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_ROCKET_STATION1">Ракетная лаборатория 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_ROCKET_STATION2">Ракетная лаборатория 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_ROCKET_STATION3">Ракетная лаборатория 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_BOMB_STATION1">Бомбовая лаборатория 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_BOMB_STATION2">Бомбовая лаборатория 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_BOMB_STATION3">Бомбовая лаборатория 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_FLY_STATION1">Лётная лаборатория 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_FLY_STATION2">Лётная лаборатория 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_SUBTERRA_STATION1">Подземная лаборатория 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_SUBTERRA_STATION2">Подземная лаборатория 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_EXODUS_STATION1">Лаборатория Исхода 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_EXODUS_STATION2">Лаборатория Исхода 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_EXODUS_STATION3">Лаборатория Исхода 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_EMPIRE_STATION1">Лаборатория Империи 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_EMPIRE_STATION2">Лаборатория Империи 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_EMPIRE_STATION3">Лаборатория Империи 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_HARKBACK_STATION1">Лаборатория Возврата 1</option>
+						<option prm_type="UNIT_ATTRIBUTE_HARKBACK_STATION2">Лаборатория Возврата 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_HARKBACK_STATION3">Лаборатория Возврата 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_CORRIDOR_ALPHA">Альфа-портал</option>
+						<option prm_type="UNIT_ATTRIBUTE_CORRIDOR_OMEGA">Омега-портал</option>
+						<option prm_type="UNIT_ATTRIBUTE_STATIC_BOMB">Строение-бомба</option>
+						<option prm_type="UNIT_ATTRIBUTE_LASER_CANNON">Лазерная пушка</option>
+						<option prm_type="UNIT_ATTRIBUTE_ROCKET_LAUNCHER">Ракетница</option>
+						<option prm_type="UNIT_ATTRIBUTE_GUN_HOWITZER">Гаубица</option>
+						<option prm_type="UNIT_ATTRIBUTE_GUN_SUBCHASER">Подземная пушка</option>
+						<option prm_type="UNIT_ATTRIBUTE_GUN_SCUM_DISRUPTOR">Скаморазрушитель</option>
+						<option prm_type="UNIT_ATTRIBUTE_GUN_BALLISTIC">Баллистическая установка</option>
+						<option prm_type="UNIT_ATTRIBUTE_GUN_FILTH_NAVIGATOR">Навигатор скверны</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT0">Скам спот</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT1">Скам спот 2</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT2">Скам спот 3</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT3">Скам спот 4</option>
+						<option prm_type="UNIT_ATTRIBUTE_BLACK_HOLE">Чёрная дыра</option>
+						<option prm_type="UNIT_ATTRIBUTE_SOLDIER">Нано-солдат</option>
+						<option prm_type="UNIT_ATTRIBUTE_OFFICER">Нано-офицер</option>
+						<option prm_type="UNIT_ATTRIBUTE_TECHNIC">Нано-техник</option>
+						<option prm_type="UNIT_ATTRIBUTE_SNIPER">Снайпер</option>
+						<option prm_type="UNIT_ATTRIBUTE_ROCKER">Рокер</option>
+						<option prm_type="UNIT_ATTRIBUTE_MORTAR">Бомбомёт</option>
+						<option prm_type="UNIT_ATTRIBUTE_CEPTOR">Фаэтон</option>
+						<option prm_type="UNIT_ATTRIBUTE_GYROID">Егерь</option>
+						<option prm_type="UNIT_ATTRIBUTE_WARGON">Варгон</option>
+						<option prm_type="UNIT_ATTRIBUTE_BOMBER">Шершень</option>
+						<option prm_type="UNIT_ATTRIBUTE_R_PROJECTOR">Р-Проектор</option>
+						<option prm_type="UNIT_ATTRIBUTE_STRAFER">Штурман</option>
+						<option prm_type="UNIT_ATTRIBUTE_EXTIRPATOR">Искоренитель</option>
+						<option prm_type="UNIT_ATTRIBUTE_LEAMO">Лимо</option>
+						<option prm_type="UNIT_ATTRIBUTE_SCUMER">Скаммер</option>
+						<option prm_type="UNIT_ATTRIBUTE_DIGGER">Диггер</option>
+						<option prm_type="UNIT_ATTRIBUTE_SCUM_SPLITTER">Скам-молот</option>
+						<option prm_type="UNIT_ATTRIBUTE_SCUM_TWISTER">Скам-Смерч</option>
+						<option prm_type="UNIT_ATTRIBUTE_SCUM_HEATER">Скам-Жгут</option>
+						<option prm_type="UNIT_ATTRIBUTE_SCUM_THROWER">Скам-Баллиста</option>
+						<option prm_type="UNIT_ATTRIBUTE_LEECH">Клещ</option>
+						<option prm_type="UNIT_ATTRIBUTE_DISINTEGRATOR">Дизинтегратор</option>
+						<option prm_type="UNIT_ATTRIBUTE_UNSEEN">Призрак</option>
+						<option prm_type="UNIT_ATTRIBUTE_PIERCER">Буравчик</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT">Скверна-паук</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT2">Скверна-акула</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT3">Скверна-демон</option>
+						<option prm_type="UNIT_ATTRIBUTE_FILTH_SPOT4">Скверна-дракон</option>
+					</optgroup>
+					<optgroup label="Scourge">
+						<option prm_type="FILTH_SPOT_ID_DRAGON">Дракон</option>
+						<option prm_type="FILTH_SPOT_ID_ANTS">Муравей</option>
+						<option prm_type="FILTH_SPOT_ID_WASP">Пчела</option>
+						<option prm_type="FILTH_SPOT_ID_GHOST">Приведение</option>
+						<option prm_type="FILTH_SPOT_ID_EYE">Глаз</option>
+						<option prm_type="FILTH_SPOT_ID_CROW">Ворона</option>
+						<option prm_type="FILTH_SPOT_ID_DAEMON">Демон</option>
+						<option prm_type="FILTH_SPOT_ID_RAT">Крыса</option>
+						<option prm_type="FILTH_SPOT_ID_WORM">Червь</option>
+						<option prm_type="FILTH_SPOT_ID_SHARK">Рбыа</option>
+						<option prm_type="FILTH_SPOT_ID_VOLCANO">Вулкан</option>
+						<option prm_type="FILTH_SPOT_ID_ANTS2">Муравей2</option>
+						<option prm_type="FILTH_SPOT_ID_SNAKE">Змеи</option>
+						<option prm_type="FILTH_SPOT_ID_DRAGON2">Дракон2</option>
+						<option prm_type="FILTH_SPOT_ID_VOLCANO_SCUM_DISRUPTOR">Вулкан скаморазрушителя</option>
+						<option prm_type="FILTH_SPOT_ID_A_ANTS">Новые муравьи</option>
+						<option prm_type="FILTH_SPOT_ID_A_CROW">Новые вороны</option>
+						<option prm_type="FILTH_SPOT_ID_A_DAEMON">Новые демоны</option>
+						<option prm_type="FILTH_SPOT_ID_A_DRAGON">Новый дракон</option>
+						<option prm_type="FILTH_SPOT_ID_A_EYE">Новые глаза</option>
+						<option prm_type="FILTH_SPOT_ID_A_RAT">Новые крысы</option>
+						<option prm_type="FILTH_SPOT_ID_A_SPIDER">Новые пауки</option>
+						<option prm_type="FILTH_SPOT_ID_A_WASP">Новые осы</option>
+						<option prm_type="FILTH_SPOT_ID_A_WORM">Новый червь</option>
+					</optgroup>
+					<optgroup label="Geoprocess">
+						<option prm_type="UNIT_ATTRIBUTE_GEO_INFLUENCE">Гора</option>
+						<option prm_type="UNIT_ATTRIBUTE_GEO_BREAK">Разлом</option>
+						<option prm_type="UNIT_ATTRIBUTE_GEO_FAULT">Дефект</option>
+						<option prm_type="UNIT_ATTRIBUTE_GEO_HEAD">Лицо</option>
+					</optgroup>
+				</select>
+				<input id="unit_create" type="button" value="Create" />
+				<div class="v_space"><img src="img/spacer.gif" /></div>
+			</div>
+			</li>
+		</ul>
 	</body>
 </html>
