@@ -1288,10 +1288,10 @@ UpdateInfoWndTask::OnPanelVisible UpdateInfoWndTask::on_panel_visible_;
 
 UpdateInfoWndTask::UpdateInfoWndTask(
 	IdsType         ids,
-	InfoWnd        &stat_wnd,
+	InfoWnd        &info_wnd,
 	ProjectManager &project_manager,
 	const HWND     &error_hwnd)
-	:UpdatePanelTask(ids, stat_wnd, project_manager, &ProjectManager::UpdateStatWnd, error_hwnd)
+	:UpdatePanelTask(ids, info_wnd, project_manager, &ProjectManager::UpdateInfoWnd, error_hwnd)
 {}
 
 void UpdateInfoWndTask::UpdatePanel(
@@ -1313,10 +1313,10 @@ UpdatePreviewWndTask::OnPanelVisible UpdatePreviewWndTask::on_panel_visible_;
 
 UpdatePreviewWndTask::UpdatePreviewWndTask(
 	IdsType         ids,
-	PreviewWnd     &stat_wnd,
+	PreviewWnd     &preview_wnd,
 	ProjectManager &project_manager,
 	const HWND     &error_hwnd)
-	:UpdatePanelTask(ids, stat_wnd, project_manager, &ProjectManager::UpdateStatWnd, error_hwnd)
+	:UpdatePanelTask(ids, preview_wnd, project_manager, &ProjectManager::UpdatePreviewWnd, error_hwnd)
 {}
 
 void UpdatePreviewWndTask::UpdatePanel(

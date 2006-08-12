@@ -61,12 +61,10 @@ public:
 	void SetReadOnly(bool read_only);
 // message processing
 private:
-	void OnColorStatic      (Msg<WM_CTLCOLORSTATIC> &msg);
-	void OnCommand          (Msg<WM_COMMAND>        &msg);
-	void OnInitDialog       (Msg<WM_INITDIALOG>     &msg);
-	void OnNotify           (Msg<WM_NOTIFY>         &msg);
-	void OnSize             (Msg<WM_SIZE>           &msg);
-	void OnTimer            (Msg<WM_TIMER>          &msg);
+	void OnCommand(Msg<WM_COMMAND>        &msg);
+	void OnNotify (Msg<WM_NOTIFY>         &msg);
+	void OnSize   (Msg<WM_SIZE>           &msg);
+	void OnTimer  (Msg<WM_TIMER>          &msg);
 protected:
 	void ProcessMessage(WndMsg &msg);
 // internal function
@@ -77,10 +75,9 @@ private:
 	void PositionChildren();
 	// html manipulation
 	bool SetHtmlText(const char * id, int value, htmlayout::dom::element root);
+	bool SetColorBox(const char * id, COLORREF color, htmlayout::dom::element root);
 // data
 private:
-	HBRUSH            fog_colour_;
-	COLORREF          custom_colours_[16];
 	Locations         locations_;
 	PreviewWnd       &preview_wnd_;
 	bool              read_only_;

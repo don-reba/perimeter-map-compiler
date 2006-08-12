@@ -62,10 +62,10 @@ void PanelWindow::OnShowWindow(Msg<WM_SHOWWINDOW> &msg)
 {
 	is_visible_ = msg.IsShown();
 	if (is_visible_)
-		foreach (const on_show_t::delegate_t &delegate, on_show_.delegates_)
+		foreach (const on_show_t::delegate_t &delegate, on_show_)
 			delegate();
 	else
-		foreach (const on_hide_t::delegate_t &delegate, on_hide_.delegates_)
+		foreach (const on_hide_t::delegate_t &delegate, on_hide_)
 			delegate();
 	msg.handled_ = true;
 }

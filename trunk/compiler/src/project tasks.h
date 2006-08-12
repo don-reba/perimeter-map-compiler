@@ -430,7 +430,7 @@ class UpdateInfoWndTask : public UpdatePanelTask
 public:
 	UpdateInfoWndTask(
 		IdsType         ids,
-		InfoWnd        &stat_wnd,
+		InfoWnd        &info_wnd,
 		ProjectManager &project_manager,
 		const HWND     &error_hwnd);
 // implementation
@@ -455,7 +455,7 @@ class UpdatePreviewWndTask : public UpdatePanelTask
 public:
 	UpdatePreviewWndTask(
 		IdsType         ids,
-		PreviewWnd     &stat_wnd,
+		PreviewWnd     &preview_wnd,
 		ProjectManager &project_manager,
 		const HWND     &error_hwnd);
 // implementation
